@@ -18,24 +18,24 @@ So I built msgpck focused on the common case: decoding known struct types and ma
 
 Benchmarks vs vmihailenco/msgpack (Apple M3 Max):
 
-### Struct Operations
+### Struct Operations (using cached `GetStructEncoder`/`GetStructDecoder`)
 | Operation | vmihailenco | msgpck | Speedup |
 |-----------|-------------|--------|---------|
 | SmallStruct Encode | 137 ns, 3 allocs | 32 ns, 0 allocs | **4.3x** |
 | MediumStruct Encode | 431 ns, 5 allocs | 157 ns, 0 allocs | **2.7x** |
 | SmallStruct Decode | 167 ns, 3 allocs | 40 ns, 1 alloc | **4.2x** |
-| SmallStruct Decode (zero-copy) | 167 ns, 3 allocs | 29 ns, 0 allocs | **5.8x** |
+| SmallStruct Decode (`zeroCopy: true`) | - | 29 ns, 0 allocs | **5.8x** |
 | MediumStruct Decode | 671 ns, 14 allocs | 324 ns, 12 allocs | **2.1x** |
-| MediumStruct Decode (zero-copy) | 671 ns, 14 allocs | 230 ns, 3 allocs | **2.9x** |
+| MediumStruct Decode (`zeroCopy: true`) | - | 230 ns, 3 allocs | **2.9x** |
 
 ### Map Operations
 | Operation | vmihailenco | msgpck | Speedup |
 |-----------|-------------|--------|---------|
-| SmallMap Encode | 127 ns, 2 allocs | 62 ns, 0 allocs | **2.0x** |
-| MediumMap Encode | 491 ns, 4 allocs | 193 ns, 0 allocs | **2.5x** |
-| SmallMap Decode | 201 ns, 8 allocs | 107 ns, 3 allocs | **1.9x** |
-| MediumMap Decode | 810 ns, 34 allocs | 392 ns, 15 allocs | **2.1x** |
-| StringMap Decode | 305 ns, 12 allocs | 114 ns, 2 allocs | **2.7x** |
+| SmallMap Encode (`Marshal`) | 127 ns, 2 allocs | 62 ns, 0 allocs | **2.0x** |
+| MediumMap Encode (`Marshal`) | 491 ns, 4 allocs | 193 ns, 0 allocs | **2.5x** |
+| SmallMap Decode (`UnmarshalMapStringAny`) | 201 ns, 8 allocs | 107 ns, 3 allocs | **1.9x** |
+| MediumMap Decode (`UnmarshalMapStringAny`) | 810 ns, 34 allocs | 392 ns, 15 allocs | **2.1x** |
+| StringMap Decode (`UnmarshalMapStringString`) | 305 ns, 12 allocs | 114 ns, 2 allocs | **2.7x** |
 
 Run benchmarks yourself:
 ```bash
