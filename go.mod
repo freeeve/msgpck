@@ -1,6 +1,6 @@
 module github.com/freeeve/msgpck
 
-go 1.24.5
+go 1.25
 
 require (
 	github.com/vmihailenco/msgpack/v5 v5.4.1 // indirect
