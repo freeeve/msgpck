@@ -58,6 +58,6 @@ jobs:
 
       - name: Run fuzz tests (short)
         run: |
-          go test -fuzz=FuzzDecoder -fuzztime=30s
-          go test -fuzz=FuzzRoundTrip -fuzztime=30s
-          go test -fuzz=FuzzMapDecode -fuzztime=30s
+          go test -fuzz=^FuzzDecoder$ -fuzztime=30s
+          go test -fuzz=^FuzzRoundTrip$ -fuzztime=30s
+          go test -fuzz=^FuzzMapDecode$ -fuzztime=30s
