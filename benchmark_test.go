@@ -46,12 +46,12 @@ var (
 
 // Pre-registered codecs (using cached versions)
 var (
-	smallStructDec   = GetStructDecoder[SmallStruct]()
-	smallStructDecZC = GetStructDecoderZeroCopy[SmallStruct]()
+	smallStructDec   = GetStructDecoder[SmallStruct](false)
+	smallStructDecZC = GetStructDecoder[SmallStruct](true)
 	smallStructEnc   = GetStructEncoder[SmallStruct]()
 
-	mediumStructDec   = GetStructDecoder[MediumStruct]()
-	mediumStructDecZC = GetStructDecoderZeroCopy[MediumStruct]()
+	mediumStructDec   = GetStructDecoder[MediumStruct](false)
+	mediumStructDecZC = GetStructDecoder[MediumStruct](true)
 	mediumStructEnc   = GetStructEncoder[MediumStruct]()
 )
 

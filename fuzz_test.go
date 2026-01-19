@@ -257,8 +257,8 @@ func FuzzCachedStructDecoder(f *testing.F) {
 	// Nil
 	f.Add([]byte{0xc0})
 
-	dec := GetStructDecoder[Person]()
-	decZC := GetStructDecoderZeroCopy[Person]()
+	dec := GetStructDecoder[Person](false)
+	decZC := GetStructDecoder[Person](true)
 
 	f.Fuzz(func(t *testing.T, data []byte) {
 		// Test regular cached decoder - shouldn't panic
@@ -313,7 +313,7 @@ func FuzzStructEncoder(f *testing.F) {
 	}
 
 	enc := GetStructEncoder[Person]()
-	dec := GetStructDecoder[Person]()
+	dec := GetStructDecoder[Person](false)
 
 	f.Fuzz(func(t *testing.T, name string, age int64) {
 		p := Person{Name: name, Age: age}

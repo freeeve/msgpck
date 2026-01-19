@@ -551,7 +551,7 @@ func TestStructCodecs(t *testing.T) {
 		p := Person{Name: "Bob", Age: 25}
 		b, _ := enc.Encode(&p)
 
-		dec := GetStructDecoder[Person]()
+		dec := GetStructDecoder[Person](false)
 		var result Person
 		err := dec.Decode(b, &result)
 		if err != nil || result.Name != "Bob" || result.Age != 25 {
@@ -564,7 +564,7 @@ func TestStructCodecs(t *testing.T) {
 		p := Person{Name: "Carol", Age: 35}
 		b, _ := enc.Encode(&p)
 
-		dec := GetStructDecoderZeroCopy[Person]()
+		dec := GetStructDecoder[Person](true)
 		var result Person
 		err := dec.Decode(b, &result)
 		if err != nil || result.Name != "Carol" {
@@ -577,7 +577,7 @@ func TestStructCodecs(t *testing.T) {
 		p := Person{Name: "Dave", Age: 40}
 		b, _ := enc.Encode(&p)
 
-		dec := GetStructDecoder[Person]()
+		dec := GetStructDecoder[Person](false)
 		var result Person
 		err := dec.Decode(b, &result)
 		if err != nil || result.Name != "Dave" {

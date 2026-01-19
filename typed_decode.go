@@ -422,7 +422,7 @@ func DecodeStringMapFunc(data []byte, fn func(m map[string]string) error) error 
 // Zero-copy strings: valid only within the callback.
 // Uses cached zero-copy decoder for repeated types.
 func DecodeStructFunc[T any](data []byte, fn func(v *T) error) error {
-	dec := GetStructDecoderZeroCopy[T]()
+	dec := GetStructDecoder[T](true)
 	var v T
 	if err := dec.Decode(data, &v); err != nil {
 		return err

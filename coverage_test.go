@@ -71,7 +71,7 @@ func TestStructWithSliceAndMap(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		dec := GetStructDecoder[Data]()
+		dec := GetStructDecoder[Data](false)
 		var result Data
 		err = dec.Decode(b, &result)
 		if err != nil {
@@ -573,7 +573,7 @@ func TestStructDecoderAllTypes(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	dec := GetStructDecoder[AllTypes]()
+	dec := GetStructDecoder[AllTypes](false)
 	var result AllTypes
 	err = dec.Decode(b, &result)
 	if err != nil {
@@ -790,7 +790,7 @@ func TestStructStringMapDecode(t *testing.T) {
 	b := make([]byte, len(e.Bytes()))
 	copy(b, e.Bytes())
 
-	dec := GetStructDecoder[Data]()
+	dec := GetStructDecoder[Data](false)
 	var d Data
 	err := dec.Decode(b, &d)
 	if err != nil || len(d.M) != 2 {
@@ -1098,7 +1098,7 @@ func TestStructDecoderUintFormats(t *testing.T) {
 		{"uint64", []byte{0x82, 0xa1, 'u', formatUint64, 0, 0, 0, 0, 0, 0, 0x01, 0x00, 0xa3, 'u', '6', '4', formatUint64, 0, 0, 0, 0, 0, 0, 0x01, 0x00}},
 	}
 
-	dec := GetStructDecoder[Data]()
+	dec := GetStructDecoder[Data](false)
 	for _, f := range formats {
 		t.Run(f.name, func(t *testing.T) {
 			var d Data
@@ -1119,7 +1119,7 @@ func TestStructDecoderFloatFormats(t *testing.T) {
 
 	t.Run("from positive fixint", func(t *testing.T) {
 		data := []byte{0x82, 0xa3, 'f', '3', '2', 0x42, 0xa3, 'f', '6', '4', 0x42}
-		dec := GetStructDecoder[Data]()
+		dec := GetStructDecoder[Data](false)
 		var d Data
 		err := dec.Decode(data, &d)
 		if err != nil {
@@ -1132,7 +1132,7 @@ func TestStructDecoderFloatFormats(t *testing.T) {
 
 	t.Run("from negative fixint", func(t *testing.T) {
 		data := []byte{0x82, 0xa3, 'f', '3', '2', 0xff, 0xa3, 'f', '6', '4', 0xfe}
-		dec := GetStructDecoder[Data]()
+		dec := GetStructDecoder[Data](false)
 		var d Data
 		err := dec.Decode(data, &d)
 		if err != nil {
@@ -1151,7 +1151,7 @@ func TestStructDecoderFloatFormats(t *testing.T) {
 		b := make([]byte, len(e.Bytes()))
 		copy(b, e.Bytes())
 
-		dec := GetStructDecoder[Data]()
+		dec := GetStructDecoder[Data](false)
 		var d Data
 		err := dec.Decode(b, &d)
 		if err != nil {
@@ -1172,7 +1172,7 @@ func TestStructDecoderFloatFormats(t *testing.T) {
 
 		for i, f := range formats {
 			data := append([]byte{0x81, 0xa3, 'f', '6', '4'}, f...)
-			dec := GetStructDecoder[Data]()
+			dec := GetStructDecoder[Data](false)
 			var d Data
 			err := dec.Decode(data, &d)
 			if err != nil {
@@ -1212,7 +1212,7 @@ func TestStructDecoderStringFormats(t *testing.T) {
 		b := make([]byte, len(e.Bytes()))
 		copy(b, e.Bytes())
 
-		dec := GetStructDecoder[Data]()
+		dec := GetStructDecoder[Data](false)
 		var d Data
 		err := dec.Decode(b, &d)
 		if err != nil || len(d.S) != 300 {
@@ -1228,7 +1228,7 @@ func TestStructDecoderStringFormats(t *testing.T) {
 			formatStr32, 0, 0, 0, 5, 'h', 'e', 'l', 'l', 'o', // str32 "hello"
 		}
 
-		dec := GetStructDecoder[Data]()
+		dec := GetStructDecoder[Data](false)
 		var d Data
 		err := dec.Decode(data, &d)
 		if err != nil || d.S != "hello" {
@@ -1252,7 +1252,7 @@ func TestStructDecoderBytesFormats(t *testing.T) {
 		b := make([]byte, len(e.Bytes()))
 		copy(b, e.Bytes())
 
-		dec := GetStructDecoder[Data]()
+		dec := GetStructDecoder[Data](false)
 		var d Data
 		err := dec.Decode(b, &d)
 		if err != nil || len(d.B) != 300 {
@@ -1268,7 +1268,7 @@ func TestStructDecoderBytesFormats(t *testing.T) {
 			formatBin32, 0, 0, 0, 3, 1, 2, 3, // bin32 [1,2,3]
 		}
 
-		dec := GetStructDecoder[Data]()
+		dec := GetStructDecoder[Data](false)
 		var d Data
 		err := dec.Decode(data, &d)
 		if err != nil || len(d.B) != 3 {
@@ -1285,7 +1285,7 @@ func TestStructDecoderBytesFormats(t *testing.T) {
 		b := make([]byte, len(e.Bytes()))
 		copy(b, e.Bytes())
 
-		dec := GetStructDecoder[Data]()
+		dec := GetStructDecoder[Data](false)
 		var d Data
 		err := dec.Decode(b, &d)
 		if err != nil || len(d.B) != 300 {
@@ -1301,7 +1301,7 @@ func TestStructDecoderBytesFormats(t *testing.T) {
 			formatStr32, 0, 0, 0, 3, 'a', 'b', 'c',
 		}
 
-		dec := GetStructDecoder[Data]()
+		dec := GetStructDecoder[Data](false)
 		var d Data
 		err := dec.Decode(data, &d)
 		if err != nil || len(d.B) != 3 {
@@ -1327,7 +1327,7 @@ func TestStructDecoderArrayFormats(t *testing.T) {
 		b := make([]byte, len(e.Bytes()))
 		copy(b, e.Bytes())
 
-		dec := GetStructDecoder[Data]()
+		dec := GetStructDecoder[Data](false)
 		var d Data
 		err := dec.Decode(b, &d)
 		if err != nil || len(d.A) != 20 {
@@ -1344,7 +1344,7 @@ func TestStructDecoderArrayFormats(t *testing.T) {
 			0xa1, 'y',              // fixstr "y"
 		}
 
-		dec := GetStructDecoder[Data]()
+		dec := GetStructDecoder[Data](false)
 		var d Data
 		err := dec.Decode(data, &d)
 		if err != nil || len(d.A) != 2 {
@@ -1371,7 +1371,7 @@ func TestStructDecoderMapFormats(t *testing.T) {
 		b := make([]byte, len(e.Bytes()))
 		copy(b, e.Bytes())
 
-		dec := GetStructDecoder[Data]()
+		dec := GetStructDecoder[Data](false)
 		var d Data
 		err := dec.Decode(b, &d)
 		if err != nil {
@@ -1388,7 +1388,7 @@ func TestStructDecoderMapFormats(t *testing.T) {
 			0xa1, 'v',              // fixstr "v"
 		}
 
-		dec := GetStructDecoder[Data]()
+		dec := GetStructDecoder[Data](false)
 		var d Data
 		err := dec.Decode(data, &d)
 		if err != nil || d.M["k"] != "v" {
@@ -1534,7 +1534,7 @@ func TestStructDecoderNilField(t *testing.T) {
 		formatNil,            // nil
 	}
 
-	dec := GetStructDecoder[Data]()
+	dec := GetStructDecoder[Data](false)
 	var d Data
 	err := dec.Decode(data, &d)
 	if err != nil {
@@ -1560,7 +1560,7 @@ func TestStructDecoderUnknownField(t *testing.T) {
 	b := make([]byte, len(e.Bytes()))
 	copy(b, e.Bytes())
 
-	dec := GetStructDecoder[Data]()
+	dec := GetStructDecoder[Data](false)
 	var d Data
 	err := dec.Decode(b, &d)
 	if err != nil || d.Name != "test" {
@@ -1581,7 +1581,7 @@ func TestStructDecoderZeroCopy(t *testing.T) {
 	b := make([]byte, len(e.Bytes()))
 	copy(b, e.Bytes())
 
-	dec := GetStructDecoderZeroCopy[Data]()
+	dec := GetStructDecoder[Data](true)
 	var d Data
 	err := dec.Decode(b, &d)
 	if err != nil || d.S != "hello" {
@@ -2997,7 +2997,7 @@ func TestStructDecoderIntFormats(t *testing.T) {
 		{"int64", []byte{0x81, 0xa1, 'i', formatInt64, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x00}, -256},
 	}
 
-	dec := GetStructDecoder[Data]()
+	dec := GetStructDecoder[Data](false)
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			var d Data
@@ -3018,7 +3018,7 @@ func TestStructDecoderInt32Field(t *testing.T) {
 		I int32 `msgpack:"i"`
 	}
 
-	dec := GetStructDecoder[Data]()
+	dec := GetStructDecoder[Data](false)
 	data := []byte{0x81, 0xa1, 'i', formatInt32, 0, 0, 0, 42}
 	var d Data
 	err := dec.Decode(data, &d)
@@ -3044,7 +3044,7 @@ func TestStructDecoderUintField(t *testing.T) {
 		{"uint64", []byte{0x81, 0xa1, 'u', formatUint64, 0, 0, 0, 0, 0, 0, 0x01, 0x00}},
 	}
 
-	dec := GetStructDecoder[Data]()
+	dec := GetStructDecoder[Data](false)
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			var d Data
@@ -3062,7 +3062,7 @@ func TestStructDecoderUintNonU64(t *testing.T) {
 		U uint `msgpack:"u"`
 	}
 
-	dec := GetStructDecoder[Data]()
+	dec := GetStructDecoder[Data](false)
 	data := []byte{0x81, 0xa1, 'u', formatUint32, 0, 0, 0, 42}
 	var d Data
 	err := dec.Decode(data, &d)
@@ -3077,7 +3077,7 @@ func TestStructDecoderFloat32Field(t *testing.T) {
 		F float32 `msgpack:"f"`
 	}
 
-	dec := GetStructDecoder[Data]()
+	dec := GetStructDecoder[Data](false)
 	data := []byte{0x81, 0xa1, 'f', formatFloat32, 0x40, 0x48, 0xf5, 0xc3} // 3.14
 	var d Data
 	err := dec.Decode(data, &d)
@@ -3099,7 +3099,7 @@ func TestStructDecoderTypeMismatch(t *testing.T) {
 	}
 
 	t.Run("bool mismatch", func(t *testing.T) {
-		dec := GetStructDecoder[DataBool]()
+		dec := GetStructDecoder[DataBool](false)
 		data := []byte{0x81, 0xa1, 'b', 0x42} // int instead of bool
 		var d DataBool
 		err := dec.Decode(data, &d)
@@ -3109,7 +3109,7 @@ func TestStructDecoderTypeMismatch(t *testing.T) {
 	})
 
 	t.Run("int mismatch", func(t *testing.T) {
-		dec := GetStructDecoder[DataInt]()
+		dec := GetStructDecoder[DataInt](false)
 		data := []byte{0x81, 0xa1, 'i', formatTrue}
 		var d DataInt
 		err := dec.Decode(data, &d)
@@ -3119,7 +3119,7 @@ func TestStructDecoderTypeMismatch(t *testing.T) {
 	})
 
 	t.Run("uint mismatch", func(t *testing.T) {
-		dec := GetStructDecoder[DataUint]()
+		dec := GetStructDecoder[DataUint](false)
 		data := []byte{0x81, 0xa1, 'u', formatTrue}
 		var d DataUint
 		err := dec.Decode(data, &d)
@@ -3136,7 +3136,7 @@ func TestStructDecoderStringSlice(t *testing.T) {
 	}
 
 	t.Run("array16", func(t *testing.T) {
-		dec := GetStructDecoder[Data]()
+		dec := GetStructDecoder[Data](false)
 		data := []byte{0x81, 0xa1, 's', formatArray16, 0, 2, 0xa1, 'a', 0xa1, 'b'}
 		var d Data
 		err := dec.Decode(data, &d)
@@ -3146,7 +3146,7 @@ func TestStructDecoderStringSlice(t *testing.T) {
 	})
 
 	t.Run("array32", func(t *testing.T) {
-		dec := GetStructDecoder[Data]()
+		dec := GetStructDecoder[Data](false)
 		data := []byte{0x81, 0xa1, 's', formatArray32, 0, 0, 0, 2, 0xa1, 'a', 0xa1, 'b'}
 		var d Data
 		err := dec.Decode(data, &d)
@@ -3156,7 +3156,7 @@ func TestStructDecoderStringSlice(t *testing.T) {
 	})
 
 	t.Run("type mismatch", func(t *testing.T) {
-		dec := GetStructDecoder[Data]()
+		dec := GetStructDecoder[Data](false)
 		data := []byte{0x81, 0xa1, 's', 0x42} // int instead of array
 		var d Data
 		err := dec.Decode(data, &d)
@@ -3173,7 +3173,7 @@ func TestStructDecoderStringMap(t *testing.T) {
 	}
 
 	t.Run("map16", func(t *testing.T) {
-		dec := GetStructDecoder[Data]()
+		dec := GetStructDecoder[Data](false)
 		data := []byte{0x81, 0xa1, 'm', formatMap16, 0, 1, 0xa1, 'k', 0xa1, 'v'}
 		var d Data
 		err := dec.Decode(data, &d)
@@ -3183,7 +3183,7 @@ func TestStructDecoderStringMap(t *testing.T) {
 	})
 
 	t.Run("map32", func(t *testing.T) {
-		dec := GetStructDecoder[Data]()
+		dec := GetStructDecoder[Data](false)
 		data := []byte{0x81, 0xa1, 'm', formatMap32, 0, 0, 0, 1, 0xa1, 'k', 0xa1, 'v'}
 		var d Data
 		err := dec.Decode(data, &d)
@@ -3193,7 +3193,7 @@ func TestStructDecoderStringMap(t *testing.T) {
 	})
 
 	t.Run("type mismatch", func(t *testing.T) {
-		dec := GetStructDecoder[Data]()
+		dec := GetStructDecoder[Data](false)
 		data := []byte{0x81, 0xa1, 'm', 0x42}
 		var d Data
 		err := dec.Decode(data, &d)
@@ -3218,7 +3218,7 @@ func TestStructDecoderStringFormatsAll(t *testing.T) {
 		{"str32", []byte{0x81, 0xa1, 's', formatStr32, 0, 0, 0, 5, 'h', 'e', 'l', 'l', 'o'}},
 	}
 
-	dec := GetStructDecoder[Data]()
+	dec := GetStructDecoder[Data](false)
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			var d Data
@@ -3250,7 +3250,7 @@ func TestStructDecoderBytesFormatsAll(t *testing.T) {
 		{"bin32", []byte{0x81, 0xa1, 'b', formatBin32, 0, 0, 0, 3, 1, 2, 3}, 3},
 	}
 
-	dec := GetStructDecoder[Data]()
+	dec := GetStructDecoder[Data](false)
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			var d Data
@@ -3269,7 +3269,7 @@ func TestStructDecoderMap16Map32(t *testing.T) {
 	}
 
 	t.Run("map16", func(t *testing.T) {
-		dec := GetStructDecoder[Data]()
+		dec := GetStructDecoder[Data](false)
 		data := []byte{formatMap16, 0, 1, 0xa1, 'v', 0x42}
 		var d Data
 		err := dec.Decode(data, &d)
@@ -3279,7 +3279,7 @@ func TestStructDecoderMap16Map32(t *testing.T) {
 	})
 
 	t.Run("map32", func(t *testing.T) {
-		dec := GetStructDecoder[Data]()
+		dec := GetStructDecoder[Data](false)
 		data := []byte{formatMap32, 0, 0, 0, 1, 0xa1, 'v', 0x42}
 		var d Data
 		err := dec.Decode(data, &d)
@@ -3295,7 +3295,7 @@ func TestStructDecoderNilMap(t *testing.T) {
 		V int `msgpack:"v"`
 	}
 
-	dec := GetStructDecoder[Data]()
+	dec := GetStructDecoder[Data](false)
 	data := []byte{formatNil}
 	var d Data
 	err := dec.Decode(data, &d)
@@ -3310,7 +3310,7 @@ func TestStructDecoderGenericSlice(t *testing.T) {
 		S []int `msgpack:"s"`
 	}
 
-	dec := GetStructDecoder[Data]()
+	dec := GetStructDecoder[Data](false)
 	data := []byte{0x81, 0xa1, 's', 0x92, 0x01, 0x02} // fixarray [1, 2]
 	var d Data
 	err := dec.Decode(data, &d)
@@ -3326,7 +3326,7 @@ func TestStructDecoderGenericMap(t *testing.T) {
 		M map[string]int `msgpack:"m"`
 	}
 
-	dec := GetStructDecoder[Data]()
+	dec := GetStructDecoder[Data](false)
 	data := []byte{0x81, 0xa1, 'm', 0x81, 0xa1, 'k', 0x42}
 	var d Data
 	err := dec.Decode(data, &d)

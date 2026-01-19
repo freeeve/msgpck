@@ -726,27 +726,24 @@ var structDecoderZeroCopyCache sync.Map
 
 // GetStructDecoder returns a cached decoder for type T.
 // Creates one if it doesn't exist.
-func GetStructDecoder[T any]() *StructDecoder[T] {
+// If zeroCopy is true, strings point directly into the input buffer and are
+// only valid while the buffer exists.
+func GetStructDecoder[T any](zeroCopy bool) *StructDecoder[T] {
 	var zero T
 	key := reflect.TypeOf(zero)
+	if zeroCopy {
+		if dec, ok := structDecoderZeroCopyCache.Load(key); ok {
+			return dec.(*StructDecoder[T])
+		}
+		dec := newStructDecoder[T]().ZeroCopy()
+		structDecoderZeroCopyCache.Store(key, dec)
+		return dec
+	}
 	if dec, ok := structDecoderCache.Load(key); ok {
 		return dec.(*StructDecoder[T])
 	}
 	dec := newStructDecoder[T]()
 	structDecoderCache.Store(key, dec)
-	return dec
-}
-
-// GetStructDecoderZeroCopy returns a cached zero-copy decoder for type T.
-// Zero-copy strings point into the input buffer - only valid while buffer exists.
-func GetStructDecoderZeroCopy[T any]() *StructDecoder[T] {
-	var zero T
-	key := reflect.TypeOf(zero)
-	if dec, ok := structDecoderZeroCopyCache.Load(key); ok {
-		return dec.(*StructDecoder[T])
-	}
-	dec := newStructDecoder[T]().ZeroCopy()
-	structDecoderZeroCopyCache.Store(key, dec)
 	return dec
 }
 

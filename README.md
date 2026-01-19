@@ -67,7 +67,7 @@ For hot paths, use cached codecs that avoid reflection on every call:
 ```go
 // Get cached encoder/decoder (created on first use, reused forever)
 enc := msgpck.GetStructEncoder[User]()
-dec := msgpck.GetStructDecoder[User]()
+dec := msgpck.GetStructDecoder[User](false)
 
 // Encode - 0 allocations with pooled buffer
 data, _ := enc.Encode(&user)
@@ -83,7 +83,7 @@ When your input buffer outlives the decoded result (common in databases), skip s
 
 ```go
 // Get cached zero-copy decoder
-dec := msgpck.GetStructDecoderZeroCopy[User]()
+dec := msgpck.GetStructDecoder[User](true)
 
 // Strings point directly into 'data' - no copies
 dec.Decode(data, &user)
@@ -146,11 +146,11 @@ msgpck.UnmarshalMapStringString(data []byte, zeroCopy bool) (map[string]string, 
 msgpck.UnmarshalStruct(data []byte, dst any) error
 
 // For hot paths: cached struct decoder
-dec := msgpck.GetStructDecoder[MyStruct]()
+dec := msgpck.GetStructDecoder[MyStruct](false)
 dec.Decode(data, &dst)
 
 // Zero-copy cached decoder
-dec := msgpck.GetStructDecoderZeroCopy[MyStruct]()
+dec := msgpck.GetStructDecoder[MyStruct](true)
 dec.Decode(data, &dst)
 ```
 
@@ -192,7 +192,7 @@ if msgpck.IsTimestamp(ext) {
 
 All public APIs are concurrent-safe:
 - `Marshal`, `MarshalCopy`, `Unmarshal*` functions use internal pools
-- `GetStructEncoder[T]()`, `GetStructDecoder[T]()` return cached, thread-safe codecs
+- `GetStructEncoder[T]()`, `GetStructDecoder[T](zeroCopy)` return cached, thread-safe codecs
 - `StructEncoder` and `StructDecoder` instances are safe to use from multiple goroutines
 
 ## When to Use msgpck vs vmihailenco/msgpack
