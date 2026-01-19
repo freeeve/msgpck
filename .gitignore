@@ -1,0 +1,15 @@
+# Fuzz testing logs
+logs/
+
+# Test binaries
+*.test
+
+# Coverage
+*.out
+coverage.html
+
+# IDE
+.idea/
+
+# Claude
+.claude/

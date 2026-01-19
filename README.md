@@ -1,0 +1,194 @@
+# msgpck
+
+A high-performance msgpack library for Go, optimized for database and serialization-heavy workloads.
+
+## Why Another Msgpack Library?
+
+Gives how standards proliferate vibes. `s/standards/msgpack libraries/g`
+
+![xkcd: Standards](https://imgs.xkcd.com/comics/standards.png)
+
+I built msgpck for [tinykvs](https://github.com/freeeve/tinykvs), a key-value store where msgpack encoding/decoding is on the hot path. 
+I found issues with fuzz testing where vmihailenco would allocate excessively on big maps/arrays, and decided to check out the 
+alternatives: shamaton/msgpack, hashicorp/go-msgpack, and tinylib/msgp. I didn't want code generation so tinylib/msgp was out. 
+hashicorp/go-msgpack was slow. shamaton/msgpack was better but didn't compete with vmihailenco/msgpack on map[string]any performance. 
+So I built msgpck focused on the common case: decoding known struct types and map[string]any with minimal allocations.
+
+## Performance
+
+Benchmarks vs vmihailenco/msgpack (Apple M3 Max):
+
+### Struct Operations
+| Operation | vmihailenco | msgpck | Speedup |
+|-----------|-------------|--------|---------|
+| SmallStruct Encode | 137 ns, 3 allocs | 32 ns, 0 allocs | **4.3x** |
+| MediumStruct Encode | 431 ns, 5 allocs | 157 ns, 0 allocs | **2.7x** |
+| SmallStruct Decode | 167 ns, 3 allocs | 40 ns, 1 alloc | **4.2x** |
+| SmallStruct Decode (zero-copy) | 167 ns, 3 allocs | 29 ns, 0 allocs | **5.8x** |
+| MediumStruct Decode | 671 ns, 14 allocs | 324 ns, 12 allocs | **2.1x** |
+| MediumStruct Decode (zero-copy) | 671 ns, 14 allocs | 230 ns, 3 allocs | **2.9x** |
+
+### Map Operations
+| Operation | vmihailenco | msgpck | Speedup |
+|-----------|-------------|--------|---------|
+| SmallMap Encode | 127 ns, 2 allocs | 62 ns, 0 allocs | **2.0x** |
+| MediumMap Encode | 491 ns, 4 allocs | 193 ns, 0 allocs | **2.5x** |
+| SmallMap Decode | 201 ns, 8 allocs | 107 ns, 3 allocs | **1.9x** |
+| MediumMap Decode | 810 ns, 34 allocs | 392 ns, 15 allocs | **2.1x** |
+| StringMap Decode | 305 ns, 12 allocs | 114 ns, 2 allocs | **2.7x** |
+
+Run benchmarks yourself:
+```bash
+go test -bench=. -benchmem
+```
+
+## Quick Start
+
+```go
+import "github.com/freeeve/msgpck"
+
+// Encode any value
+data, _ := msgpck.MarshalCopy(map[string]any{"name": "Alice", "age": 30})
+
+// Decode to map
+m, _ := msgpck.UnmarshalMap(data)
+
+// Decode to struct
+var user User
+msgpck.UnmarshalStruct(data, &user)
+```
+
+## Key Features
+
+### Cached Struct Codecs
+
+For hot paths, use cached codecs that avoid reflection on every call:
+
+```go
+// Get cached encoder/decoder (created on first use, reused forever)
+enc := msgpck.GetStructEncoder[User]()
+dec := msgpck.GetStructDecoder[User]()
+
+// Encode - 0 allocations with pooled buffer
+data, _ := enc.Encode(&user)
+
+// Decode - minimal allocations
+var user User
+dec.Decode(data, &user)
+```
+
+### Zero-Copy Mode
+
+When your input buffer outlives the decoded result (common in databases), skip string allocations entirely:
+
+```go
+// Get cached zero-copy decoder
+dec := msgpck.GetStructDecoderZeroCopy[User]()
+
+// Strings point directly into 'data' - no copies
+dec.Decode(data, &user)
+```
+
+**Warning**: Zero-copy strings are only valid while the input buffer exists. Use the callback API when buffer lifetime is uncertain:
+
+```go
+// Safe zero-copy: strings valid only within callback
+msgpck.DecodeStructFunc(data, func(user *User) error {
+    // Use user.Name here - it points into data
+    processUser(user)
+    return nil
+})
+// After callback returns, data can be reused safely
+```
+
+### Typed Map Decoding
+
+When you know your map types, avoid `any` boxing overhead:
+
+```go
+// map[string]any - general purpose
+m, _ := msgpck.UnmarshalMap(data)
+
+// map[string]string - faster when you know the type
+m, _ := msgpck.UnmarshalMapStringString(data, false)
+
+// Zero-copy variants
+m, _ := msgpck.UnmarshalMapZeroCopy(data)
+m, _ := msgpck.UnmarshalMapStringString(data, true)
+```
+
+## API Reference
+
+### Encoding
+
+```go
+// Encode any Go value to msgpack
+msgpck.Marshal(v any) ([]byte, error)       // pooled buffer - don't retain
+msgpck.MarshalCopy(v any) ([]byte, error)   // safe to retain
+
+// For hot paths: cached struct encoder
+enc := msgpck.GetStructEncoder[MyStruct]()
+enc.Encode(&src)      // pooled buffer
+enc.EncodeCopy(&src)  // safe to retain
+```
+
+### Decoding
+
+```go
+// General decoding
+msgpck.Unmarshal(data []byte) (any, error)
+
+// Map decoding
+msgpck.UnmarshalMap(data []byte) (map[string]any, error)
+msgpck.UnmarshalMapZeroCopy(data []byte) (map[string]any, error)
+msgpck.UnmarshalMapStringString(data []byte, zeroCopy bool) (map[string]string, error)
+
+// Struct decoding (reflection-based, works with any struct)
+msgpck.UnmarshalStruct(data []byte, dst any) error
+
+// For hot paths: cached struct decoder
+dec := msgpck.GetStructDecoder[MyStruct]()
+dec.Decode(data, &dst)
+
+// Zero-copy cached decoder
+dec := msgpck.GetStructDecoderZeroCopy[MyStruct]()
+dec.Decode(data, &dst)
+```
+
+### Callback APIs (Safe Zero-Copy)
+
+```go
+// Buffer guaranteed valid during callback - safest for zero-copy
+msgpck.DecodeStructFunc(data, func(v *MyStruct) error { ... })
+msgpck.DecodeMapFunc(data, func(m map[string]any) error { ... })
+msgpck.DecodeStringMapFunc(data, func(m map[string]string) error { ... })
+```
+
+## Concurrency
+
+All public APIs are concurrent-safe:
+- `Marshal`, `MarshalCopy`, `Unmarshal*` functions use internal pools
+- `GetStructEncoder[T]()`, `GetStructDecoder[T]()` return cached, thread-safe codecs
+- `StructEncoder` and `StructDecoder` instances are safe to use from multiple goroutines
+
+## When to Use msgpck vs vmihailenco/msgpack
+
+**Use msgpck when:**
+- Encoding/decoding is on your hot path
+- You decode the same struct types repeatedly
+- You can benefit from zero-copy (database, network buffers)
+- You need minimal allocations
+
+**Use vmihailenco/msgpack when:**
+- You need full msgpack spec support (extensions, timestamps, etc.)
+- You need custom encoders/decoders for complex types
+- You're decoding unknown/dynamic schemas
+- Convenience matters more than raw speed
+
+## Compatibility
+
+msgpck produces standard msgpack bytes. Data encoded with vmihailenco/msgpack decodes correctly with msgpck and vice versa.
+
+## License
+
+MIT
