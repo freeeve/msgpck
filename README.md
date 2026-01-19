@@ -1,5 +1,10 @@
 # msgpck
 
+[![CI](https://github.com/freeeve/msgpck/actions/workflows/ci.yml/badge.svg)](https://github.com/freeeve/msgpck/actions/workflows/ci.yml)
+[![Coverage Status](https://coveralls.io/repos/github/freeeve/msgpck/badge.svg?branch=main)](https://coveralls.io/github/freeeve/msgpck?branch=main)
+[![Go Report Card](https://goreportcard.com/badge/github.com/freeeve/msgpck)](https://goreportcard.com/report/github.com/freeeve/msgpck)
+[![Go Reference](https://pkg.go.dev/badge/github.com/freeeve/msgpck.svg)](https://pkg.go.dev/github.com/freeeve/msgpck)
+
 A high-performance msgpack library for Go, optimized for database and serialization-heavy workloads.
 
 ## Why Another Msgpack Library?
