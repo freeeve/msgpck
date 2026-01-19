@@ -42,16 +42,27 @@ CRASHED_FILE="$LOG_DIR/crashed.txt"
 touch "$RESULTS_FILE" "$CRASHED_FILE"
 TOTAL_FINDINGS=0
 
-# Cleanup on exit
-cleanup() {
+copy_corpus_to_testdata() {
     echo ""
     echo "=========================================="
-    echo "Fuzz testing interrupted or completed"
+    echo "Copying fuzz corpus to testdata/"
     echo "=========================================="
-    print_summary
-    exit 0
+
+    local GOCACHE_FUZZ="$(go env GOCACHE)/fuzz/github.com/freeeve/msgpck"
+    local TESTDATA_FUZZ="$PROJECT_ROOT/testdata/fuzz"
+
+    if [ -d "$GOCACHE_FUZZ" ]; then
+        mkdir -p "$TESTDATA_FUZZ"
+        local before_count=$(find "$TESTDATA_FUZZ" -type f 2>/dev/null | wc -l | tr -d ' ')
+        cp -r "$GOCACHE_FUZZ"/* "$TESTDATA_FUZZ"/ 2>/dev/null || true
+        local after_count=$(find "$TESTDATA_FUZZ" -type f | wc -l | tr -d ' ')
+        local new_count=$((after_count - before_count))
+        echo "Copied corpus from Go cache to testdata/fuzz/"
+        echo "New files added: $new_count (total: $after_count)"
+    else
+        echo "No fuzz cache found at $GOCACHE_FUZZ"
+    fi
 }
-trap cleanup SIGINT SIGTERM
 
 print_summary() {
     echo ""
@@ -86,6 +97,18 @@ print_summary() {
     echo "To check for failures:"
     echo "   grep -l 'FAIL\|panic\|crash' $LOG_DIR/*.log 2>/dev/null || echo 'No failures found'"
 }
+
+# Cleanup on exit
+cleanup() {
+    echo ""
+    echo "=========================================="
+    echo "Fuzz testing interrupted or completed"
+    echo "=========================================="
+    copy_corpus_to_testdata
+    print_summary
+    exit 0
+}
+trap cleanup SIGINT SIGTERM
 
 run_fuzz_target() {
     local target="$1"
@@ -171,4 +194,5 @@ else
     done
 fi
 
+copy_corpus_to_testdata
 print_summary
