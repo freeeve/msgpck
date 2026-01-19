@@ -25,49 +25,49 @@ func (d *Decoder) DecodeAny() (any, error) {
 // decodeAnyValue decodes directly to any, skipping intermediate Value struct
 func (d *Decoder) decodeAnyValue(format byte) (any, error) {
 	// Positive fixint: 0xxxxxxx
-	if IsPositiveFixint(format) {
+	if isPositiveFixint(format) {
 		return int64(format), nil
 	}
 
 	// Negative fixint: 111xxxxx
-	if IsNegativeFixint(format) {
+	if isNegativeFixint(format) {
 		return int64(int8(format)), nil
 	}
 
 	// Fixmap: 1000xxxx
-	if IsFixmap(format) {
-		return d.decodeMapAny(FixmapLen(format))
+	if isFixmap(format) {
+		return d.decodeMapAny(fixmapLen(format))
 	}
 
 	// Fixarray: 1001xxxx
-	if IsFixarray(format) {
-		return d.decodeArrayAny(FixarrayLen(format))
+	if isFixarray(format) {
+		return d.decodeArrayAny(fixarrayLen(format))
 	}
 
 	// Fixstr: 101xxxxx
-	if IsFixstr(format) {
-		return d.decodeStringAny(FixstrLen(format))
+	if isFixstr(format) {
+		return d.decodeStringAny(fixstrLen(format))
 	}
 
 	switch format {
-	case FormatNil:
+	case formatNil:
 		return nil, nil
 
-	case FormatFalse:
+	case formatFalse:
 		return false, nil
-	case FormatTrue:
+	case formatTrue:
 		return true, nil
 
-	case FormatUint8:
+	case formatUint8:
 		v, err := d.readUint8()
 		return int64(v), err
-	case FormatUint16:
+	case formatUint16:
 		v, err := d.readUint16()
 		return int64(v), err
-	case FormatUint32:
+	case formatUint32:
 		v, err := d.readUint32()
 		return int64(v), err
-	case FormatUint64:
+	case formatUint64:
 		v, err := d.readUint64()
 		// Return as uint64 only if it overflows int64
 		if v > 9223372036854775807 {
@@ -75,84 +75,84 @@ func (d *Decoder) decodeAnyValue(format byte) (any, error) {
 		}
 		return int64(v), err
 
-	case FormatInt8:
+	case formatInt8:
 		v, err := d.readInt8()
 		return int64(v), err
-	case FormatInt16:
+	case formatInt16:
 		v, err := d.readInt16()
 		return int64(v), err
-	case FormatInt32:
+	case formatInt32:
 		v, err := d.readInt32()
 		return int64(v), err
-	case FormatInt64:
+	case formatInt64:
 		v, err := d.readInt64()
 		return v, err
 
-	case FormatFloat32:
+	case formatFloat32:
 		v, err := d.readFloat32()
 		return float64(v), err // promote to float64 for consistency
-	case FormatFloat64:
+	case formatFloat64:
 		v, err := d.readFloat64()
 		return v, err
 
-	case FormatStr8:
+	case formatStr8:
 		length, err := d.readUint8()
 		if err != nil {
 			return nil, err
 		}
 		return d.decodeStringAny(int(length))
-	case FormatStr16:
+	case formatStr16:
 		length, err := d.readUint16()
 		if err != nil {
 			return nil, err
 		}
 		return d.decodeStringAny(int(length))
-	case FormatStr32:
+	case formatStr32:
 		length, err := d.readUint32()
 		if err != nil {
 			return nil, err
 		}
 		return d.decodeStringAny(int(length))
 
-	case FormatBin8:
+	case formatBin8:
 		length, err := d.readUint8()
 		if err != nil {
 			return nil, err
 		}
 		return d.decodeBinaryAny(int(length))
-	case FormatBin16:
+	case formatBin16:
 		length, err := d.readUint16()
 		if err != nil {
 			return nil, err
 		}
 		return d.decodeBinaryAny(int(length))
-	case FormatBin32:
+	case formatBin32:
 		length, err := d.readUint32()
 		if err != nil {
 			return nil, err
 		}
 		return d.decodeBinaryAny(int(length))
 
-	case FormatArray16:
+	case formatArray16:
 		length, err := d.readUint16()
 		if err != nil {
 			return nil, err
 		}
 		return d.decodeArrayAny(int(length))
-	case FormatArray32:
+	case formatArray32:
 		length, err := d.readUint32()
 		if err != nil {
 			return nil, err
 		}
 		return d.decodeArrayAny(int(length))
 
-	case FormatMap16:
+	case formatMap16:
 		length, err := d.readUint16()
 		if err != nil {
 			return nil, err
 		}
 		return d.decodeMapAny(int(length))
-	case FormatMap32:
+	case formatMap32:
 		length, err := d.readUint32()
 		if err != nil {
 			return nil, err
@@ -234,21 +234,21 @@ func (d *Decoder) decodeMapAny(length int) (map[string]any, error) {
 
 		// Decode key as string
 		var key string
-		if IsFixstr(keyFormat) {
-			key, err = d.decodeStringAny(FixstrLen(keyFormat))
-		} else if keyFormat == FormatStr8 {
+		if isFixstr(keyFormat) {
+			key, err = d.decodeStringAny(fixstrLen(keyFormat))
+		} else if keyFormat == formatStr8 {
 			length, err := d.readUint8()
 			if err != nil {
 				return nil, err
 			}
 			key, err = d.decodeStringAny(int(length))
-		} else if keyFormat == FormatStr16 {
+		} else if keyFormat == formatStr16 {
 			length, err := d.readUint16()
 			if err != nil {
 				return nil, err
 			}
 			key, err = d.decodeStringAny(int(length))
-		} else if keyFormat == FormatStr32 {
+		} else if keyFormat == formatStr32 {
 			length, err := d.readUint32()
 			if err != nil {
 				return nil, err

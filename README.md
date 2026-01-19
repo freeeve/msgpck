@@ -51,7 +51,7 @@ import "github.com/freeeve/msgpck"
 data, _ := msgpck.MarshalCopy(map[string]any{"name": "Alice", "age": 30})
 
 // Decode to map
-m, _ := msgpck.UnmarshalMap(data)
+m, _ := msgpck.UnmarshalMapStringAny(data, false)
 
 // Decode to struct
 var user User
@@ -107,13 +107,13 @@ When you know your map types, avoid `any` boxing overhead:
 
 ```go
 // map[string]any - general purpose
-m, _ := msgpck.UnmarshalMap(data)
+m, _ := msgpck.UnmarshalMapStringAny(data, false)
 
 // map[string]string - faster when you know the type
 m, _ := msgpck.UnmarshalMapStringString(data, false)
 
-// Zero-copy variants
-m, _ := msgpck.UnmarshalMapZeroCopy(data)
+// Zero-copy variants (strings point into input buffer)
+m, _ := msgpck.UnmarshalMapStringAny(data, true)
 m, _ := msgpck.UnmarshalMapStringString(data, true)
 ```
 
@@ -139,8 +139,7 @@ enc.EncodeCopy(&src)  // safe to retain
 msgpck.Unmarshal(data []byte) (any, error)
 
 // Map decoding
-msgpck.UnmarshalMap(data []byte) (map[string]any, error)
-msgpck.UnmarshalMapZeroCopy(data []byte) (map[string]any, error)
+msgpck.UnmarshalMapStringAny(data []byte, zeroCopy bool) (map[string]any, error)
 msgpck.UnmarshalMapStringString(data []byte, zeroCopy bool) (map[string]string, error)
 
 // Struct decoding (reflection-based, works with any struct)
@@ -164,6 +163,31 @@ msgpck.DecodeMapFunc(data, func(m map[string]any) error { ... })
 msgpck.DecodeStringMapFunc(data, func(m map[string]string) error { ... })
 ```
 
+### Timestamps
+
+msgpck supports the msgpack timestamp extension type (-1). Times are encoded using the most compact format and decoded to UTC:
+
+```go
+// Encode a time.Time
+data := msgpck.MarshalTimestamp(time.Now())
+
+// Decode back to time.Time (UTC)
+t, _ := msgpck.UnmarshalTimestamp(data)
+
+// Streaming API
+enc := msgpck.NewEncoder(nil)
+enc.EncodeTimestamp(time.Now())
+
+dec := msgpck.NewDecoder(data)
+t, _ := dec.DecodeTimestamp()
+
+// Convert extension values
+ext, _ := dec.DecodeExt()
+if msgpck.IsTimestamp(ext) {
+    t, _ := msgpck.ExtToTimestamp(ext)
+}
+```
+
 ## Concurrency
 
 All public APIs are concurrent-safe:
@@ -180,7 +204,6 @@ All public APIs are concurrent-safe:
 - You need minimal allocations
 
 **Use vmihailenco/msgpack when:**
-- You need full msgpack spec support (extensions, timestamps, etc.)
 - You need custom encoders/decoders for complex types
 - You're decoding unknown/dynamic schemas
 - Convenience matters more than raw speed

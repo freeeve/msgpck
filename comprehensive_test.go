@@ -10,7 +10,7 @@ import (
 // TestAllFormats tests encoding and decoding of all msgpack formats
 func TestAllFormats(t *testing.T) {
 	t.Run("nil", func(t *testing.T) {
-		data := []byte{FormatNil}
+		data := []byte{formatNil}
 		d := NewDecoder(data)
 		v, err := d.Decode()
 		if err != nil || v.Type != TypeNil {
@@ -20,13 +20,13 @@ func TestAllFormats(t *testing.T) {
 
 	t.Run("bool", func(t *testing.T) {
 		// false
-		d := NewDecoder([]byte{FormatFalse})
+		d := NewDecoder([]byte{formatFalse})
 		v, _ := d.Decode()
 		if v.Type != TypeBool || v.Bool != false {
 			t.Error("false decode failed")
 		}
 		// true
-		d.Reset([]byte{FormatTrue})
+		d.Reset([]byte{formatTrue})
 		v, _ = d.Decode()
 		if v.Type != TypeBool || v.Bool != true {
 			t.Error("true decode failed")
@@ -54,7 +54,7 @@ func TestAllFormats(t *testing.T) {
 	})
 
 	t.Run("uint8", func(t *testing.T) {
-		d := NewDecoder([]byte{FormatUint8, 200})
+		d := NewDecoder([]byte{formatUint8, 200})
 		v, _ := d.Decode()
 		if v.Type != TypeUint || v.Uint != 200 {
 			t.Error("uint8 failed")
@@ -62,7 +62,7 @@ func TestAllFormats(t *testing.T) {
 	})
 
 	t.Run("uint16", func(t *testing.T) {
-		d := NewDecoder([]byte{FormatUint16, 0x12, 0x34})
+		d := NewDecoder([]byte{formatUint16, 0x12, 0x34})
 		v, _ := d.Decode()
 		if v.Type != TypeUint || v.Uint != 0x1234 {
 			t.Error("uint16 failed")
@@ -70,7 +70,7 @@ func TestAllFormats(t *testing.T) {
 	})
 
 	t.Run("uint32", func(t *testing.T) {
-		d := NewDecoder([]byte{FormatUint32, 0x12, 0x34, 0x56, 0x78})
+		d := NewDecoder([]byte{formatUint32, 0x12, 0x34, 0x56, 0x78})
 		v, _ := d.Decode()
 		if v.Type != TypeUint || v.Uint != 0x12345678 {
 			t.Error("uint32 failed")
@@ -78,7 +78,7 @@ func TestAllFormats(t *testing.T) {
 	})
 
 	t.Run("uint64", func(t *testing.T) {
-		d := NewDecoder([]byte{FormatUint64, 0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc, 0xde, 0xf0})
+		d := NewDecoder([]byte{formatUint64, 0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc, 0xde, 0xf0})
 		v, _ := d.Decode()
 		if v.Type != TypeUint || v.Uint != 0x123456789abcdef0 {
 			t.Error("uint64 failed")
@@ -86,7 +86,7 @@ func TestAllFormats(t *testing.T) {
 	})
 
 	t.Run("int8", func(t *testing.T) {
-		d := NewDecoder([]byte{FormatInt8, 0x80}) // -128
+		d := NewDecoder([]byte{formatInt8, 0x80}) // -128
 		v, _ := d.Decode()
 		if v.Type != TypeInt || v.Int != -128 {
 			t.Error("int8 failed")
@@ -94,7 +94,7 @@ func TestAllFormats(t *testing.T) {
 	})
 
 	t.Run("int16", func(t *testing.T) {
-		d := NewDecoder([]byte{FormatInt16, 0x80, 0x00})
+		d := NewDecoder([]byte{formatInt16, 0x80, 0x00})
 		v, _ := d.Decode()
 		if v.Type != TypeInt || v.Int != -32768 {
 			t.Error("int16 failed")
@@ -102,7 +102,7 @@ func TestAllFormats(t *testing.T) {
 	})
 
 	t.Run("int32", func(t *testing.T) {
-		d := NewDecoder([]byte{FormatInt32, 0x80, 0x00, 0x00, 0x00})
+		d := NewDecoder([]byte{formatInt32, 0x80, 0x00, 0x00, 0x00})
 		v, _ := d.Decode()
 		if v.Type != TypeInt || v.Int != -2147483648 {
 			t.Error("int32 failed")
@@ -110,7 +110,7 @@ func TestAllFormats(t *testing.T) {
 	})
 
 	t.Run("int64", func(t *testing.T) {
-		d := NewDecoder([]byte{FormatInt64, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00})
+		d := NewDecoder([]byte{formatInt64, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00})
 		v, _ := d.Decode()
 		if v.Type != TypeInt || v.Int != math.MinInt64 {
 			t.Error("int64 failed")
@@ -118,7 +118,7 @@ func TestAllFormats(t *testing.T) {
 	})
 
 	t.Run("float32", func(t *testing.T) {
-		d := NewDecoder([]byte{FormatFloat32, 0x40, 0x48, 0xf5, 0xc3})
+		d := NewDecoder([]byte{formatFloat32, 0x40, 0x48, 0xf5, 0xc3})
 		v, _ := d.Decode()
 		if v.Type != TypeFloat32 || math.Abs(float64(v.Float32)-3.14) > 0.001 {
 			t.Errorf("float32 failed: %v", v.Float32)
@@ -126,7 +126,7 @@ func TestAllFormats(t *testing.T) {
 	})
 
 	t.Run("float64", func(t *testing.T) {
-		d := NewDecoder([]byte{FormatFloat64, 0x40, 0x09, 0x21, 0xfb, 0x54, 0x44, 0x2d, 0x18})
+		d := NewDecoder([]byte{formatFloat64, 0x40, 0x09, 0x21, 0xfb, 0x54, 0x44, 0x2d, 0x18})
 		v, _ := d.Decode()
 		if v.Type != TypeFloat64 || math.Abs(v.Float64-3.14159265359) > 0.0000001 {
 			t.Errorf("float64 failed: %v", v.Float64)
@@ -144,7 +144,7 @@ func TestAllFormats(t *testing.T) {
 
 	t.Run("str8", func(t *testing.T) {
 		str := "this is a longer string for str8 format testing"
-		data := append([]byte{FormatStr8, byte(len(str))}, []byte(str)...)
+		data := append([]byte{formatStr8, byte(len(str))}, []byte(str)...)
 		d := NewDecoder(data)
 		v, _ := d.Decode()
 		if v.Type != TypeString || string(v.Bytes) != str {
@@ -154,7 +154,7 @@ func TestAllFormats(t *testing.T) {
 
 	t.Run("str16", func(t *testing.T) {
 		str := string(make([]byte, 300))
-		data := append([]byte{FormatStr16, 0x01, 0x2c}, []byte(str)...)
+		data := append([]byte{formatStr16, 0x01, 0x2c}, []byte(str)...)
 		d := NewDecoder(data)
 		v, _ := d.Decode()
 		if v.Type != TypeString || len(v.Bytes) != 300 {
@@ -164,7 +164,7 @@ func TestAllFormats(t *testing.T) {
 
 	t.Run("bin8", func(t *testing.T) {
 		bin := []byte{1, 2, 3, 4, 5}
-		data := append([]byte{FormatBin8, 5}, bin...)
+		data := append([]byte{formatBin8, 5}, bin...)
 		d := NewDecoder(data)
 		v, _ := d.Decode()
 		if v.Type != TypeBinary || !bytes.Equal(v.Bytes, bin) {
@@ -174,7 +174,7 @@ func TestAllFormats(t *testing.T) {
 
 	t.Run("bin16", func(t *testing.T) {
 		bin := make([]byte, 300)
-		data := append([]byte{FormatBin16, 0x01, 0x2c}, bin...)
+		data := append([]byte{formatBin16, 0x01, 0x2c}, bin...)
 		d := NewDecoder(data)
 		v, _ := d.Decode()
 		if v.Type != TypeBinary || len(v.Bytes) != 300 {
@@ -184,7 +184,7 @@ func TestAllFormats(t *testing.T) {
 
 	t.Run("bin32", func(t *testing.T) {
 		bin := make([]byte, 70000)
-		data := append([]byte{FormatBin32, 0x00, 0x01, 0x11, 0x70}, bin...)
+		data := append([]byte{formatBin32, 0x00, 0x01, 0x11, 0x70}, bin...)
 		d := NewDecoder(data)
 		v, _ := d.Decode()
 		if v.Type != TypeBinary || len(v.Bytes) != 70000 {
@@ -242,11 +242,11 @@ func TestAllFormats(t *testing.T) {
 			format byte
 			size   int
 		}{
-			{FormatFixExt1, 1},
-			{FormatFixExt2, 2},
-			{FormatFixExt4, 4},
-			{FormatFixExt8, 8},
-			{FormatFixExt16, 16},
+			{formatFixExt1, 1},
+			{formatFixExt2, 2},
+			{formatFixExt4, 4},
+			{formatFixExt8, 8},
+			{formatFixExt16, 16},
 		}
 		for _, c := range cases {
 			data := append([]byte{c.format, 0x42}, make([]byte, c.size)...)
@@ -259,7 +259,7 @@ func TestAllFormats(t *testing.T) {
 	})
 
 	t.Run("ext8", func(t *testing.T) {
-		data := append([]byte{FormatExt8, 5, 0x42}, make([]byte, 5)...)
+		data := append([]byte{formatExt8, 5, 0x42}, make([]byte, 5)...)
 		d := NewDecoder(data)
 		v, _ := d.Decode()
 		if v.Type != TypeExt || v.Ext.Type != 0x42 || len(v.Ext.Data) != 5 {
@@ -268,7 +268,7 @@ func TestAllFormats(t *testing.T) {
 	})
 
 	t.Run("ext16", func(t *testing.T) {
-		data := append([]byte{FormatExt16, 0x01, 0x00, 0x42}, make([]byte, 256)...)
+		data := append([]byte{formatExt16, 0x01, 0x00, 0x42}, make([]byte, 256)...)
 		d := NewDecoder(data)
 		v, _ := d.Decode()
 		if v.Type != TypeExt || v.Ext.Type != 0x42 || len(v.Ext.Data) != 256 {
@@ -277,7 +277,7 @@ func TestAllFormats(t *testing.T) {
 	})
 
 	t.Run("ext32", func(t *testing.T) {
-		data := append([]byte{FormatExt32, 0x00, 0x01, 0x00, 0x00, 0x42}, make([]byte, 65536)...)
+		data := append([]byte{formatExt32, 0x00, 0x01, 0x00, 0x00, 0x42}, make([]byte, 65536)...)
 		d := NewDecoder(data)
 		v, _ := d.Decode()
 		if v.Type != TypeExt || v.Ext.Type != 0x42 || len(v.Ext.Data) != 65536 {
@@ -297,12 +297,12 @@ func TestEncoderAllFormats(t *testing.T) {
 			{127, 0x7f},
 			{-1, 0xff},
 			{-32, 0xe0},
-			{-33, FormatInt8},
-			{128, FormatUint8},
-			{256, FormatUint16},
-			{65536, FormatUint32},
-			{-129, FormatInt16},
-			{-32769, FormatInt32},
+			{-33, formatInt8},
+			{128, formatUint8},
+			{256, formatUint16},
+			{65536, formatUint32},
+			{-129, formatInt16},
+			{-32769, formatInt32},
 		}
 		for _, tc := range tests {
 			e := NewEncoder(16)
@@ -320,10 +320,10 @@ func TestEncoderAllFormats(t *testing.T) {
 		}{
 			{0, 0x00},
 			{127, 0x7f},
-			{128, FormatUint8},
-			{256, FormatUint16},
-			{65536, FormatUint32},
-			{1 << 32, FormatUint64},
+			{128, formatUint8},
+			{256, formatUint16},
+			{65536, formatUint32},
+			{1 << 32, formatUint64},
 		}
 		for _, tc := range tests {
 			e := NewEncoder(16)
@@ -341,10 +341,10 @@ func TestEncoderAllFormats(t *testing.T) {
 		}{
 			{0, 0xa0},
 			{31, 0xbf},
-			{32, FormatStr8},
-			{255, FormatStr8},
-			{256, FormatStr16},
-			{65535, FormatStr16},
+			{32, formatStr8},
+			{255, formatStr8},
+			{256, formatStr16},
+			{65535, formatStr16},
 		}
 		for _, tc := range tests {
 			e := NewEncoder(tc.len + 10)
@@ -360,10 +360,10 @@ func TestEncoderAllFormats(t *testing.T) {
 			len    int
 			expect byte
 		}{
-			{0, FormatBin8},
-			{255, FormatBin8},
-			{256, FormatBin16},
-			{65535, FormatBin16},
+			{0, formatBin8},
+			{255, formatBin8},
+			{256, formatBin16},
+			{65535, formatBin16},
 		}
 		for _, tc := range tests {
 			e := NewEncoder(tc.len + 10)
@@ -381,8 +381,8 @@ func TestEncoderAllFormats(t *testing.T) {
 		}{
 			{0, 0x90},
 			{15, 0x9f},
-			{16, FormatArray16},
-			{65535, FormatArray16},
+			{16, formatArray16},
+			{65535, formatArray16},
 		}
 		for _, tc := range tests {
 			e := NewEncoder(16)
@@ -400,8 +400,8 @@ func TestEncoderAllFormats(t *testing.T) {
 		}{
 			{0, 0x80},
 			{15, 0x8f},
-			{16, FormatMap16},
-			{65535, FormatMap16},
+			{16, formatMap16},
+			{65535, formatMap16},
 		}
 		for _, tc := range tests {
 			e := NewEncoder(16)
@@ -415,7 +415,7 @@ func TestEncoderAllFormats(t *testing.T) {
 	t.Run("float32", func(t *testing.T) {
 		e := NewEncoder(16)
 		e.EncodeFloat32(3.14)
-		if e.Bytes()[0] != FormatFloat32 {
+		if e.Bytes()[0] != formatFloat32 {
 			t.Error("EncodeFloat32 format wrong")
 		}
 	})
@@ -423,7 +423,7 @@ func TestEncoderAllFormats(t *testing.T) {
 	t.Run("float64", func(t *testing.T) {
 		e := NewEncoder(16)
 		e.EncodeFloat64(3.14)
-		if e.Bytes()[0] != FormatFloat64 {
+		if e.Bytes()[0] != formatFloat64 {
 			t.Error("EncodeFloat64 format wrong")
 		}
 	})
@@ -916,7 +916,7 @@ func TestErrorCases(t *testing.T) {
 
 	t.Run("binary too long", func(t *testing.T) {
 		cfg := DefaultConfig().WithMaxBinaryLen(5)
-		data := []byte{FormatBin8, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+		data := []byte{formatBin8, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 		d := NewDecoderWithConfig(data, cfg)
 		_, err := d.Decode()
 		if err != ErrBinaryTooLong {
@@ -926,7 +926,7 @@ func TestErrorCases(t *testing.T) {
 
 	t.Run("ext too long", func(t *testing.T) {
 		cfg := DefaultConfig().WithMaxExtLen(5)
-		data := []byte{FormatExt8, 10, 0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+		data := []byte{formatExt8, 10, 0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 		d := NewDecoderWithConfig(data, cfg)
 		_, err := d.Decode()
 		if err != ErrExtTooLong {

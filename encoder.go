@@ -93,15 +93,15 @@ func (e *Encoder) writeUint64(v uint64) {
 
 // EncodeNil writes a nil value
 func (e *Encoder) EncodeNil() {
-	e.writeByte(FormatNil)
+	e.writeByte(formatNil)
 }
 
 // EncodeBool writes a boolean value
 func (e *Encoder) EncodeBool(v bool) {
 	if v {
-		e.writeByte(FormatTrue)
+		e.writeByte(formatTrue)
 	} else {
-		e.writeByte(FormatFalse)
+		e.writeByte(formatFalse)
 	}
 }
 
@@ -117,16 +117,16 @@ func (e *Encoder) EncodeInt(v int64) {
 		// Negative fixint
 		e.writeByte(byte(v))
 	} else if v >= -128 {
-		e.writeByte(FormatInt8)
+		e.writeByte(formatInt8)
 		e.writeByte(byte(v))
 	} else if v >= -32768 {
-		e.writeByte(FormatInt16)
+		e.writeByte(formatInt16)
 		e.writeUint16(uint16(v))
 	} else if v >= -2147483648 {
-		e.writeByte(FormatInt32)
+		e.writeByte(formatInt32)
 		e.writeUint32(uint32(v))
 	} else {
-		e.writeByte(FormatInt64)
+		e.writeByte(formatInt64)
 		e.writeUint64(uint64(v))
 	}
 }
@@ -137,29 +137,29 @@ func (e *Encoder) EncodeUint(v uint64) {
 		// Positive fixint
 		e.writeByte(byte(v))
 	} else if v <= 255 {
-		e.writeByte(FormatUint8)
+		e.writeByte(formatUint8)
 		e.writeByte(byte(v))
 	} else if v <= 65535 {
-		e.writeByte(FormatUint16)
+		e.writeByte(formatUint16)
 		e.writeUint16(uint16(v))
 	} else if v <= 4294967295 {
-		e.writeByte(FormatUint32)
+		e.writeByte(formatUint32)
 		e.writeUint32(uint32(v))
 	} else {
-		e.writeByte(FormatUint64)
+		e.writeByte(formatUint64)
 		e.writeUint64(v)
 	}
 }
 
 // EncodeFloat32 writes a float32 value
 func (e *Encoder) EncodeFloat32(v float32) {
-	e.writeByte(FormatFloat32)
+	e.writeByte(formatFloat32)
 	e.writeUint32(math.Float32bits(v))
 }
 
 // EncodeFloat64 writes a float64 value
 func (e *Encoder) EncodeFloat64(v float64) {
-	e.writeByte(FormatFloat64)
+	e.writeByte(formatFloat64)
 	e.writeUint64(math.Float64bits(v))
 }
 
@@ -168,15 +168,15 @@ func (e *Encoder) EncodeString(v string) {
 	length := len(v)
 
 	if length <= 31 {
-		e.writeByte(FixstrPrefix | byte(length))
+		e.writeByte(fixstrPrefix | byte(length))
 	} else if length <= 255 {
-		e.writeByte(FormatStr8)
+		e.writeByte(formatStr8)
 		e.writeByte(byte(length))
 	} else if length <= 65535 {
-		e.writeByte(FormatStr16)
+		e.writeByte(formatStr16)
 		e.writeUint16(uint16(length))
 	} else {
-		e.writeByte(FormatStr32)
+		e.writeByte(formatStr32)
 		e.writeUint32(uint32(length))
 	}
 	// Zero-copy string to bytes using unsafe
@@ -189,15 +189,15 @@ func (e *Encoder) EncodeStringBytes(v []byte) {
 
 	if length <= 31 {
 		// Fixstr
-		e.writeByte(FixstrPrefix | byte(length))
+		e.writeByte(fixstrPrefix | byte(length))
 	} else if length <= 255 {
-		e.writeByte(FormatStr8)
+		e.writeByte(formatStr8)
 		e.writeByte(byte(length))
 	} else if length <= 65535 {
-		e.writeByte(FormatStr16)
+		e.writeByte(formatStr16)
 		e.writeUint16(uint16(length))
 	} else {
-		e.writeByte(FormatStr32)
+		e.writeByte(formatStr32)
 		e.writeUint32(uint32(length))
 	}
 	e.writeBytes(v)
@@ -208,13 +208,13 @@ func (e *Encoder) EncodeBinary(v []byte) {
 	length := len(v)
 
 	if length <= 255 {
-		e.writeByte(FormatBin8)
+		e.writeByte(formatBin8)
 		e.writeByte(byte(length))
 	} else if length <= 65535 {
-		e.writeByte(FormatBin16)
+		e.writeByte(formatBin16)
 		e.writeUint16(uint16(length))
 	} else {
-		e.writeByte(FormatBin32)
+		e.writeByte(formatBin32)
 		e.writeUint32(uint32(length))
 	}
 	e.writeBytes(v)
@@ -225,12 +225,12 @@ func (e *Encoder) EncodeBinary(v []byte) {
 func (e *Encoder) EncodeArrayHeader(length int) {
 	if length <= 15 {
 		// Fixarray
-		e.writeByte(FixarrayPrefix | byte(length))
+		e.writeByte(fixarrayPrefix | byte(length))
 	} else if length <= 65535 {
-		e.writeByte(FormatArray16)
+		e.writeByte(formatArray16)
 		e.writeUint16(uint16(length))
 	} else {
-		e.writeByte(FormatArray32)
+		e.writeByte(formatArray32)
 		e.writeUint32(uint32(length))
 	}
 }
@@ -240,12 +240,12 @@ func (e *Encoder) EncodeArrayHeader(length int) {
 func (e *Encoder) EncodeMapHeader(length int) {
 	if length <= 15 {
 		// Fixmap
-		e.writeByte(FixmapPrefix | byte(length))
+		e.writeByte(fixmapPrefix | byte(length))
 	} else if length <= 65535 {
-		e.writeByte(FormatMap16)
+		e.writeByte(formatMap16)
 		e.writeUint16(uint16(length))
 	} else {
-		e.writeByte(FormatMap32)
+		e.writeByte(formatMap32)
 		e.writeUint32(uint32(length))
 	}
 }
@@ -256,24 +256,24 @@ func (e *Encoder) EncodeExt(extType int8, data []byte) {
 
 	switch length {
 	case 1:
-		e.writeByte(FormatFixExt1)
+		e.writeByte(formatFixExt1)
 	case 2:
-		e.writeByte(FormatFixExt2)
+		e.writeByte(formatFixExt2)
 	case 4:
-		e.writeByte(FormatFixExt4)
+		e.writeByte(formatFixExt4)
 	case 8:
-		e.writeByte(FormatFixExt8)
+		e.writeByte(formatFixExt8)
 	case 16:
-		e.writeByte(FormatFixExt16)
+		e.writeByte(formatFixExt16)
 	default:
 		if length <= 255 {
-			e.writeByte(FormatExt8)
+			e.writeByte(formatExt8)
 			e.writeByte(byte(length))
 		} else if length <= 65535 {
-			e.writeByte(FormatExt16)
+			e.writeByte(formatExt16)
 			e.writeUint16(uint16(length))
 		} else {
-			e.writeByte(FormatExt32)
+			e.writeByte(formatExt32)
 			e.writeUint32(uint32(length))
 		}
 	}

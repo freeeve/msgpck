@@ -230,23 +230,23 @@ func (d *Decoder) readStringBytes() ([]byte, error) {
 	}
 
 	var length int
-	if IsFixstr(format) {
-		length = FixstrLen(format)
+	if isFixstr(format) {
+		length = fixstrLen(format)
 	} else {
 		switch format {
-		case FormatStr8:
+		case formatStr8:
 			n, err := d.readUint8()
 			if err != nil {
 				return nil, err
 			}
 			length = int(n)
-		case FormatStr16:
+		case formatStr16:
 			n, err := d.readUint16()
 			if err != nil {
 				return nil, err
 			}
 			length = int(n)
-		case FormatStr32:
+		case formatStr32:
 			n, err := d.readUint32()
 			if err != nil {
 				return nil, err

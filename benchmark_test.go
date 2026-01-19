@@ -112,7 +112,7 @@ func BenchmarkMsgpck_SmallMap_Unmarshal(b *testing.B) {
 	data, _ := vmihailenco.Marshal(smallMap)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		UnmarshalMap(data)
+		UnmarshalMapStringAny(data, false)
 	}
 }
 
@@ -120,7 +120,7 @@ func BenchmarkMsgpck_SmallMap_UnmarshalZeroCopy(b *testing.B) {
 	data, _ := vmihailenco.Marshal(smallMap)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		UnmarshalMapZeroCopy(data)
+		UnmarshalMapStringAny(data, true)
 	}
 }
 
@@ -137,7 +137,7 @@ func BenchmarkMsgpck_MediumMap_Unmarshal(b *testing.B) {
 	data, _ := vmihailenco.Marshal(mediumMap)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		UnmarshalMap(data)
+		UnmarshalMapStringAny(data, false)
 	}
 }
 
@@ -145,7 +145,7 @@ func BenchmarkMsgpck_MediumMap_UnmarshalZeroCopy(b *testing.B) {
 	data, _ := vmihailenco.Marshal(mediumMap)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		UnmarshalMapZeroCopy(data)
+		UnmarshalMapStringAny(data, true)
 	}
 }
 

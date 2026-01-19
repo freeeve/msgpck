@@ -176,7 +176,7 @@ func TestSecurityLimits(t *testing.T) {
 	t.Run("string too long", func(t *testing.T) {
 		cfg := DefaultConfig().WithMaxStringLen(10)
 		// str8 with length 100
-		data := []byte{FormatStr8, 100}
+		data := []byte{formatStr8, 100}
 		data = append(data, make([]byte, 100)...)
 
 		d := NewDecoderWithConfig(data, cfg)
@@ -189,7 +189,7 @@ func TestSecurityLimits(t *testing.T) {
 	t.Run("array too long", func(t *testing.T) {
 		cfg := DefaultConfig().WithMaxArrayLen(5)
 		// array16 with length 1000
-		data := []byte{FormatArray16, 0x03, 0xe8} // 1000
+		data := []byte{formatArray16, 0x03, 0xe8} // 1000
 
 		d := NewDecoderWithConfig(data, cfg)
 		_, err := d.Decode()
@@ -201,7 +201,7 @@ func TestSecurityLimits(t *testing.T) {
 	t.Run("map too long", func(t *testing.T) {
 		cfg := DefaultConfig().WithMaxMapLen(5)
 		// map16 with length 1000
-		data := []byte{FormatMap16, 0x03, 0xe8}
+		data := []byte{formatMap16, 0x03, 0xe8}
 
 		d := NewDecoderWithConfig(data, cfg)
 		_, err := d.Decode()
@@ -236,7 +236,7 @@ func TestUnexpectedEOF(t *testing.T) {
 		data []byte
 	}{
 		{"empty", []byte{}},
-		{"truncated uint16", []byte{FormatUint16, 0x01}},
+		{"truncated uint16", []byte{formatUint16, 0x01}},
 		{"truncated string", []byte{0xa5, 'h', 'e'}}, // fixstr 5, only 2 chars
 		{"truncated array", []byte{0x92, 0x01}},      // fixarray 2, only 1 element
 	}

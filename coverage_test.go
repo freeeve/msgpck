@@ -2,6 +2,7 @@ package msgpck
 
 import (
 	"testing"
+	"time"
 )
 
 // Tests to increase coverage of various modules
@@ -88,21 +89,6 @@ func TestStructWithSliceAndMap(t *testing.T) {
 		}
 	})
 
-	t.Run("DecodeStructFuncWithDecoder", func(t *testing.T) {
-		original := Data{Tags: []string{"x"}}
-		enc := GetStructEncoder[Data]()
-		b, _ := enc.EncodeCopy(&original)
-
-		dec := GetStructDecoder[Data]()
-		var got []string
-		err := DecodeStructFuncWithDecoder(b, dec, func(v *Data) error {
-			got = v.Tags
-			return nil
-		})
-		if err != nil || len(got) != 1 {
-			t.Error("DecodeStructFuncWithDecoder failed")
-		}
-	})
 }
 
 // TestTypedDecodeExtra tests extra typed decode functions
@@ -115,7 +101,7 @@ func TestTypedDecodeExtra(t *testing.T) {
 		b := make([]byte, len(e.Bytes()))
 		copy(b, e.Bytes())
 
-		m, err := UnmarshalMap(b)
+		m, err := UnmarshalMapStringAny(b, false)
 		if err != nil || m["key"] != "value" {
 			t.Error("UnmarshalMap failed")
 		}
@@ -129,7 +115,7 @@ func TestTypedDecodeExtra(t *testing.T) {
 		b := make([]byte, len(e.Bytes()))
 		copy(b, e.Bytes())
 
-		m, err := UnmarshalMapZeroCopy(b)
+		m, err := UnmarshalMapStringAny(b, true)
 		if err != nil || m["key"] != "value" {
 			t.Error("UnmarshalMapZeroCopy failed")
 		}
@@ -376,15 +362,15 @@ func TestDecodeAnyAllFormats(t *testing.T) {
 		name string
 		data []byte
 	}{
-		{"str8", append([]byte{FormatStr8, 5}, []byte("hello")...)},
-		{"str16", append([]byte{FormatStr16, 0, 5}, []byte("hello")...)},
-		{"bin8", append([]byte{FormatBin8, 3}, []byte{1, 2, 3}...)},
-		{"bin16", append([]byte{FormatBin16, 0, 3}, []byte{1, 2, 3}...)},
-		{"bin32", append([]byte{FormatBin32, 0, 0, 0, 3}, []byte{1, 2, 3}...)},
-		{"array16", []byte{FormatArray16, 0, 1, 0x01}},
-		{"array32", []byte{FormatArray32, 0, 0, 0, 1, 0x01}},
-		{"map16", []byte{FormatMap16, 0, 1, 0xa1, 'k', 0x01}},
-		{"map32", []byte{FormatMap32, 0, 0, 0, 1, 0xa1, 'k', 0x01}},
+		{"str8", append([]byte{formatStr8, 5}, []byte("hello")...)},
+		{"str16", append([]byte{formatStr16, 0, 5}, []byte("hello")...)},
+		{"bin8", append([]byte{formatBin8, 3}, []byte{1, 2, 3}...)},
+		{"bin16", append([]byte{formatBin16, 0, 3}, []byte{1, 2, 3}...)},
+		{"bin32", append([]byte{formatBin32, 0, 0, 0, 3}, []byte{1, 2, 3}...)},
+		{"array16", []byte{formatArray16, 0, 1, 0x01}},
+		{"array32", []byte{formatArray32, 0, 0, 0, 1, 0x01}},
+		{"map16", []byte{formatMap16, 0, 1, 0xa1, 'k', 0x01}},
+		{"map32", []byte{formatMap32, 0, 0, 0, 1, 0xa1, 'k', 0x01}},
 	}
 
 	for _, tc := range tests {
@@ -611,14 +597,14 @@ func TestDecodeValuePaths(t *testing.T) {
 		}{
 			{"positive fixint", []byte{0x81, 0xa1, 'v', 0x42}},
 			{"negative fixint", []byte{0x81, 0xa1, 'v', 0xff}},
-			{"uint8", []byte{0x81, 0xa1, 'v', FormatUint8, 200}},
-			{"uint16", []byte{0x81, 0xa1, 'v', FormatUint16, 0x01, 0x00}},
-			{"uint32", []byte{0x81, 0xa1, 'v', FormatUint32, 0, 0, 0x01, 0x00}},
-			{"uint64", []byte{0x81, 0xa1, 'v', FormatUint64, 0, 0, 0, 0, 0, 0, 0x01, 0x00}},
-			{"int8", []byte{0x81, 0xa1, 'v', FormatInt8, 0x80}},
-			{"int16", []byte{0x81, 0xa1, 'v', FormatInt16, 0xff, 0x00}},
-			{"int32", []byte{0x81, 0xa1, 'v', FormatInt32, 0xff, 0xff, 0xff, 0x00}},
-			{"int64", []byte{0x81, 0xa1, 'v', FormatInt64, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x00}},
+			{"uint8", []byte{0x81, 0xa1, 'v', formatUint8, 200}},
+			{"uint16", []byte{0x81, 0xa1, 'v', formatUint16, 0x01, 0x00}},
+			{"uint32", []byte{0x81, 0xa1, 'v', formatUint32, 0, 0, 0x01, 0x00}},
+			{"uint64", []byte{0x81, 0xa1, 'v', formatUint64, 0, 0, 0, 0, 0, 0, 0x01, 0x00}},
+			{"int8", []byte{0x81, 0xa1, 'v', formatInt8, 0x80}},
+			{"int16", []byte{0x81, 0xa1, 'v', formatInt16, 0xff, 0x00}},
+			{"int32", []byte{0x81, 0xa1, 'v', formatInt32, 0xff, 0xff, 0xff, 0x00}},
+			{"int64", []byte{0x81, 0xa1, 'v', formatInt64, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x00}},
 		}
 		for _, f := range formats {
 			var d Data
@@ -638,8 +624,8 @@ func TestDecodeValuePaths(t *testing.T) {
 			data []byte
 		}{
 			{"positive fixint", []byte{0x81, 0xa1, 'v', 0x42}},
-			{"uint8", []byte{0x81, 0xa1, 'v', FormatUint8, 200}},
-			{"int8 positive", []byte{0x81, 0xa1, 'v', FormatInt8, 50}},
+			{"uint8", []byte{0x81, 0xa1, 'v', formatUint8, 200}},
+			{"int8 positive", []byte{0x81, 0xa1, 'v', formatInt8, 50}},
 		}
 		for _, f := range formats {
 			var d Data
@@ -751,14 +737,14 @@ func TestDecodeValuePaths(t *testing.T) {
 func TestTypedDecodeAllFormats(t *testing.T) {
 	t.Run("all int formats in any", func(t *testing.T) {
 		formats := [][]byte{
-			{FormatUint8, 200},
-			{FormatUint16, 0x01, 0x00},
-			{FormatUint32, 0, 0, 0x01, 0x00},
-			{FormatUint64, 0, 0, 0, 0, 0, 0, 0x01, 0x00},
-			{FormatInt8, 0x80},
-			{FormatInt16, 0xff, 0x00},
-			{FormatInt32, 0xff, 0xff, 0xff, 0x00},
-			{FormatInt64, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x00},
+			{formatUint8, 200},
+			{formatUint16, 0x01, 0x00},
+			{formatUint32, 0, 0, 0x01, 0x00},
+			{formatUint64, 0, 0, 0, 0, 0, 0, 0x01, 0x00},
+			{formatInt8, 0x80},
+			{formatInt16, 0xff, 0x00},
+			{formatInt32, 0xff, 0xff, 0xff, 0x00},
+			{formatInt64, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x00},
 		}
 		for i, f := range formats {
 			d := NewDecoder(f)
@@ -770,8 +756,8 @@ func TestTypedDecodeAllFormats(t *testing.T) {
 	})
 
 	t.Run("float formats", func(t *testing.T) {
-		f32 := []byte{FormatFloat32, 0x40, 0x48, 0xf5, 0xc3}
-		f64 := []byte{FormatFloat64, 0x40, 0x09, 0x21, 0xfb, 0x54, 0x44, 0x2d, 0x18}
+		f32 := []byte{formatFloat32, 0x40, 0x48, 0xf5, 0xc3}
+		f64 := []byte{formatFloat64, 0x40, 0x09, 0x21, 0xfb, 0x54, 0x44, 0x2d, 0x18}
 
 		d := NewDecoder(f32)
 		_, err := d.DecodeAny()
@@ -815,7 +801,7 @@ func TestStructStringMapDecode(t *testing.T) {
 // TestNilDecode tests nil decoding
 func TestNilDecode(t *testing.T) {
 	t.Run("nil map", func(t *testing.T) {
-		data := []byte{FormatNil}
+		data := []byte{formatNil}
 		m, err := UnmarshalMapStringAny(data, true)
 		if err != nil || m != nil {
 			t.Error("nil map decode should return nil")
@@ -826,7 +812,7 @@ func TestNilDecode(t *testing.T) {
 		type Data struct {
 			V int `msgpack:"v"`
 		}
-		data := []byte{FormatNil}
+		data := []byte{formatNil}
 		var d Data
 		err := UnmarshalStruct(data, &d)
 		if err != nil {
@@ -925,7 +911,7 @@ func TestUnmarshalMapStringStringFormats(t *testing.T) {
 		data := []byte{
 			0x81,                   // fixmap 1
 			0xa3, 'k', 'e', 'y',    // fixstr "key"
-			FormatStr32, 0, 0, 0, 3, 'v', 'a', 'l', // str32 "val"
+			formatStr32, 0, 0, 0, 3, 'v', 'a', 'l', // str32 "val"
 		}
 
 		m, err := UnmarshalMapStringString(data, true)
@@ -938,7 +924,7 @@ func TestUnmarshalMapStringStringFormats(t *testing.T) {
 		data := []byte{
 			0x81,                // fixmap 1
 			0xa3, 'k', 'e', 'y', // fixstr "key"
-			FormatNil, // nil value
+			formatNil, // nil value
 		}
 
 		m, err := UnmarshalMapStringString(data, false)
@@ -954,7 +940,7 @@ func TestUnmarshalMapStringStringFormats(t *testing.T) {
 	t.Run("map16 format", func(t *testing.T) {
 		// map16 with 1 entry
 		data := []byte{
-			FormatMap16, 0, 1,   // map16 length 1
+			formatMap16, 0, 1,   // map16 length 1
 			0xa1, 'k',           // fixstr "k"
 			0xa1, 'v',           // fixstr "v"
 		}
@@ -968,7 +954,7 @@ func TestUnmarshalMapStringStringFormats(t *testing.T) {
 	t.Run("map32 format", func(t *testing.T) {
 		// map32 with 1 entry
 		data := []byte{
-			FormatMap32, 0, 0, 0, 1, // map32 length 1
+			formatMap32, 0, 0, 0, 1, // map32 length 1
 			0xa1, 'k',                // fixstr "k"
 			0xa1, 'v',                // fixstr "v"
 		}
@@ -980,7 +966,7 @@ func TestUnmarshalMapStringStringFormats(t *testing.T) {
 	})
 
 	t.Run("nil map", func(t *testing.T) {
-		m, err := UnmarshalMapStringString([]byte{FormatNil}, false)
+		m, err := UnmarshalMapStringString([]byte{formatNil}, false)
 		if err != nil || m != nil {
 			t.Error("nil should return nil map")
 		}
@@ -1106,10 +1092,10 @@ func TestStructDecoderUintFormats(t *testing.T) {
 		data []byte
 	}{
 		{"positive fixint", []byte{0x82, 0xa1, 'u', 0x42, 0xa3, 'u', '6', '4', 0x42}},
-		{"uint8", []byte{0x82, 0xa1, 'u', FormatUint8, 200, 0xa3, 'u', '6', '4', FormatUint8, 200}},
-		{"uint16", []byte{0x82, 0xa1, 'u', FormatUint16, 0x01, 0x00, 0xa3, 'u', '6', '4', FormatUint16, 0x01, 0x00}},
-		{"uint32", []byte{0x82, 0xa1, 'u', FormatUint32, 0, 0, 0x01, 0x00, 0xa3, 'u', '6', '4', FormatUint32, 0, 0, 0x01, 0x00}},
-		{"uint64", []byte{0x82, 0xa1, 'u', FormatUint64, 0, 0, 0, 0, 0, 0, 0x01, 0x00, 0xa3, 'u', '6', '4', FormatUint64, 0, 0, 0, 0, 0, 0, 0x01, 0x00}},
+		{"uint8", []byte{0x82, 0xa1, 'u', formatUint8, 200, 0xa3, 'u', '6', '4', formatUint8, 200}},
+		{"uint16", []byte{0x82, 0xa1, 'u', formatUint16, 0x01, 0x00, 0xa3, 'u', '6', '4', formatUint16, 0x01, 0x00}},
+		{"uint32", []byte{0x82, 0xa1, 'u', formatUint32, 0, 0, 0x01, 0x00, 0xa3, 'u', '6', '4', formatUint32, 0, 0, 0x01, 0x00}},
+		{"uint64", []byte{0x82, 0xa1, 'u', formatUint64, 0, 0, 0, 0, 0, 0, 0x01, 0x00, 0xa3, 'u', '6', '4', formatUint64, 0, 0, 0, 0, 0, 0, 0x01, 0x00}},
 	}
 
 	dec := GetStructDecoder[Data]()
@@ -1175,13 +1161,13 @@ func TestStructDecoderFloatFormats(t *testing.T) {
 
 	t.Run("from various int formats", func(t *testing.T) {
 		formats := [][]byte{
-			{FormatUint8, 100},
-			{FormatUint16, 0, 100},
-			{FormatUint32, 0, 0, 0, 100},
-			{FormatInt8, 50},
-			{FormatInt16, 0, 50},
-			{FormatInt32, 0, 0, 0, 50},
-			{FormatInt64, 0, 0, 0, 0, 0, 0, 0, 50},
+			{formatUint8, 100},
+			{formatUint16, 0, 100},
+			{formatUint32, 0, 0, 0, 100},
+			{formatInt8, 50},
+			{formatInt16, 0, 50},
+			{formatInt32, 0, 0, 0, 50},
+			{formatInt64, 0, 0, 0, 0, 0, 0, 0, 50},
 		}
 
 		for i, f := range formats {
@@ -1199,7 +1185,7 @@ func TestStructDecoderFloatFormats(t *testing.T) {
 // TestUint64Overflow tests uint64 values that overflow int64
 func TestUint64Overflow(t *testing.T) {
 	// Value > max int64
-	data := []byte{FormatUint64, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}
+	data := []byte{formatUint64, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}
 	d := NewDecoder(data)
 	v, err := d.DecodeAny()
 	if err != nil {
@@ -1239,7 +1225,7 @@ func TestStructDecoderStringFormats(t *testing.T) {
 		data := []byte{
 			0x81,                             // fixmap 1
 			0xa1, 's',                        // fixstr "s"
-			FormatStr32, 0, 0, 0, 5, 'h', 'e', 'l', 'l', 'o', // str32 "hello"
+			formatStr32, 0, 0, 0, 5, 'h', 'e', 'l', 'l', 'o', // str32 "hello"
 		}
 
 		dec := GetStructDecoder[Data]()
@@ -1279,7 +1265,7 @@ func TestStructDecoderBytesFormats(t *testing.T) {
 		data := []byte{
 			0x81,                             // fixmap 1
 			0xa1, 'b',                        // fixstr "b"
-			FormatBin32, 0, 0, 0, 3, 1, 2, 3, // bin32 [1,2,3]
+			formatBin32, 0, 0, 0, 3, 1, 2, 3, // bin32 [1,2,3]
 		}
 
 		dec := GetStructDecoder[Data]()
@@ -1312,7 +1298,7 @@ func TestStructDecoderBytesFormats(t *testing.T) {
 		data := []byte{
 			0x81,                             // fixmap 1
 			0xa1, 'b',                        // fixstr "b"
-			FormatStr32, 0, 0, 0, 3, 'a', 'b', 'c',
+			formatStr32, 0, 0, 0, 3, 'a', 'b', 'c',
 		}
 
 		dec := GetStructDecoder[Data]()
@@ -1353,7 +1339,7 @@ func TestStructDecoderArrayFormats(t *testing.T) {
 		data := []byte{
 			0x81,                   // fixmap 1
 			0xa1, 'a',              // fixstr "a"
-			FormatArray32, 0, 0, 0, 2, // array32 length 2
+			formatArray32, 0, 0, 0, 2, // array32 length 2
 			0xa1, 'x',              // fixstr "x"
 			0xa1, 'y',              // fixstr "y"
 		}
@@ -1397,7 +1383,7 @@ func TestStructDecoderMapFormats(t *testing.T) {
 		data := []byte{
 			0x81,                   // fixmap 1
 			0xa1, 'm',              // fixstr "m"
-			FormatMap32, 0, 0, 0, 1, // map32 length 1
+			formatMap32, 0, 0, 0, 1, // map32 length 1
 			0xa1, 'k',              // fixstr "k"
 			0xa1, 'v',              // fixstr "v"
 		}
@@ -1465,7 +1451,7 @@ func TestDecodeStructFunc(t *testing.T) {
 func TestTypedDecodeMapFormats(t *testing.T) {
 	t.Run("map32 in typed decode", func(t *testing.T) {
 		data := []byte{
-			FormatMap32, 0, 0, 0, 1, // map32 length 1
+			formatMap32, 0, 0, 0, 1, // map32 length 1
 			0xa1, 'k',               // fixstr "k"
 			0x01,                    // positive fixint 1
 		}
@@ -1480,7 +1466,7 @@ func TestTypedDecodeMapFormats(t *testing.T) {
 		data := []byte{
 			0x81,                         // fixmap 1
 			0xa1, 'k',                    // fixstr "k"
-			FormatMap32, 0, 0, 0, 1,      // map32 length 1
+			formatMap32, 0, 0, 0, 1,      // map32 length 1
 			0xa1, 'n',                    // fixstr "n"
 			0x01,                         // positive fixint 1
 		}
@@ -1502,14 +1488,14 @@ func TestExtFormats(t *testing.T) {
 		name string
 		data []byte
 	}{
-		{"fixext1", []byte{FormatFixExt1, 1, 0xff}},
-		{"fixext2", []byte{FormatFixExt2, 1, 0xff, 0xff}},
-		{"fixext4", []byte{FormatFixExt4, 1, 0xff, 0xff, 0xff, 0xff}},
-		{"fixext8", []byte{FormatFixExt8, 1, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}},
-		{"fixext16", append([]byte{FormatFixExt16, 1}, make([]byte, 16)...)},
-		{"ext8", []byte{FormatExt8, 3, 1, 0xff, 0xff, 0xff}},
-		{"ext16", append([]byte{FormatExt16, 0, 3, 1}, make([]byte, 3)...)},
-		{"ext32", append([]byte{FormatExt32, 0, 0, 0, 3, 1}, make([]byte, 3)...)},
+		{"fixext1", []byte{formatFixExt1, 1, 0xff}},
+		{"fixext2", []byte{formatFixExt2, 1, 0xff, 0xff}},
+		{"fixext4", []byte{formatFixExt4, 1, 0xff, 0xff, 0xff, 0xff}},
+		{"fixext8", []byte{formatFixExt8, 1, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}},
+		{"fixext16", append([]byte{formatFixExt16, 1}, make([]byte, 16)...)},
+		{"ext8", []byte{formatExt8, 3, 1, 0xff, 0xff, 0xff}},
+		{"ext16", append([]byte{formatExt16, 0, 3, 1}, make([]byte, 3)...)},
+		{"ext32", append([]byte{formatExt32, 0, 0, 0, 3, 1}, make([]byte, 3)...)},
 	}
 
 	for _, tc := range tests {
@@ -1528,7 +1514,7 @@ func TestExtFormats(t *testing.T) {
 
 // TestDecodeAnyStr32 tests str32 format in DecodeAny
 func TestDecodeAnyStr32(t *testing.T) {
-	data := []byte{FormatStr32, 0, 0, 0, 5, 'h', 'e', 'l', 'l', 'o'}
+	data := []byte{formatStr32, 0, 0, 0, 5, 'h', 'e', 'l', 'l', 'o'}
 	d := NewDecoder(data)
 	v, err := d.DecodeAny()
 	if err != nil || v != "hello" {
@@ -1545,7 +1531,7 @@ func TestStructDecoderNilField(t *testing.T) {
 	data := []byte{
 		0x81,                 // fixmap 1
 		0xa1, 's',            // fixstr "s"
-		FormatNil,            // nil
+		formatNil,            // nil
 	}
 
 	dec := GetStructDecoder[Data]()
@@ -1613,14 +1599,14 @@ func TestReflectionDecodeValueUint(t *testing.T) {
 		name string
 		data []byte
 	}{
-		{"uint8", []byte{0x81, 0xa1, 'u', FormatUint8, 200}},
-		{"uint16", []byte{0x81, 0xa1, 'u', FormatUint16, 0x01, 0x00}},
-		{"uint32", []byte{0x81, 0xa1, 'u', FormatUint32, 0, 0, 0x01, 0x00}},
-		{"uint64", []byte{0x81, 0xa1, 'u', FormatUint64, 0, 0, 0, 0, 0, 0, 0x01, 0x00}},
-		{"int8", []byte{0x81, 0xa1, 'u', FormatInt8, 50}},
-		{"int16", []byte{0x81, 0xa1, 'u', FormatInt16, 0, 50}},
-		{"int32", []byte{0x81, 0xa1, 'u', FormatInt32, 0, 0, 0, 50}},
-		{"int64", []byte{0x81, 0xa1, 'u', FormatInt64, 0, 0, 0, 0, 0, 0, 0, 50}},
+		{"uint8", []byte{0x81, 0xa1, 'u', formatUint8, 200}},
+		{"uint16", []byte{0x81, 0xa1, 'u', formatUint16, 0x01, 0x00}},
+		{"uint32", []byte{0x81, 0xa1, 'u', formatUint32, 0, 0, 0x01, 0x00}},
+		{"uint64", []byte{0x81, 0xa1, 'u', formatUint64, 0, 0, 0, 0, 0, 0, 0x01, 0x00}},
+		{"int8", []byte{0x81, 0xa1, 'u', formatInt8, 50}},
+		{"int16", []byte{0x81, 0xa1, 'u', formatInt16, 0, 50}},
+		{"int32", []byte{0x81, 0xa1, 'u', formatInt32, 0, 0, 0, 50}},
+		{"int64", []byte{0x81, 0xa1, 'u', formatInt64, 0, 0, 0, 0, 0, 0, 0, 50}},
 	}
 
 	for _, f := range formats {
@@ -1644,16 +1630,16 @@ func TestReflectionDecodeValueFloat(t *testing.T) {
 		name string
 		data []byte
 	}{
-		{"float32", []byte{0x81, 0xa1, 'f', FormatFloat32, 0x40, 0x48, 0xf5, 0xc3}},
-		{"float64", []byte{0x81, 0xa1, 'f', FormatFloat64, 0x40, 0x09, 0x21, 0xfb, 0x54, 0x44, 0x2d, 0x18}},
-		{"uint8", []byte{0x81, 0xa1, 'f', FormatUint8, 100}},
-		{"uint16", []byte{0x81, 0xa1, 'f', FormatUint16, 0, 100}},
-		{"uint32", []byte{0x81, 0xa1, 'f', FormatUint32, 0, 0, 0, 100}},
-		{"uint64", []byte{0x81, 0xa1, 'f', FormatUint64, 0, 0, 0, 0, 0, 0, 0, 100}},
-		{"int8", []byte{0x81, 0xa1, 'f', FormatInt8, 50}},
-		{"int16", []byte{0x81, 0xa1, 'f', FormatInt16, 0, 50}},
-		{"int32", []byte{0x81, 0xa1, 'f', FormatInt32, 0, 0, 0, 50}},
-		{"int64", []byte{0x81, 0xa1, 'f', FormatInt64, 0, 0, 0, 0, 0, 0, 0, 50}},
+		{"float32", []byte{0x81, 0xa1, 'f', formatFloat32, 0x40, 0x48, 0xf5, 0xc3}},
+		{"float64", []byte{0x81, 0xa1, 'f', formatFloat64, 0x40, 0x09, 0x21, 0xfb, 0x54, 0x44, 0x2d, 0x18}},
+		{"uint8", []byte{0x81, 0xa1, 'f', formatUint8, 100}},
+		{"uint16", []byte{0x81, 0xa1, 'f', formatUint16, 0, 100}},
+		{"uint32", []byte{0x81, 0xa1, 'f', formatUint32, 0, 0, 0, 100}},
+		{"uint64", []byte{0x81, 0xa1, 'f', formatUint64, 0, 0, 0, 0, 0, 0, 0, 100}},
+		{"int8", []byte{0x81, 0xa1, 'f', formatInt8, 50}},
+		{"int16", []byte{0x81, 0xa1, 'f', formatInt16, 0, 50}},
+		{"int32", []byte{0x81, 0xa1, 'f', formatInt32, 0, 0, 0, 50}},
+		{"int64", []byte{0x81, 0xa1, 'f', formatInt64, 0, 0, 0, 0, 0, 0, 0, 50}},
 	}
 
 	for _, f := range formats {
@@ -1708,7 +1694,7 @@ func TestReflectionDecodeValueBytes(t *testing.T) {
 	t.Run("str32", func(t *testing.T) {
 		data := []byte{
 			0x81, 0xa1, 'b',
-			FormatStr32, 0, 0, 0, 5, 'h', 'e', 'l', 'l', 'o',
+			formatStr32, 0, 0, 0, 5, 'h', 'e', 'l', 'l', 'o',
 		}
 		var d Data
 		err := UnmarshalStruct(data, &d)
@@ -1750,7 +1736,7 @@ func TestReflectionDecodeValueBytes(t *testing.T) {
 	t.Run("bin32", func(t *testing.T) {
 		data := []byte{
 			0x81, 0xa1, 'b',
-			FormatBin32, 0, 0, 0, 3, 1, 2, 3,
+			formatBin32, 0, 0, 0, 3, 1, 2, 3,
 		}
 		var d Data
 		err := UnmarshalStruct(data, &d)
@@ -1870,7 +1856,7 @@ func TestReflectionDecodeWithStringKeyFormats(t *testing.T) {
 	t.Run("str8 key", func(t *testing.T) {
 		// Test str8 format key parsing
 		data := []byte{0x81}                                      // fixmap 1
-		data = append(data, FormatStr8, 1, 'v')                   // str8 "v"
+		data = append(data, formatStr8, 1, 'v')                   // str8 "v"
 		data = append(data, 0x42)                                 // value 66
 
 		var d Data
@@ -1882,7 +1868,7 @@ func TestReflectionDecodeWithStringKeyFormats(t *testing.T) {
 
 	t.Run("str16 key", func(t *testing.T) {
 		data := []byte{0x81}                                      // fixmap 1
-		data = append(data, FormatStr16, 0, 1, 'v')               // str16 "v"
+		data = append(data, formatStr16, 0, 1, 'v')               // str16 "v"
 		data = append(data, 0x42)                                 // value 66
 
 		var d Data
@@ -1894,7 +1880,7 @@ func TestReflectionDecodeWithStringKeyFormats(t *testing.T) {
 
 	t.Run("str32 key", func(t *testing.T) {
 		data := []byte{0x81}                                      // fixmap 1
-		data = append(data, FormatStr32, 0, 0, 0, 1, 'v')         // str32 "v"
+		data = append(data, formatStr32, 0, 0, 0, 1, 'v')         // str32 "v"
 		data = append(data, 0x42)                                 // value 66
 
 		var d Data
@@ -1912,7 +1898,7 @@ func TestReflectionDecodeStructMap16(t *testing.T) {
 	}
 
 	// map16 with 1 entry
-	data := []byte{FormatMap16, 0, 1, 0xa1, 'v', 0x42}
+	data := []byte{formatMap16, 0, 1, 0xa1, 'v', 0x42}
 	var d Data
 	err := UnmarshalStruct(data, &d)
 	if err != nil || d.V != 66 {
@@ -1927,7 +1913,7 @@ func TestReflectionDecodeStructMap32(t *testing.T) {
 	}
 
 	// map32 with 1 entry
-	data := []byte{FormatMap32, 0, 0, 0, 1, 0xa1, 'v', 0x42}
+	data := []byte{formatMap32, 0, 0, 0, 1, 0xa1, 'v', 0x42}
 	var d Data
 	err := UnmarshalStruct(data, &d)
 	if err != nil || d.V != 66 {
@@ -2009,7 +1995,7 @@ func TestDecodeMapAnyStr32Key(t *testing.T) {
 	// Map with str32 key
 	data := []byte{
 		0x81,                                    // fixmap 1
-		FormatStr32, 0, 0, 0, 3, 'k', 'e', 'y',  // str32 "key"
+		formatStr32, 0, 0, 0, 3, 'k', 'e', 'y',  // str32 "key"
 		0x42,                                    // value 66
 	}
 
@@ -2027,7 +2013,7 @@ func TestDecodeMapAnyStr32Key(t *testing.T) {
 // TestDecodeMapKeyStr8Str16 tests decodeMapAny with str8 and str16 keys
 func TestDecodeMapKeyStr8Str16(t *testing.T) {
 	t.Run("str8 key", func(t *testing.T) {
-		data := []byte{0x81, FormatStr8, 3, 'k', 'e', 'y', 0x42}
+		data := []byte{0x81, formatStr8, 3, 'k', 'e', 'y', 0x42}
 		d := NewDecoder(data)
 		v, err := d.DecodeAny()
 		if err != nil {
@@ -2040,7 +2026,7 @@ func TestDecodeMapKeyStr8Str16(t *testing.T) {
 	})
 
 	t.Run("str16 key", func(t *testing.T) {
-		data := []byte{0x81, FormatStr16, 0, 3, 'k', 'e', 'y', 0x42}
+		data := []byte{0x81, formatStr16, 0, 3, 'k', 'e', 'y', 0x42}
 		d := NewDecoder(data)
 		v, err := d.DecodeAny()
 		if err != nil {
@@ -2175,7 +2161,7 @@ func TestDecodeValueStringFormats(t *testing.T) {
 	}
 
 	t.Run("str8", func(t *testing.T) {
-		data := []byte{0x81, 0xa1, 's', FormatStr8, 5, 'h', 'e', 'l', 'l', 'o'}
+		data := []byte{0x81, 0xa1, 's', formatStr8, 5, 'h', 'e', 'l', 'l', 'o'}
 		var d Data
 		err := UnmarshalStruct(data, &d)
 		if err != nil || d.S != "hello" {
@@ -2184,7 +2170,7 @@ func TestDecodeValueStringFormats(t *testing.T) {
 	})
 
 	t.Run("str16", func(t *testing.T) {
-		data := []byte{0x81, 0xa1, 's', FormatStr16, 0, 5, 'h', 'e', 'l', 'l', 'o'}
+		data := []byte{0x81, 0xa1, 's', formatStr16, 0, 5, 'h', 'e', 'l', 'l', 'o'}
 		var d Data
 		err := UnmarshalStruct(data, &d)
 		if err != nil || d.S != "hello" {
@@ -2193,7 +2179,7 @@ func TestDecodeValueStringFormats(t *testing.T) {
 	})
 
 	t.Run("str32", func(t *testing.T) {
-		data := []byte{0x81, 0xa1, 's', FormatStr32, 0, 0, 0, 5, 'h', 'e', 'l', 'l', 'o'}
+		data := []byte{0x81, 0xa1, 's', formatStr32, 0, 0, 0, 5, 'h', 'e', 'l', 'l', 'o'}
 		var d Data
 		err := UnmarshalStruct(data, &d)
 		if err != nil || d.S != "hello" {
@@ -2209,7 +2195,7 @@ func TestDecodeIntoArrayFormats(t *testing.T) {
 	}
 
 	t.Run("array16", func(t *testing.T) {
-		data := []byte{0x81, 0xa1, 'a', FormatArray16, 0, 3, 0x01, 0x02, 0x03}
+		data := []byte{0x81, 0xa1, 'a', formatArray16, 0, 3, 0x01, 0x02, 0x03}
 		var d Data
 		err := UnmarshalStruct(data, &d)
 		if err != nil || d.A[0] != 1 || d.A[1] != 2 || d.A[2] != 3 {
@@ -2218,7 +2204,7 @@ func TestDecodeIntoArrayFormats(t *testing.T) {
 	})
 
 	t.Run("array32", func(t *testing.T) {
-		data := []byte{0x81, 0xa1, 'a', FormatArray32, 0, 0, 0, 3, 0x01, 0x02, 0x03}
+		data := []byte{0x81, 0xa1, 'a', formatArray32, 0, 0, 0, 3, 0x01, 0x02, 0x03}
 		var d Data
 		err := UnmarshalStruct(data, &d)
 		if err != nil || d.A[0] != 1 || d.A[1] != 2 || d.A[2] != 3 {
@@ -2234,7 +2220,7 @@ func TestDecodeIntoSliceFormats(t *testing.T) {
 	}
 
 	t.Run("array16", func(t *testing.T) {
-		data := []byte{0x81, 0xa1, 's', FormatArray16, 0, 3, 0x01, 0x02, 0x03}
+		data := []byte{0x81, 0xa1, 's', formatArray16, 0, 3, 0x01, 0x02, 0x03}
 		var d Data
 		err := UnmarshalStruct(data, &d)
 		if err != nil || len(d.S) != 3 {
@@ -2243,7 +2229,7 @@ func TestDecodeIntoSliceFormats(t *testing.T) {
 	})
 
 	t.Run("array32", func(t *testing.T) {
-		data := []byte{0x81, 0xa1, 's', FormatArray32, 0, 0, 0, 3, 0x01, 0x02, 0x03}
+		data := []byte{0x81, 0xa1, 's', formatArray32, 0, 0, 0, 3, 0x01, 0x02, 0x03}
 		var d Data
 		err := UnmarshalStruct(data, &d)
 		if err != nil || len(d.S) != 3 {
@@ -2259,7 +2245,7 @@ func TestDecodeIntoMapFormats(t *testing.T) {
 	}
 
 	t.Run("map16", func(t *testing.T) {
-		data := []byte{0x81, 0xa1, 'm', FormatMap16, 0, 1, 0xa1, 'k', 0x42}
+		data := []byte{0x81, 0xa1, 'm', formatMap16, 0, 1, 0xa1, 'k', 0x42}
 		var d Data
 		err := UnmarshalStruct(data, &d)
 		if err != nil || d.M["k"] != 66 {
@@ -2268,7 +2254,7 @@ func TestDecodeIntoMapFormats(t *testing.T) {
 	})
 
 	t.Run("map32", func(t *testing.T) {
-		data := []byte{0x81, 0xa1, 'm', FormatMap32, 0, 0, 0, 1, 0xa1, 'k', 0x42}
+		data := []byte{0x81, 0xa1, 'm', formatMap32, 0, 0, 0, 1, 0xa1, 'k', 0x42}
 		var d Data
 		err := UnmarshalStruct(data, &d)
 		if err != nil || d.M["k"] != 66 {
@@ -2289,7 +2275,7 @@ func TestDecodeIntoStructFormats(t *testing.T) {
 	t.Run("map16 nested", func(t *testing.T) {
 		data := []byte{
 			0x81, 0xa1, 'i',  // outer map with "i" key
-			FormatMap16, 0, 1,  // map16 for inner
+			formatMap16, 0, 1,  // map16 for inner
 			0xa1, 'v', 0x42,    // "v": 66
 		}
 		var o Outer
@@ -2302,7 +2288,7 @@ func TestDecodeIntoStructFormats(t *testing.T) {
 	t.Run("map32 nested", func(t *testing.T) {
 		data := []byte{
 			0x81, 0xa1, 'i',  // outer map with "i" key
-			FormatMap32, 0, 0, 0, 1,  // map32 for inner
+			formatMap32, 0, 0, 0, 1,  // map32 for inner
 			0xa1, 'v', 0x42,          // "v": 66
 		}
 		var o Outer
@@ -2326,7 +2312,7 @@ func TestDecodeStringKeyFormats(t *testing.T) {
 		data := []byte{
 			0x81, 0xa1, 'i',      // outer: "i"
 			0x81,                  // inner fixmap 1
-			FormatStr8, 1, 'v',   // str8 "v"
+			formatStr8, 1, 'v',   // str8 "v"
 			0x42,                  // 66
 		}
 		var o Outer
@@ -2340,7 +2326,7 @@ func TestDecodeStringKeyFormats(t *testing.T) {
 		data := []byte{
 			0x81, 0xa1, 'i',       // outer: "i"
 			0x81,                   // inner fixmap 1
-			FormatStr16, 0, 1, 'v', // str16 "v"
+			formatStr16, 0, 1, 'v', // str16 "v"
 			0x42,                   // 66
 		}
 		var o Outer
@@ -2354,7 +2340,7 @@ func TestDecodeStringKeyFormats(t *testing.T) {
 		data := []byte{
 			0x81, 0xa1, 'i',           // outer: "i"
 			0x81,                       // inner fixmap 1
-			FormatStr32, 0, 0, 0, 1, 'v', // str32 "v"
+			formatStr32, 0, 0, 0, 1, 'v', // str32 "v"
 			0x42,                       // 66
 		}
 		var o Outer
@@ -2368,7 +2354,7 @@ func TestDecodeStringKeyFormats(t *testing.T) {
 // TestDecodeMapValueFormats tests decodeMap in decode_value.go with various formats
 func TestDecodeMapValueFormats(t *testing.T) {
 	t.Run("str8 key in Value decode", func(t *testing.T) {
-		data := []byte{0x81, FormatStr8, 3, 'k', 'e', 'y', 0x42}
+		data := []byte{0x81, formatStr8, 3, 'k', 'e', 'y', 0x42}
 		d := NewDecoder(data)
 		v, err := d.Decode()
 		if err != nil {
@@ -2380,7 +2366,7 @@ func TestDecodeMapValueFormats(t *testing.T) {
 	})
 
 	t.Run("str16 key in Value decode", func(t *testing.T) {
-		data := []byte{0x81, FormatStr16, 0, 3, 'k', 'e', 'y', 0x42}
+		data := []byte{0x81, formatStr16, 0, 3, 'k', 'e', 'y', 0x42}
 		d := NewDecoder(data)
 		v, err := d.Decode()
 		if err != nil {
@@ -2392,7 +2378,7 @@ func TestDecodeMapValueFormats(t *testing.T) {
 	})
 
 	t.Run("map16 Value decode", func(t *testing.T) {
-		data := []byte{FormatMap16, 0, 1, 0xa1, 'k', 0x42}
+		data := []byte{formatMap16, 0, 1, 0xa1, 'k', 0x42}
 		d := NewDecoder(data)
 		v, err := d.Decode()
 		if err != nil {
@@ -2404,7 +2390,7 @@ func TestDecodeMapValueFormats(t *testing.T) {
 	})
 
 	t.Run("map32 Value decode", func(t *testing.T) {
-		data := []byte{FormatMap32, 0, 0, 0, 1, 0xa1, 'k', 0x42}
+		data := []byte{formatMap32, 0, 0, 0, 1, 0xa1, 'k', 0x42}
 		d := NewDecoder(data)
 		v, err := d.Decode()
 		if err != nil {
@@ -2419,7 +2405,7 @@ func TestDecodeMapValueFormats(t *testing.T) {
 // TestDecodeStringBinaryFormats tests decodeString and decodeBinary
 func TestDecodeStringBinaryFormats(t *testing.T) {
 	t.Run("str16 Value decode", func(t *testing.T) {
-		data := []byte{FormatStr16, 0, 5, 'h', 'e', 'l', 'l', 'o'}
+		data := []byte{formatStr16, 0, 5, 'h', 'e', 'l', 'l', 'o'}
 		d := NewDecoder(data)
 		v, err := d.Decode()
 		if err != nil || v.Type != TypeString {
@@ -2428,7 +2414,7 @@ func TestDecodeStringBinaryFormats(t *testing.T) {
 	})
 
 	t.Run("str32 Value decode", func(t *testing.T) {
-		data := []byte{FormatStr32, 0, 0, 0, 5, 'h', 'e', 'l', 'l', 'o'}
+		data := []byte{formatStr32, 0, 0, 0, 5, 'h', 'e', 'l', 'l', 'o'}
 		d := NewDecoder(data)
 		v, err := d.Decode()
 		if err != nil || v.Type != TypeString {
@@ -2437,7 +2423,7 @@ func TestDecodeStringBinaryFormats(t *testing.T) {
 	})
 
 	t.Run("bin16 Value decode", func(t *testing.T) {
-		data := []byte{FormatBin16, 0, 3, 1, 2, 3}
+		data := []byte{formatBin16, 0, 3, 1, 2, 3}
 		d := NewDecoder(data)
 		v, err := d.Decode()
 		if err != nil || v.Type != TypeBinary {
@@ -2446,7 +2432,7 @@ func TestDecodeStringBinaryFormats(t *testing.T) {
 	})
 
 	t.Run("bin32 Value decode", func(t *testing.T) {
-		data := []byte{FormatBin32, 0, 0, 0, 3, 1, 2, 3}
+		data := []byte{formatBin32, 0, 0, 0, 3, 1, 2, 3}
 		d := NewDecoder(data)
 		v, err := d.Decode()
 		if err != nil || v.Type != TypeBinary {
@@ -2495,7 +2481,7 @@ func TestDecodeIntTypeMismatch(t *testing.T) {
 		I int `msgpack:"i"`
 	}
 
-	data := []byte{0x81, 0xa1, 'i', FormatTrue} // bool instead of int
+	data := []byte{0x81, 0xa1, 'i', formatTrue} // bool instead of int
 	var d Data
 	err := UnmarshalStruct(data, &d)
 	if err != ErrTypeMismatch {
@@ -2509,7 +2495,7 @@ func TestDecodeUintTypeMismatch(t *testing.T) {
 		U uint `msgpack:"u"`
 	}
 
-	data := []byte{0x81, 0xa1, 'u', FormatTrue} // bool instead of uint
+	data := []byte{0x81, 0xa1, 'u', formatTrue} // bool instead of uint
 	var d Data
 	err := UnmarshalStruct(data, &d)
 	if err != ErrTypeMismatch {
@@ -2523,7 +2509,7 @@ func TestDecodeFloatTypeMismatch(t *testing.T) {
 		F float64 `msgpack:"f"`
 	}
 
-	data := []byte{0x81, 0xa1, 'f', FormatTrue} // bool instead of float
+	data := []byte{0x81, 0xa1, 'f', formatTrue} // bool instead of float
 	var d Data
 	err := UnmarshalStruct(data, &d)
 	if err != ErrTypeMismatch {
@@ -2632,7 +2618,7 @@ func TestValidationLimitsDecodeAny(t *testing.T) {
 
 	t.Run("binary too long", func(t *testing.T) {
 		cfg := DefaultConfig().WithMaxBinaryLen(2)
-		data := []byte{FormatBin8, 5, 1, 2, 3, 4, 5}
+		data := []byte{formatBin8, 5, 1, 2, 3, 4, 5}
 		d := NewDecoderWithConfig(data, cfg)
 		_, err := d.DecodeAny()
 		if err != ErrBinaryTooLong {
@@ -2728,11 +2714,11 @@ func TestDecodeUnexpectedEOF(t *testing.T) {
 		data []byte
 	}{
 		{"empty data", []byte{}},
-		{"truncated uint16", []byte{FormatUint16, 0x00}},
-		{"truncated uint32", []byte{FormatUint32, 0x00, 0x00, 0x00}},
-		{"truncated uint64", []byte{FormatUint64, 0x00, 0x00, 0x00, 0x00}},
+		{"truncated uint16", []byte{formatUint16, 0x00}},
+		{"truncated uint32", []byte{formatUint32, 0x00, 0x00, 0x00}},
+		{"truncated uint64", []byte{formatUint64, 0x00, 0x00, 0x00, 0x00}},
 		{"truncated string", []byte{0xa5, 'h', 'e'}}, // fixstr 5, only 2 bytes
-		{"truncated binary", []byte{FormatBin8, 5, 1, 2}},
+		{"truncated binary", []byte{formatBin8, 5, 1, 2}},
 		{"truncated array", []byte{0x92, 0x01}}, // fixarray 2, only 1 element
 		{"truncated map", []byte{0x81, 0xa1, 'k'}}, // fixmap 1, missing value
 	}
@@ -2754,13 +2740,13 @@ func TestDecodeValueUnexpectedEOF(t *testing.T) {
 		name string
 		data []byte
 	}{
-		{"truncated str8", []byte{FormatStr8, 5, 'h'}},
-		{"truncated str16", []byte{FormatStr16, 0, 5, 'h'}},
-		{"truncated str32", []byte{FormatStr32, 0, 0, 0, 5, 'h'}},
-		{"truncated bin8", []byte{FormatBin8, 5, 1}},
-		{"truncated bin16", []byte{FormatBin16, 0, 5, 1}},
-		{"truncated bin32", []byte{FormatBin32, 0, 0, 0, 5, 1}},
-		{"truncated ext8", []byte{FormatExt8, 5, 1}},
+		{"truncated str8", []byte{formatStr8, 5, 'h'}},
+		{"truncated str16", []byte{formatStr16, 0, 5, 'h'}},
+		{"truncated str32", []byte{formatStr32, 0, 0, 0, 5, 'h'}},
+		{"truncated bin8", []byte{formatBin8, 5, 1}},
+		{"truncated bin16", []byte{formatBin16, 0, 5, 1}},
+		{"truncated bin32", []byte{formatBin32, 0, 0, 0, 5, 1}},
+		{"truncated ext8", []byte{formatExt8, 5, 1}},
 		{"truncated map key", []byte{0x81}}, // fixmap 1, no key
 	}
 
@@ -2778,7 +2764,7 @@ func TestDecodeValueUnexpectedEOF(t *testing.T) {
 // TestTypedDecodeMapStringAnyFormats tests typed_decode.go map format paths
 func TestTypedDecodeMapStringAnyFormats(t *testing.T) {
 	t.Run("map16", func(t *testing.T) {
-		data := []byte{FormatMap16, 0, 1, 0xa1, 'k', 0xa1, 'v'}
+		data := []byte{formatMap16, 0, 1, 0xa1, 'k', 0xa1, 'v'}
 		m, err := UnmarshalMapStringAny(data, false)
 		if err != nil || m["k"] != "v" {
 			t.Error("map16 in UnmarshalMapStringAny failed")
@@ -2786,7 +2772,7 @@ func TestTypedDecodeMapStringAnyFormats(t *testing.T) {
 	})
 
 	t.Run("map32", func(t *testing.T) {
-		data := []byte{FormatMap32, 0, 0, 0, 1, 0xa1, 'k', 0xa1, 'v'}
+		data := []byte{formatMap32, 0, 0, 0, 1, 0xa1, 'k', 0xa1, 'v'}
 		m, err := UnmarshalMapStringAny(data, true)
 		if err != nil || m["k"] != "v" {
 			t.Error("map32 in UnmarshalMapStringAny failed")
@@ -2803,29 +2789,29 @@ func TestTypedDecodeAnyValueFormats(t *testing.T) {
 		{"fixmap", []byte{0x81, 0xa1, 'k', 0x01}},
 		{"fixarray", []byte{0x91, 0x01}},
 		{"fixstr", []byte{0xa5, 'h', 'e', 'l', 'l', 'o'}},
-		{"nil", []byte{FormatNil}},
-		{"false", []byte{FormatFalse}},
-		{"true", []byte{FormatTrue}},
-		{"uint8", []byte{FormatUint8, 200}},
-		{"uint16", []byte{FormatUint16, 0x01, 0x00}},
-		{"uint32", []byte{FormatUint32, 0, 0, 0x01, 0x00}},
-		{"uint64", []byte{FormatUint64, 0, 0, 0, 0, 0, 0, 0x01, 0x00}},
-		{"int8", []byte{FormatInt8, 0x80}},
-		{"int16", []byte{FormatInt16, 0xff, 0x00}},
-		{"int32", []byte{FormatInt32, 0xff, 0xff, 0xff, 0x00}},
-		{"int64", []byte{FormatInt64, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x00}},
-		{"float32", []byte{FormatFloat32, 0x40, 0x48, 0xf5, 0xc3}},
-		{"float64", []byte{FormatFloat64, 0x40, 0x09, 0x21, 0xfb, 0x54, 0x44, 0x2d, 0x18}},
-		{"str8", []byte{FormatStr8, 5, 'h', 'e', 'l', 'l', 'o'}},
-		{"str16", []byte{FormatStr16, 0, 5, 'h', 'e', 'l', 'l', 'o'}},
-		{"str32", []byte{FormatStr32, 0, 0, 0, 5, 'h', 'e', 'l', 'l', 'o'}},
-		{"bin8", []byte{FormatBin8, 3, 1, 2, 3}},
-		{"bin16", []byte{FormatBin16, 0, 3, 1, 2, 3}},
-		{"bin32", []byte{FormatBin32, 0, 0, 0, 3, 1, 2, 3}},
-		{"array16", []byte{FormatArray16, 0, 1, 0x01}},
-		{"array32", []byte{FormatArray32, 0, 0, 0, 1, 0x01}},
-		{"map16", []byte{FormatMap16, 0, 1, 0xa1, 'k', 0x01}},
-		{"map32", []byte{FormatMap32, 0, 0, 0, 1, 0xa1, 'k', 0x01}},
+		{"nil", []byte{formatNil}},
+		{"false", []byte{formatFalse}},
+		{"true", []byte{formatTrue}},
+		{"uint8", []byte{formatUint8, 200}},
+		{"uint16", []byte{formatUint16, 0x01, 0x00}},
+		{"uint32", []byte{formatUint32, 0, 0, 0x01, 0x00}},
+		{"uint64", []byte{formatUint64, 0, 0, 0, 0, 0, 0, 0x01, 0x00}},
+		{"int8", []byte{formatInt8, 0x80}},
+		{"int16", []byte{formatInt16, 0xff, 0x00}},
+		{"int32", []byte{formatInt32, 0xff, 0xff, 0xff, 0x00}},
+		{"int64", []byte{formatInt64, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x00}},
+		{"float32", []byte{formatFloat32, 0x40, 0x48, 0xf5, 0xc3}},
+		{"float64", []byte{formatFloat64, 0x40, 0x09, 0x21, 0xfb, 0x54, 0x44, 0x2d, 0x18}},
+		{"str8", []byte{formatStr8, 5, 'h', 'e', 'l', 'l', 'o'}},
+		{"str16", []byte{formatStr16, 0, 5, 'h', 'e', 'l', 'l', 'o'}},
+		{"str32", []byte{formatStr32, 0, 0, 0, 5, 'h', 'e', 'l', 'l', 'o'}},
+		{"bin8", []byte{formatBin8, 3, 1, 2, 3}},
+		{"bin16", []byte{formatBin16, 0, 3, 1, 2, 3}},
+		{"bin32", []byte{formatBin32, 0, 0, 0, 3, 1, 2, 3}},
+		{"array16", []byte{formatArray16, 0, 1, 0x01}},
+		{"array32", []byte{formatArray32, 0, 0, 0, 1, 0x01}},
+		{"map16", []byte{formatMap16, 0, 1, 0xa1, 'k', 0x01}},
+		{"map32", []byte{formatMap32, 0, 0, 0, 1, 0xa1, 'k', 0x01}},
 	}
 
 	for _, tc := range tests {
@@ -3001,14 +2987,14 @@ func TestStructDecoderIntFormats(t *testing.T) {
 	}{
 		{"positive fixint", []byte{0x81, 0xa1, 'i', 0x42}, 66},
 		{"negative fixint", []byte{0x81, 0xa1, 'i', 0xe0}, -32},
-		{"uint8", []byte{0x81, 0xa1, 'i', FormatUint8, 200}, 200},
-		{"uint16", []byte{0x81, 0xa1, 'i', FormatUint16, 0x01, 0x00}, 256},
-		{"uint32", []byte{0x81, 0xa1, 'i', FormatUint32, 0, 0, 0x01, 0x00}, 256},
-		{"uint64", []byte{0x81, 0xa1, 'i', FormatUint64, 0, 0, 0, 0, 0, 0, 0x01, 0x00}, 256},
-		{"int8", []byte{0x81, 0xa1, 'i', FormatInt8, 0x80}, -128},
-		{"int16", []byte{0x81, 0xa1, 'i', FormatInt16, 0xff, 0x00}, -256},
-		{"int32", []byte{0x81, 0xa1, 'i', FormatInt32, 0xff, 0xff, 0xff, 0x00}, -256},
-		{"int64", []byte{0x81, 0xa1, 'i', FormatInt64, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x00}, -256},
+		{"uint8", []byte{0x81, 0xa1, 'i', formatUint8, 200}, 200},
+		{"uint16", []byte{0x81, 0xa1, 'i', formatUint16, 0x01, 0x00}, 256},
+		{"uint32", []byte{0x81, 0xa1, 'i', formatUint32, 0, 0, 0x01, 0x00}, 256},
+		{"uint64", []byte{0x81, 0xa1, 'i', formatUint64, 0, 0, 0, 0, 0, 0, 0x01, 0x00}, 256},
+		{"int8", []byte{0x81, 0xa1, 'i', formatInt8, 0x80}, -128},
+		{"int16", []byte{0x81, 0xa1, 'i', formatInt16, 0xff, 0x00}, -256},
+		{"int32", []byte{0x81, 0xa1, 'i', formatInt32, 0xff, 0xff, 0xff, 0x00}, -256},
+		{"int64", []byte{0x81, 0xa1, 'i', formatInt64, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x00}, -256},
 	}
 
 	dec := GetStructDecoder[Data]()
@@ -3033,7 +3019,7 @@ func TestStructDecoderInt32Field(t *testing.T) {
 	}
 
 	dec := GetStructDecoder[Data]()
-	data := []byte{0x81, 0xa1, 'i', FormatInt32, 0, 0, 0, 42}
+	data := []byte{0x81, 0xa1, 'i', formatInt32, 0, 0, 0, 42}
 	var d Data
 	err := dec.Decode(data, &d)
 	if err != nil || d.I != 42 {
@@ -3052,10 +3038,10 @@ func TestStructDecoderUintField(t *testing.T) {
 		data []byte
 	}{
 		{"positive fixint", []byte{0x81, 0xa1, 'u', 0x42}},
-		{"uint8", []byte{0x81, 0xa1, 'u', FormatUint8, 200}},
-		{"uint16", []byte{0x81, 0xa1, 'u', FormatUint16, 0x01, 0x00}},
-		{"uint32", []byte{0x81, 0xa1, 'u', FormatUint32, 0, 0, 0x01, 0x00}},
-		{"uint64", []byte{0x81, 0xa1, 'u', FormatUint64, 0, 0, 0, 0, 0, 0, 0x01, 0x00}},
+		{"uint8", []byte{0x81, 0xa1, 'u', formatUint8, 200}},
+		{"uint16", []byte{0x81, 0xa1, 'u', formatUint16, 0x01, 0x00}},
+		{"uint32", []byte{0x81, 0xa1, 'u', formatUint32, 0, 0, 0x01, 0x00}},
+		{"uint64", []byte{0x81, 0xa1, 'u', formatUint64, 0, 0, 0, 0, 0, 0, 0x01, 0x00}},
 	}
 
 	dec := GetStructDecoder[Data]()
@@ -3077,7 +3063,7 @@ func TestStructDecoderUintNonU64(t *testing.T) {
 	}
 
 	dec := GetStructDecoder[Data]()
-	data := []byte{0x81, 0xa1, 'u', FormatUint32, 0, 0, 0, 42}
+	data := []byte{0x81, 0xa1, 'u', formatUint32, 0, 0, 0, 42}
 	var d Data
 	err := dec.Decode(data, &d)
 	if err != nil || d.U != 42 {
@@ -3092,7 +3078,7 @@ func TestStructDecoderFloat32Field(t *testing.T) {
 	}
 
 	dec := GetStructDecoder[Data]()
-	data := []byte{0x81, 0xa1, 'f', FormatFloat32, 0x40, 0x48, 0xf5, 0xc3} // 3.14
+	data := []byte{0x81, 0xa1, 'f', formatFloat32, 0x40, 0x48, 0xf5, 0xc3} // 3.14
 	var d Data
 	err := dec.Decode(data, &d)
 	if err != nil {
@@ -3124,7 +3110,7 @@ func TestStructDecoderTypeMismatch(t *testing.T) {
 
 	t.Run("int mismatch", func(t *testing.T) {
 		dec := GetStructDecoder[DataInt]()
-		data := []byte{0x81, 0xa1, 'i', FormatTrue}
+		data := []byte{0x81, 0xa1, 'i', formatTrue}
 		var d DataInt
 		err := dec.Decode(data, &d)
 		if err != ErrTypeMismatch {
@@ -3134,7 +3120,7 @@ func TestStructDecoderTypeMismatch(t *testing.T) {
 
 	t.Run("uint mismatch", func(t *testing.T) {
 		dec := GetStructDecoder[DataUint]()
-		data := []byte{0x81, 0xa1, 'u', FormatTrue}
+		data := []byte{0x81, 0xa1, 'u', formatTrue}
 		var d DataUint
 		err := dec.Decode(data, &d)
 		if err != ErrTypeMismatch {
@@ -3151,7 +3137,7 @@ func TestStructDecoderStringSlice(t *testing.T) {
 
 	t.Run("array16", func(t *testing.T) {
 		dec := GetStructDecoder[Data]()
-		data := []byte{0x81, 0xa1, 's', FormatArray16, 0, 2, 0xa1, 'a', 0xa1, 'b'}
+		data := []byte{0x81, 0xa1, 's', formatArray16, 0, 2, 0xa1, 'a', 0xa1, 'b'}
 		var d Data
 		err := dec.Decode(data, &d)
 		if err != nil || len(d.S) != 2 {
@@ -3161,7 +3147,7 @@ func TestStructDecoderStringSlice(t *testing.T) {
 
 	t.Run("array32", func(t *testing.T) {
 		dec := GetStructDecoder[Data]()
-		data := []byte{0x81, 0xa1, 's', FormatArray32, 0, 0, 0, 2, 0xa1, 'a', 0xa1, 'b'}
+		data := []byte{0x81, 0xa1, 's', formatArray32, 0, 0, 0, 2, 0xa1, 'a', 0xa1, 'b'}
 		var d Data
 		err := dec.Decode(data, &d)
 		if err != nil || len(d.S) != 2 {
@@ -3188,7 +3174,7 @@ func TestStructDecoderStringMap(t *testing.T) {
 
 	t.Run("map16", func(t *testing.T) {
 		dec := GetStructDecoder[Data]()
-		data := []byte{0x81, 0xa1, 'm', FormatMap16, 0, 1, 0xa1, 'k', 0xa1, 'v'}
+		data := []byte{0x81, 0xa1, 'm', formatMap16, 0, 1, 0xa1, 'k', 0xa1, 'v'}
 		var d Data
 		err := dec.Decode(data, &d)
 		if err != nil || d.M["k"] != "v" {
@@ -3198,7 +3184,7 @@ func TestStructDecoderStringMap(t *testing.T) {
 
 	t.Run("map32", func(t *testing.T) {
 		dec := GetStructDecoder[Data]()
-		data := []byte{0x81, 0xa1, 'm', FormatMap32, 0, 0, 0, 1, 0xa1, 'k', 0xa1, 'v'}
+		data := []byte{0x81, 0xa1, 'm', formatMap32, 0, 0, 0, 1, 0xa1, 'k', 0xa1, 'v'}
 		var d Data
 		err := dec.Decode(data, &d)
 		if err != nil || d.M["k"] != "v" {
@@ -3227,9 +3213,9 @@ func TestStructDecoderStringFormatsAll(t *testing.T) {
 		name string
 		data []byte
 	}{
-		{"str8", []byte{0x81, 0xa1, 's', FormatStr8, 5, 'h', 'e', 'l', 'l', 'o'}},
-		{"str16", []byte{0x81, 0xa1, 's', FormatStr16, 0, 5, 'h', 'e', 'l', 'l', 'o'}},
-		{"str32", []byte{0x81, 0xa1, 's', FormatStr32, 0, 0, 0, 5, 'h', 'e', 'l', 'l', 'o'}},
+		{"str8", []byte{0x81, 0xa1, 's', formatStr8, 5, 'h', 'e', 'l', 'l', 'o'}},
+		{"str16", []byte{0x81, 0xa1, 's', formatStr16, 0, 5, 'h', 'e', 'l', 'l', 'o'}},
+		{"str32", []byte{0x81, 0xa1, 's', formatStr32, 0, 0, 0, 5, 'h', 'e', 'l', 'l', 'o'}},
 	}
 
 	dec := GetStructDecoder[Data]()
@@ -3256,12 +3242,12 @@ func TestStructDecoderBytesFormatsAll(t *testing.T) {
 		want int
 	}{
 		{"fixstr", []byte{0x81, 0xa1, 'b', 0xa3, 'a', 'b', 'c'}, 3},
-		{"str8", []byte{0x81, 0xa1, 'b', FormatStr8, 3, 'a', 'b', 'c'}, 3},
-		{"str16", []byte{0x81, 0xa1, 'b', FormatStr16, 0, 3, 'a', 'b', 'c'}, 3},
-		{"str32", []byte{0x81, 0xa1, 'b', FormatStr32, 0, 0, 0, 3, 'a', 'b', 'c'}, 3},
-		{"bin8", []byte{0x81, 0xa1, 'b', FormatBin8, 3, 1, 2, 3}, 3},
-		{"bin16", []byte{0x81, 0xa1, 'b', FormatBin16, 0, 3, 1, 2, 3}, 3},
-		{"bin32", []byte{0x81, 0xa1, 'b', FormatBin32, 0, 0, 0, 3, 1, 2, 3}, 3},
+		{"str8", []byte{0x81, 0xa1, 'b', formatStr8, 3, 'a', 'b', 'c'}, 3},
+		{"str16", []byte{0x81, 0xa1, 'b', formatStr16, 0, 3, 'a', 'b', 'c'}, 3},
+		{"str32", []byte{0x81, 0xa1, 'b', formatStr32, 0, 0, 0, 3, 'a', 'b', 'c'}, 3},
+		{"bin8", []byte{0x81, 0xa1, 'b', formatBin8, 3, 1, 2, 3}, 3},
+		{"bin16", []byte{0x81, 0xa1, 'b', formatBin16, 0, 3, 1, 2, 3}, 3},
+		{"bin32", []byte{0x81, 0xa1, 'b', formatBin32, 0, 0, 0, 3, 1, 2, 3}, 3},
 	}
 
 	dec := GetStructDecoder[Data]()
@@ -3284,7 +3270,7 @@ func TestStructDecoderMap16Map32(t *testing.T) {
 
 	t.Run("map16", func(t *testing.T) {
 		dec := GetStructDecoder[Data]()
-		data := []byte{FormatMap16, 0, 1, 0xa1, 'v', 0x42}
+		data := []byte{formatMap16, 0, 1, 0xa1, 'v', 0x42}
 		var d Data
 		err := dec.Decode(data, &d)
 		if err != nil || d.V != 66 {
@@ -3294,7 +3280,7 @@ func TestStructDecoderMap16Map32(t *testing.T) {
 
 	t.Run("map32", func(t *testing.T) {
 		dec := GetStructDecoder[Data]()
-		data := []byte{FormatMap32, 0, 0, 0, 1, 0xa1, 'v', 0x42}
+		data := []byte{formatMap32, 0, 0, 0, 1, 0xa1, 'v', 0x42}
 		var d Data
 		err := dec.Decode(data, &d)
 		if err != nil || d.V != 66 {
@@ -3310,7 +3296,7 @@ func TestStructDecoderNilMap(t *testing.T) {
 	}
 
 	dec := GetStructDecoder[Data]()
-	data := []byte{FormatNil}
+	data := []byte{formatNil}
 	var d Data
 	err := dec.Decode(data, &d)
 	if err != nil {
@@ -3362,7 +3348,7 @@ func TestDecoderReadStringBytes(t *testing.T) {
 	})
 
 	t.Run("str8", func(t *testing.T) {
-		data := []byte{FormatStr8, 5, 'h', 'e', 'l', 'l', 'o'}
+		data := []byte{formatStr8, 5, 'h', 'e', 'l', 'l', 'o'}
 		d := NewDecoder(data)
 		b, err := d.readStringBytes()
 		if err != nil || string(b) != "hello" {
@@ -3371,7 +3357,7 @@ func TestDecoderReadStringBytes(t *testing.T) {
 	})
 
 	t.Run("str16", func(t *testing.T) {
-		data := []byte{FormatStr16, 0, 5, 'h', 'e', 'l', 'l', 'o'}
+		data := []byte{formatStr16, 0, 5, 'h', 'e', 'l', 'l', 'o'}
 		d := NewDecoder(data)
 		b, err := d.readStringBytes()
 		if err != nil || string(b) != "hello" {
@@ -3380,7 +3366,7 @@ func TestDecoderReadStringBytes(t *testing.T) {
 	})
 
 	t.Run("str32", func(t *testing.T) {
-		data := []byte{FormatStr32, 0, 0, 0, 5, 'h', 'e', 'l', 'l', 'o'}
+		data := []byte{formatStr32, 0, 0, 0, 5, 'h', 'e', 'l', 'l', 'o'}
 		d := NewDecoder(data)
 		b, err := d.readStringBytes()
 		if err != nil || string(b) != "hello" {
@@ -3479,26 +3465,11 @@ func TestTypedDecodeCallbackFuncs(t *testing.T) {
 		}
 	})
 
-	t.Run("DecodeStructFuncWithDecoder", func(t *testing.T) {
-		type Data struct {
-			V int `msgpack:"v"`
-		}
-		dec := GetStructDecoder[Data]().ZeroCopy()
-		data := []byte{0x81, 0xa1, 'v', 0x42}
-		var result int
-		err := DecodeStructFuncWithDecoder(data, dec, func(d *Data) error {
-			result = d.V
-			return nil
-		})
-		if err != nil || result != 66 {
-			t.Error("DecodeStructFuncWithDecoder failed")
-		}
-	})
 }
 
 // TestTypedDecodeNilMap tests nil map handling
 func TestTypedDecodeNilMap(t *testing.T) {
-	data := []byte{FormatNil}
+	data := []byte{formatNil}
 	m, err := UnmarshalMapStringAny(data, false)
 	if err != nil || m != nil {
 		t.Error("nil map should return nil")
@@ -3508,7 +3479,7 @@ func TestTypedDecodeNilMap(t *testing.T) {
 // TestTypedDecodeMapStringString tests UnmarshalMapStringString paths
 func TestTypedDecodeMapStringString(t *testing.T) {
 	t.Run("map16", func(t *testing.T) {
-		data := []byte{FormatMap16, 0, 1, 0xa1, 'k', 0xa1, 'v'}
+		data := []byte{formatMap16, 0, 1, 0xa1, 'k', 0xa1, 'v'}
 		m, err := UnmarshalMapStringString(data, false)
 		if err != nil || m["k"] != "v" {
 			t.Error("map16 failed")
@@ -3516,7 +3487,7 @@ func TestTypedDecodeMapStringString(t *testing.T) {
 	})
 
 	t.Run("map32", func(t *testing.T) {
-		data := []byte{FormatMap32, 0, 0, 0, 1, 0xa1, 'k', 0xa1, 'v'}
+		data := []byte{formatMap32, 0, 0, 0, 1, 0xa1, 'k', 0xa1, 'v'}
 		m, err := UnmarshalMapStringString(data, true)
 		if err != nil || m["k"] != "v" {
 			t.Error("map32 failed")
@@ -3524,7 +3495,7 @@ func TestTypedDecodeMapStringString(t *testing.T) {
 	})
 
 	t.Run("nil", func(t *testing.T) {
-		data := []byte{FormatNil}
+		data := []byte{formatNil}
 		m, err := UnmarshalMapStringString(data, false)
 		if err != nil || m != nil {
 			t.Error("nil map failed")
@@ -3540,7 +3511,7 @@ func TestTypedDecodeMapStringString(t *testing.T) {
 	})
 
 	t.Run("nil value", func(t *testing.T) {
-		data := []byte{0x81, 0xa1, 'k', FormatNil}
+		data := []byte{0x81, 0xa1, 'k', formatNil}
 		m, err := UnmarshalMapStringString(data, false)
 		if err != nil || len(m) != 0 {
 			t.Error("nil value should skip entry")
@@ -3548,7 +3519,7 @@ func TestTypedDecodeMapStringString(t *testing.T) {
 	})
 
 	t.Run("str8 value", func(t *testing.T) {
-		data := []byte{0x81, 0xa1, 'k', FormatStr8, 1, 'v'}
+		data := []byte{0x81, 0xa1, 'k', formatStr8, 1, 'v'}
 		m, err := UnmarshalMapStringString(data, false)
 		if err != nil || m["k"] != "v" {
 			t.Error("str8 value failed")
@@ -3556,7 +3527,7 @@ func TestTypedDecodeMapStringString(t *testing.T) {
 	})
 
 	t.Run("str16 value", func(t *testing.T) {
-		data := []byte{0x81, 0xa1, 'k', FormatStr16, 0, 1, 'v'}
+		data := []byte{0x81, 0xa1, 'k', formatStr16, 0, 1, 'v'}
 		m, err := UnmarshalMapStringString(data, false)
 		if err != nil || m["k"] != "v" {
 			t.Error("str16 value failed")
@@ -3564,7 +3535,7 @@ func TestTypedDecodeMapStringString(t *testing.T) {
 	})
 
 	t.Run("str32 value", func(t *testing.T) {
-		data := []byte{0x81, 0xa1, 'k', FormatStr32, 0, 0, 0, 1, 'v'}
+		data := []byte{0x81, 0xa1, 'k', formatStr32, 0, 0, 0, 1, 'v'}
 		m, err := UnmarshalMapStringString(data, false)
 		if err != nil || m["k"] != "v" {
 			t.Error("str32 value failed")
@@ -3662,7 +3633,7 @@ func TestStructEncoderEncodeAppend(t *testing.T) {
 // TestDecodeExtFormats tests ext format decoding
 func TestDecodeExtFormats(t *testing.T) {
 	t.Run("ext16", func(t *testing.T) {
-		data := append([]byte{FormatExt16, 0, 5, 1}, make([]byte, 5)...)
+		data := append([]byte{formatExt16, 0, 5, 1}, make([]byte, 5)...)
 		d := NewDecoder(data)
 		v, err := d.Decode()
 		if err != nil || v.Type != TypeExt {
@@ -3671,7 +3642,7 @@ func TestDecodeExtFormats(t *testing.T) {
 	})
 
 	t.Run("ext32", func(t *testing.T) {
-		data := append([]byte{FormatExt32, 0, 0, 0, 5, 1}, make([]byte, 5)...)
+		data := append([]byte{formatExt32, 0, 0, 0, 5, 1}, make([]byte, 5)...)
 		d := NewDecoder(data)
 		v, err := d.Decode()
 		if err != nil || v.Type != TypeExt {
@@ -3683,7 +3654,7 @@ func TestDecodeExtFormats(t *testing.T) {
 // TestDecodeAnyBin16Bin32 tests DecodeAny with bin16/bin32
 func TestDecodeAnyBin16Bin32(t *testing.T) {
 	t.Run("bin16", func(t *testing.T) {
-		data := []byte{FormatBin16, 0, 3, 1, 2, 3}
+		data := []byte{formatBin16, 0, 3, 1, 2, 3}
 		d := NewDecoder(data)
 		v, err := d.DecodeAny()
 		if err != nil {
@@ -3695,7 +3666,7 @@ func TestDecodeAnyBin16Bin32(t *testing.T) {
 	})
 
 	t.Run("bin32", func(t *testing.T) {
-		data := []byte{FormatBin32, 0, 0, 0, 3, 1, 2, 3}
+		data := []byte{formatBin32, 0, 0, 0, 3, 1, 2, 3}
 		d := NewDecoder(data)
 		v, err := d.DecodeAny()
 		if err != nil {
@@ -3710,7 +3681,7 @@ func TestDecodeAnyBin16Bin32(t *testing.T) {
 // TestDecodeAnyMap16Map32 tests DecodeAny with map16/map32
 func TestDecodeAnyMap16Map32(t *testing.T) {
 	t.Run("map16", func(t *testing.T) {
-		data := []byte{FormatMap16, 0, 1, 0xa1, 'k', 0x42}
+		data := []byte{formatMap16, 0, 1, 0xa1, 'k', 0x42}
 		d := NewDecoder(data)
 		v, err := d.DecodeAny()
 		if err != nil {
@@ -3723,7 +3694,7 @@ func TestDecodeAnyMap16Map32(t *testing.T) {
 	})
 
 	t.Run("map32", func(t *testing.T) {
-		data := []byte{FormatMap32, 0, 0, 0, 1, 0xa1, 'k', 0x42}
+		data := []byte{formatMap32, 0, 0, 0, 1, 0xa1, 'k', 0x42}
 		d := NewDecoder(data)
 		v, err := d.DecodeAny()
 		if err != nil {
@@ -3739,7 +3710,7 @@ func TestDecodeAnyMap16Map32(t *testing.T) {
 // TestDecodeAnyArray16Array32 tests DecodeAny with array16/array32
 func TestDecodeAnyArray16Array32(t *testing.T) {
 	t.Run("array16", func(t *testing.T) {
-		data := []byte{FormatArray16, 0, 2, 0x01, 0x02}
+		data := []byte{formatArray16, 0, 2, 0x01, 0x02}
 		d := NewDecoder(data)
 		v, err := d.DecodeAny()
 		if err != nil {
@@ -3752,7 +3723,7 @@ func TestDecodeAnyArray16Array32(t *testing.T) {
 	})
 
 	t.Run("array32", func(t *testing.T) {
-		data := []byte{FormatArray32, 0, 0, 0, 2, 0x01, 0x02}
+		data := []byte{formatArray32, 0, 0, 0, 2, 0x01, 0x02}
 		d := NewDecoder(data)
 		v, err := d.DecodeAny()
 		if err != nil {
@@ -3768,7 +3739,7 @@ func TestDecodeAnyArray16Array32(t *testing.T) {
 // TestDecodeAnyUint64Large tests uint64 values > max int64
 func TestDecodeAnyUint64Large(t *testing.T) {
 	// uint64 value larger than max int64
-	data := []byte{FormatUint64, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01}
+	data := []byte{formatUint64, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01}
 	d := NewDecoder(data)
 	v, err := d.DecodeAny()
 	if err != nil {
@@ -3964,7 +3935,7 @@ func TestReflectionDecodeUnexportedField(t *testing.T) {
 // TestDecodeValueMapKeyFormats tests decodeMap key format paths in decode_value.go
 func TestDecodeValueMapKeyFormats(t *testing.T) {
 	t.Run("str32 key", func(t *testing.T) {
-		data := []byte{0x81, FormatStr32, 0, 0, 0, 1, 'k', 0x42}
+		data := []byte{0x81, formatStr32, 0, 0, 0, 1, 'k', 0x42}
 		d := NewDecoder(data)
 		v, err := d.Decode()
 		if err != nil {
@@ -3979,7 +3950,7 @@ func TestDecodeValueMapKeyFormats(t *testing.T) {
 // TestDecodeValueExtFormats tests ext format paths
 func TestDecodeValueExtFormats(t *testing.T) {
 	t.Run("fixext8", func(t *testing.T) {
-		data := append([]byte{FormatFixExt8, 1}, make([]byte, 8)...)
+		data := append([]byte{formatFixExt8, 1}, make([]byte, 8)...)
 		d := NewDecoder(data)
 		v, err := d.Decode()
 		if err != nil || v.Type != TypeExt {
@@ -3988,7 +3959,7 @@ func TestDecodeValueExtFormats(t *testing.T) {
 	})
 
 	t.Run("fixext16", func(t *testing.T) {
-		data := append([]byte{FormatFixExt16, 1}, make([]byte, 16)...)
+		data := append([]byte{formatFixExt16, 1}, make([]byte, 16)...)
 		d := NewDecoder(data)
 		v, err := d.Decode()
 		if err != nil || v.Type != TypeExt {
@@ -4111,7 +4082,7 @@ func TestMarshalError(t *testing.T) {
 // TestDecodeBinaryAnyFormats tests decodeBinaryAny paths
 func TestDecodeBinaryAnyFormats(t *testing.T) {
 	t.Run("bin8", func(t *testing.T) {
-		data := []byte{FormatBin8, 3, 1, 2, 3}
+		data := []byte{formatBin8, 3, 1, 2, 3}
 		d := NewDecoder(data)
 		v, err := d.DecodeAny()
 		if err != nil {
@@ -4126,7 +4097,7 @@ func TestDecodeBinaryAnyFormats(t *testing.T) {
 // TestDecodeStringAnyFormats tests decodeStringAny paths
 func TestDecodeStringAnyFormats(t *testing.T) {
 	t.Run("str8", func(t *testing.T) {
-		data := []byte{FormatStr8, 5, 'h', 'e', 'l', 'l', 'o'}
+		data := []byte{formatStr8, 5, 'h', 'e', 'l', 'l', 'o'}
 		d := NewDecoder(data)
 		v, err := d.DecodeAny()
 		if err != nil || v != "hello" {
@@ -4138,7 +4109,7 @@ func TestDecodeStringAnyFormats(t *testing.T) {
 // TestDecodeMapAnyFormatsKeyFormats tests decodeMapAny key paths
 func TestDecodeMapAnyFormatsKeyFormats(t *testing.T) {
 	t.Run("str8 key", func(t *testing.T) {
-		data := []byte{0x81, FormatStr8, 1, 'k', 0x42}
+		data := []byte{0x81, formatStr8, 1, 'k', 0x42}
 		d := NewDecoder(data)
 		v, err := d.DecodeAny()
 		if err != nil {
@@ -4151,7 +4122,7 @@ func TestDecodeMapAnyFormatsKeyFormats(t *testing.T) {
 	})
 
 	t.Run("str16 key", func(t *testing.T) {
-		data := []byte{0x81, FormatStr16, 0, 1, 'k', 0x42}
+		data := []byte{0x81, formatStr16, 0, 1, 'k', 0x42}
 		d := NewDecoder(data)
 		v, err := d.DecodeAny()
 		if err != nil {
@@ -4164,7 +4135,7 @@ func TestDecodeMapAnyFormatsKeyFormats(t *testing.T) {
 	})
 
 	t.Run("str32 key", func(t *testing.T) {
-		data := []byte{0x81, FormatStr32, 0, 0, 0, 1, 'k', 0x42}
+		data := []byte{0x81, formatStr32, 0, 0, 0, 1, 'k', 0x42}
 		d := NewDecoder(data)
 		v, err := d.DecodeAny()
 		if err != nil {
@@ -4184,7 +4155,7 @@ func TestReflectionDecodeIntoMapKeyFormats(t *testing.T) {
 	}
 
 	t.Run("str8 key", func(t *testing.T) {
-		data := []byte{0x81, 0xa1, 'm', 0x81, FormatStr8, 1, 'k', 0x42}
+		data := []byte{0x81, 0xa1, 'm', 0x81, formatStr8, 1, 'k', 0x42}
 		var d Data
 		err := UnmarshalStruct(data, &d)
 		if err != nil || d.M["k"] != 66 {
@@ -4193,7 +4164,7 @@ func TestReflectionDecodeIntoMapKeyFormats(t *testing.T) {
 	})
 
 	t.Run("str16 key", func(t *testing.T) {
-		data := []byte{0x81, 0xa1, 'm', 0x81, FormatStr16, 0, 1, 'k', 0x42}
+		data := []byte{0x81, 0xa1, 'm', 0x81, formatStr16, 0, 1, 'k', 0x42}
 		var d Data
 		err := UnmarshalStruct(data, &d)
 		if err != nil || d.M["k"] != 66 {
@@ -4202,7 +4173,7 @@ func TestReflectionDecodeIntoMapKeyFormats(t *testing.T) {
 	})
 
 	t.Run("str32 key", func(t *testing.T) {
-		data := []byte{0x81, 0xa1, 'm', 0x81, FormatStr32, 0, 0, 0, 1, 'k', 0x42}
+		data := []byte{0x81, 0xa1, 'm', 0x81, formatStr32, 0, 0, 0, 1, 'k', 0x42}
 		var d Data
 		err := UnmarshalStruct(data, &d)
 		if err != nil || d.M["k"] != 66 {
@@ -4271,7 +4242,7 @@ func TestReflectionDecodeValueBytesEOF(t *testing.T) {
 	}
 
 	// str8 with declared length but missing data
-	data := []byte{0x81, 0xa1, 'b', FormatStr8, 100}
+	data := []byte{0x81, 0xa1, 'b', formatStr8, 100}
 	var d Data
 	err := UnmarshalStruct(data, &d)
 	if err != ErrUnexpectedEOF {
@@ -4356,14 +4327,14 @@ func TestEncoderStringFormats(t *testing.T) {
 	// str8 (32-255 bytes)
 	e.Reset()
 	e.EncodeString(string(make([]byte, 50)))
-	if e.Bytes()[0] != FormatStr8 {
+	if e.Bytes()[0] != formatStr8 {
 		t.Error("medium string should use str8")
 	}
 
 	// str16 (256-65535 bytes)
 	e.Reset()
 	e.EncodeString(string(make([]byte, 300)))
-	if e.Bytes()[0] != FormatStr16 {
+	if e.Bytes()[0] != formatStr16 {
 		t.Error("large string should use str16")
 	}
 }
@@ -4375,14 +4346,14 @@ func TestEncoderBinaryFormats(t *testing.T) {
 	// bin8 (0-255 bytes)
 	e.Reset()
 	e.EncodeBinary(make([]byte, 50))
-	if e.Bytes()[0] != FormatBin8 {
+	if e.Bytes()[0] != formatBin8 {
 		t.Error("small binary should use bin8")
 	}
 
 	// bin16 (256-65535 bytes)
 	e.Reset()
 	e.EncodeBinary(make([]byte, 300))
-	if e.Bytes()[0] != FormatBin16 {
+	if e.Bytes()[0] != formatBin16 {
 		t.Error("medium binary should use bin16")
 	}
 }
@@ -4401,7 +4372,7 @@ func TestEncoderMapHeader(t *testing.T) {
 	// map16 (16-65535)
 	e.Reset()
 	e.EncodeMapHeader(20)
-	if e.Bytes()[0] != FormatMap16 {
+	if e.Bytes()[0] != formatMap16 {
 		t.Error("medium map should use map16")
 	}
 }
@@ -4420,7 +4391,7 @@ func TestEncoderArrayHeader(t *testing.T) {
 	// array16 (16-65535)
 	e.Reset()
 	e.EncodeArrayHeader(20)
-	if e.Bytes()[0] != FormatArray16 {
+	if e.Bytes()[0] != formatArray16 {
 		t.Error("medium array should use array16")
 	}
 }
@@ -4432,7 +4403,7 @@ func TestDecodeStructKeyReadError(t *testing.T) {
 	}
 
 	// str8 key with missing length byte
-	data := []byte{0x81, FormatStr8} // missing length
+	data := []byte{0x81, formatStr8} // missing length
 	var d Data
 	err := UnmarshalStruct(data, &d)
 	if err != ErrUnexpectedEOF {
@@ -4447,7 +4418,7 @@ func TestDecodeStructStr16KeyReadError(t *testing.T) {
 	}
 
 	// str16 key with missing length bytes
-	data := []byte{0x81, FormatStr16, 0} // missing second length byte
+	data := []byte{0x81, formatStr16, 0} // missing second length byte
 	var d Data
 	err := UnmarshalStruct(data, &d)
 	if err != ErrUnexpectedEOF {
@@ -4462,7 +4433,7 @@ func TestDecodeStructStr32KeyReadError(t *testing.T) {
 	}
 
 	// str32 key with missing length bytes
-	data := []byte{0x81, FormatStr32, 0, 0, 0} // missing last length byte
+	data := []byte{0x81, formatStr32, 0, 0, 0} // missing last length byte
 	var d Data
 	err := UnmarshalStruct(data, &d)
 	if err != ErrUnexpectedEOF {
@@ -4497,11 +4468,11 @@ func TestDecodeValueAllFormats(t *testing.T) {
 		name string
 		data []byte
 	}{
-		{"float32", []byte{FormatFloat32, 0x40, 0x48, 0xf5, 0xc3}},
-		{"float64", []byte{FormatFloat64, 0x40, 0x09, 0x21, 0xfb, 0x54, 0x44, 0x2d, 0x18}},
-		{"array16", []byte{FormatArray16, 0, 2, 0x01, 0x02}},
-		{"array32", []byte{FormatArray32, 0, 0, 0, 2, 0x01, 0x02}},
-		{"ext8", append([]byte{FormatExt8, 3, 1}, make([]byte, 3)...)},
+		{"float32", []byte{formatFloat32, 0x40, 0x48, 0xf5, 0xc3}},
+		{"float64", []byte{formatFloat64, 0x40, 0x09, 0x21, 0xfb, 0x54, 0x44, 0x2d, 0x18}},
+		{"array16", []byte{formatArray16, 0, 2, 0x01, 0x02}},
+		{"array32", []byte{formatArray32, 0, 0, 0, 2, 0x01, 0x02}},
+		{"ext8", append([]byte{formatExt8, 3, 1}, make([]byte, 3)...)},
 	}
 
 	for _, tc := range tests {
@@ -4521,7 +4492,7 @@ func TestDecodeValueAllFormats(t *testing.T) {
 // TestDecodeValueExtTooLong tests ext too long error
 func TestDecodeValueExtTooLong(t *testing.T) {
 	cfg := DefaultConfig().WithMaxExtLen(1)
-	data := append([]byte{FormatExt8, 5, 1}, make([]byte, 5)...)
+	data := append([]byte{formatExt8, 5, 1}, make([]byte, 5)...)
 	d := NewDecoderWithConfig(data, cfg)
 	_, err := d.Decode()
 	if err != ErrExtTooLong {
@@ -4547,7 +4518,7 @@ func TestDecodeMapNonStringKeyValue(t *testing.T) {
 // TestDecodeStringAllFormats tests decodeString with all formats
 func TestDecodeStringAllFormats(t *testing.T) {
 	t.Run("str16", func(t *testing.T) {
-		data := []byte{FormatStr16, 0, 5, 'h', 'e', 'l', 'l', 'o'}
+		data := []byte{formatStr16, 0, 5, 'h', 'e', 'l', 'l', 'o'}
 		d := NewDecoder(data)
 		v, err := d.Decode()
 		if err != nil || v.Type != TypeString {
@@ -4556,7 +4527,7 @@ func TestDecodeStringAllFormats(t *testing.T) {
 	})
 
 	t.Run("str32", func(t *testing.T) {
-		data := []byte{FormatStr32, 0, 0, 0, 5, 'h', 'e', 'l', 'l', 'o'}
+		data := []byte{formatStr32, 0, 0, 0, 5, 'h', 'e', 'l', 'l', 'o'}
 		d := NewDecoder(data)
 		v, err := d.Decode()
 		if err != nil || v.Type != TypeString {
@@ -4568,7 +4539,7 @@ func TestDecodeStringAllFormats(t *testing.T) {
 // TestDecodeBinaryAllFormats tests decodeBinary with all formats
 func TestDecodeBinaryAllFormats(t *testing.T) {
 	t.Run("bin16", func(t *testing.T) {
-		data := []byte{FormatBin16, 0, 3, 1, 2, 3}
+		data := []byte{formatBin16, 0, 3, 1, 2, 3}
 		d := NewDecoder(data)
 		v, err := d.Decode()
 		if err != nil || v.Type != TypeBinary {
@@ -4577,7 +4548,7 @@ func TestDecodeBinaryAllFormats(t *testing.T) {
 	})
 
 	t.Run("bin32", func(t *testing.T) {
-		data := []byte{FormatBin32, 0, 0, 0, 3, 1, 2, 3}
+		data := []byte{formatBin32, 0, 0, 0, 3, 1, 2, 3}
 		d := NewDecoder(data)
 		v, err := d.Decode()
 		if err != nil || v.Type != TypeBinary {
@@ -4629,7 +4600,7 @@ func TestDecodeValueBytesAllFormats(t *testing.T) {
 	}
 
 	t.Run("bin16", func(t *testing.T) {
-		data := []byte{0x81, 0xa1, 'b', FormatBin16, 0, 3, 1, 2, 3}
+		data := []byte{0x81, 0xa1, 'b', formatBin16, 0, 3, 1, 2, 3}
 		var d Data
 		err := UnmarshalStruct(data, &d)
 		if err != nil || len(d.B) != 3 {
@@ -4638,7 +4609,7 @@ func TestDecodeValueBytesAllFormats(t *testing.T) {
 	})
 
 	t.Run("bin32", func(t *testing.T) {
-		data := []byte{0x81, 0xa1, 'b', FormatBin32, 0, 0, 0, 3, 1, 2, 3}
+		data := []byte{0x81, 0xa1, 'b', formatBin32, 0, 0, 0, 3, 1, 2, 3}
 		var d Data
 		err := UnmarshalStruct(data, &d)
 		if err != nil || len(d.B) != 3 {
@@ -4650,7 +4621,7 @@ func TestDecodeValueBytesAllFormats(t *testing.T) {
 // TestDecodeStringAnyAllFormats tests decodeStringAny with str16/str32
 func TestDecodeStringAnyAllFormats(t *testing.T) {
 	t.Run("str16", func(t *testing.T) {
-		data := []byte{FormatStr16, 0, 5, 'h', 'e', 'l', 'l', 'o'}
+		data := []byte{formatStr16, 0, 5, 'h', 'e', 'l', 'l', 'o'}
 		d := NewDecoder(data)
 		v, err := d.DecodeAny()
 		if err != nil || v != "hello" {
@@ -4659,7 +4630,7 @@ func TestDecodeStringAnyAllFormats(t *testing.T) {
 	})
 
 	t.Run("str32", func(t *testing.T) {
-		data := []byte{FormatStr32, 0, 0, 0, 5, 'h', 'e', 'l', 'l', 'o'}
+		data := []byte{formatStr32, 0, 0, 0, 5, 'h', 'e', 'l', 'l', 'o'}
 		d := NewDecoder(data)
 		v, err := d.DecodeAny()
 		if err != nil || v != "hello" {
@@ -4671,7 +4642,7 @@ func TestDecodeStringAnyAllFormats(t *testing.T) {
 // TestDecodeBinaryAnyAllFormats tests decodeBinaryAny with bin16/bin32
 func TestDecodeBinaryAnyAllFormats(t *testing.T) {
 	t.Run("bin16", func(t *testing.T) {
-		data := []byte{FormatBin16, 0, 3, 1, 2, 3}
+		data := []byte{formatBin16, 0, 3, 1, 2, 3}
 		d := NewDecoder(data)
 		v, err := d.DecodeAny()
 		if err != nil {
@@ -4683,7 +4654,7 @@ func TestDecodeBinaryAnyAllFormats(t *testing.T) {
 	})
 
 	t.Run("bin32", func(t *testing.T) {
-		data := []byte{FormatBin32, 0, 0, 0, 3, 1, 2, 3}
+		data := []byte{formatBin32, 0, 0, 0, 3, 1, 2, 3}
 		d := NewDecoder(data)
 		v, err := d.DecodeAny()
 		if err != nil {
@@ -4702,7 +4673,7 @@ func TestDecodeIntoSliceArray16Array32(t *testing.T) {
 	}
 
 	t.Run("array16", func(t *testing.T) {
-		data := []byte{0x81, 0xa1, 's', FormatArray16, 0, 2, 0x01, 0x02}
+		data := []byte{0x81, 0xa1, 's', formatArray16, 0, 2, 0x01, 0x02}
 		var d Data
 		err := UnmarshalStruct(data, &d)
 		if err != nil || len(d.S) != 2 {
@@ -4711,7 +4682,7 @@ func TestDecodeIntoSliceArray16Array32(t *testing.T) {
 	})
 
 	t.Run("array32", func(t *testing.T) {
-		data := []byte{0x81, 0xa1, 's', FormatArray32, 0, 0, 0, 2, 0x01, 0x02}
+		data := []byte{0x81, 0xa1, 's', formatArray32, 0, 0, 0, 2, 0x01, 0x02}
 		var d Data
 		err := UnmarshalStruct(data, &d)
 		if err != nil || len(d.S) != 2 {
@@ -4727,7 +4698,7 @@ func TestDecodeIntoArrayArray16Array32(t *testing.T) {
 	}
 
 	t.Run("array16", func(t *testing.T) {
-		data := []byte{0x81, 0xa1, 'a', FormatArray16, 0, 2, 0x01, 0x02}
+		data := []byte{0x81, 0xa1, 'a', formatArray16, 0, 2, 0x01, 0x02}
 		var d Data
 		err := UnmarshalStruct(data, &d)
 		if err != nil || d.A[0] != 1 {
@@ -4736,7 +4707,7 @@ func TestDecodeIntoArrayArray16Array32(t *testing.T) {
 	})
 
 	t.Run("array32", func(t *testing.T) {
-		data := []byte{0x81, 0xa1, 'a', FormatArray32, 0, 0, 0, 2, 0x01, 0x02}
+		data := []byte{0x81, 0xa1, 'a', formatArray32, 0, 0, 0, 2, 0x01, 0x02}
 		var d Data
 		err := UnmarshalStruct(data, &d)
 		if err != nil || d.A[0] != 1 {
@@ -4752,7 +4723,7 @@ func TestDecodeIntoMapMap16Map32(t *testing.T) {
 	}
 
 	t.Run("map16", func(t *testing.T) {
-		data := []byte{0x81, 0xa1, 'm', FormatMap16, 0, 1, 0xa1, 'k', 0x42}
+		data := []byte{0x81, 0xa1, 'm', formatMap16, 0, 1, 0xa1, 'k', 0x42}
 		var d Data
 		err := UnmarshalStruct(data, &d)
 		if err != nil || d.M["k"] != 66 {
@@ -4761,7 +4732,7 @@ func TestDecodeIntoMapMap16Map32(t *testing.T) {
 	})
 
 	t.Run("map32", func(t *testing.T) {
-		data := []byte{0x81, 0xa1, 'm', FormatMap32, 0, 0, 0, 1, 0xa1, 'k', 0x42}
+		data := []byte{0x81, 0xa1, 'm', formatMap32, 0, 0, 0, 1, 0xa1, 'k', 0x42}
 		var d Data
 		err := UnmarshalStruct(data, &d)
 		if err != nil || d.M["k"] != 66 {
@@ -4782,7 +4753,7 @@ func TestDecodeIntoStructMap16Map32(t *testing.T) {
 	t.Run("map16 nested", func(t *testing.T) {
 		data := []byte{
 			0x81, 0xa1, 'i',
-			FormatMap16, 0, 1, 0xa1, 'v', 0x42,
+			formatMap16, 0, 1, 0xa1, 'v', 0x42,
 		}
 		var o Outer
 		err := UnmarshalStruct(data, &o)
@@ -4794,7 +4765,7 @@ func TestDecodeIntoStructMap16Map32(t *testing.T) {
 	t.Run("map32 nested", func(t *testing.T) {
 		data := []byte{
 			0x81, 0xa1, 'i',
-			FormatMap32, 0, 0, 0, 1, 0xa1, 'v', 0x42,
+			formatMap32, 0, 0, 0, 1, 0xa1, 'v', 0x42,
 		}
 		var o Outer
 		err := UnmarshalStruct(data, &o)
@@ -4816,7 +4787,7 @@ func TestDecodeStringKeyAllFormats(t *testing.T) {
 	t.Run("str8 key in nested", func(t *testing.T) {
 		data := []byte{
 			0x81, 0xa1, 'i',
-			0x81, FormatStr8, 1, 'v', 0x42,
+			0x81, formatStr8, 1, 'v', 0x42,
 		}
 		var o Outer
 		err := UnmarshalStruct(data, &o)
@@ -4828,7 +4799,7 @@ func TestDecodeStringKeyAllFormats(t *testing.T) {
 	t.Run("str16 key in nested", func(t *testing.T) {
 		data := []byte{
 			0x81, 0xa1, 'i',
-			0x81, FormatStr16, 0, 1, 'v', 0x42,
+			0x81, formatStr16, 0, 1, 'v', 0x42,
 		}
 		var o Outer
 		err := UnmarshalStruct(data, &o)
@@ -4840,7 +4811,7 @@ func TestDecodeStringKeyAllFormats(t *testing.T) {
 	t.Run("str32 key in nested", func(t *testing.T) {
 		data := []byte{
 			0x81, 0xa1, 'i',
-			0x81, FormatStr32, 0, 0, 0, 1, 'v', 0x42,
+			0x81, formatStr32, 0, 0, 0, 1, 'v', 0x42,
 		}
 		var o Outer
 		err := UnmarshalStruct(data, &o)
@@ -4887,7 +4858,7 @@ func TestDecodeValueBytesEOFPaths(t *testing.T) {
 	}
 
 	t.Run("str16 EOF", func(t *testing.T) {
-		data := []byte{0x81, 0xa1, 'b', FormatStr16, 0} // missing length byte
+		data := []byte{0x81, 0xa1, 'b', formatStr16, 0} // missing length byte
 		var d Data
 		err := UnmarshalStruct(data, &d)
 		if err != ErrUnexpectedEOF {
@@ -4896,7 +4867,7 @@ func TestDecodeValueBytesEOFPaths(t *testing.T) {
 	})
 
 	t.Run("str32 EOF", func(t *testing.T) {
-		data := []byte{0x81, 0xa1, 'b', FormatStr32, 0, 0} // missing length bytes
+		data := []byte{0x81, 0xa1, 'b', formatStr32, 0, 0} // missing length bytes
 		var d Data
 		err := UnmarshalStruct(data, &d)
 		if err != ErrUnexpectedEOF {
@@ -4905,7 +4876,7 @@ func TestDecodeValueBytesEOFPaths(t *testing.T) {
 	})
 
 	t.Run("bin8 EOF", func(t *testing.T) {
-		data := []byte{0x81, 0xa1, 'b', FormatBin8} // missing length byte
+		data := []byte{0x81, 0xa1, 'b', formatBin8} // missing length byte
 		var d Data
 		err := UnmarshalStruct(data, &d)
 		if err != ErrUnexpectedEOF {
@@ -4914,7 +4885,7 @@ func TestDecodeValueBytesEOFPaths(t *testing.T) {
 	})
 
 	t.Run("bin16 EOF", func(t *testing.T) {
-		data := []byte{0x81, 0xa1, 'b', FormatBin16, 0} // missing length byte
+		data := []byte{0x81, 0xa1, 'b', formatBin16, 0} // missing length byte
 		var d Data
 		err := UnmarshalStruct(data, &d)
 		if err != ErrUnexpectedEOF {
@@ -4923,7 +4894,7 @@ func TestDecodeValueBytesEOFPaths(t *testing.T) {
 	})
 
 	t.Run("bin32 EOF", func(t *testing.T) {
-		data := []byte{0x81, 0xa1, 'b', FormatBin32, 0, 0} // missing length bytes
+		data := []byte{0x81, 0xa1, 'b', formatBin32, 0, 0} // missing length bytes
 		var d Data
 		err := UnmarshalStruct(data, &d)
 		if err != ErrUnexpectedEOF {
@@ -4940,7 +4911,7 @@ func TestDecodeValueBytesValidation(t *testing.T) {
 
 	t.Run("str16 too long", func(t *testing.T) {
 		cfg := DefaultConfig().WithMaxStringLen(1)
-		data := []byte{0x81, 0xa1, 'b', FormatStr16, 0, 10, 'h', 'e', 'l', 'l', 'o', 'w', 'o', 'r', 'l', 'd'}
+		data := []byte{0x81, 0xa1, 'b', formatStr16, 0, 10, 'h', 'e', 'l', 'l', 'o', 'w', 'o', 'r', 'l', 'd'}
 		var d Data
 		err := UnmarshalStructWithConfig(data, &d, cfg)
 		if err != ErrStringTooLong {
@@ -4950,7 +4921,7 @@ func TestDecodeValueBytesValidation(t *testing.T) {
 
 	t.Run("bin16 too long", func(t *testing.T) {
 		cfg := DefaultConfig().WithMaxBinaryLen(1)
-		data := []byte{0x81, 0xa1, 'b', FormatBin16, 0, 5, 1, 2, 3, 4, 5}
+		data := []byte{0x81, 0xa1, 'b', formatBin16, 0, 5, 1, 2, 3, 4, 5}
 		var d Data
 		err := UnmarshalStructWithConfig(data, &d, cfg)
 		if err != ErrBinaryTooLong {
@@ -4967,7 +4938,7 @@ func TestDecodeValueStringValidation(t *testing.T) {
 
 	t.Run("str16 too long", func(t *testing.T) {
 		cfg := DefaultConfig().WithMaxStringLen(1)
-		data := []byte{0x81, 0xa1, 's', FormatStr16, 0, 5, 'h', 'e', 'l', 'l', 'o'}
+		data := []byte{0x81, 0xa1, 's', formatStr16, 0, 5, 'h', 'e', 'l', 'l', 'o'}
 		var d Data
 		err := UnmarshalStructWithConfig(data, &d, cfg)
 		if err != ErrStringTooLong {
@@ -4977,7 +4948,7 @@ func TestDecodeValueStringValidation(t *testing.T) {
 
 	t.Run("str32 too long", func(t *testing.T) {
 		cfg := DefaultConfig().WithMaxStringLen(1)
-		data := []byte{0x81, 0xa1, 's', FormatStr32, 0, 0, 0, 5, 'h', 'e', 'l', 'l', 'o'}
+		data := []byte{0x81, 0xa1, 's', formatStr32, 0, 0, 0, 5, 'h', 'e', 'l', 'l', 'o'}
 		var d Data
 		err := UnmarshalStructWithConfig(data, &d, cfg)
 		if err != ErrStringTooLong {
@@ -5004,7 +4975,7 @@ func TestDecodeIntoSliceValidation(t *testing.T) {
 
 	t.Run("array16 too long", func(t *testing.T) {
 		cfg := DefaultConfig().WithMaxArrayLen(1)
-		data := []byte{0x81, 0xa1, 's', FormatArray16, 0, 3, 0x01, 0x02, 0x03}
+		data := []byte{0x81, 0xa1, 's', formatArray16, 0, 3, 0x01, 0x02, 0x03}
 		var d Data
 		err := UnmarshalStructWithConfig(data, &d, cfg)
 		if err != ErrArrayTooLong {
@@ -5048,7 +5019,7 @@ func TestDecodeIntoMapValidation(t *testing.T) {
 
 	t.Run("map16 too long", func(t *testing.T) {
 		cfg := DefaultConfig().WithMaxMapLen(0)
-		data := []byte{0x81, 0xa1, 'm', FormatMap16, 0, 1, 0xa1, 'k', 0x42}
+		data := []byte{0x81, 0xa1, 'm', formatMap16, 0, 1, 0xa1, 'k', 0x42}
 		var d Data
 		err := UnmarshalStructWithConfig(data, &d, cfg)
 		if err != ErrMapTooLong {
@@ -5080,7 +5051,7 @@ func TestDecodeIntoStructValidation(t *testing.T) {
 // TestDecodeMapKeyEOF tests decodeMap key EOF paths
 func TestDecodeMapKeyEOF(t *testing.T) {
 	t.Run("str8 key EOF", func(t *testing.T) {
-		data := []byte{0x81, FormatStr8} // map with str8 key, missing length
+		data := []byte{0x81, formatStr8} // map with str8 key, missing length
 		d := NewDecoder(data)
 		_, err := d.Decode()
 		if err != ErrUnexpectedEOF {
@@ -5089,7 +5060,7 @@ func TestDecodeMapKeyEOF(t *testing.T) {
 	})
 
 	t.Run("str16 key EOF", func(t *testing.T) {
-		data := []byte{0x81, FormatStr16, 0} // map with str16 key, missing length
+		data := []byte{0x81, formatStr16, 0} // map with str16 key, missing length
 		d := NewDecoder(data)
 		_, err := d.Decode()
 		if err != ErrUnexpectedEOF {
@@ -5098,7 +5069,7 @@ func TestDecodeMapKeyEOF(t *testing.T) {
 	})
 
 	t.Run("str32 key EOF", func(t *testing.T) {
-		data := []byte{0x81, FormatStr32, 0, 0} // map with str32 key, missing length
+		data := []byte{0x81, formatStr32, 0, 0} // map with str32 key, missing length
 		d := NewDecoder(data)
 		_, err := d.Decode()
 		if err != ErrUnexpectedEOF {
@@ -5110,7 +5081,7 @@ func TestDecodeMapKeyEOF(t *testing.T) {
 // TestDecodeExtEOF tests decodeExt EOF paths
 func TestDecodeExtEOF(t *testing.T) {
 	t.Run("ext8 length EOF", func(t *testing.T) {
-		data := []byte{FormatExt8} // ext8 with missing length
+		data := []byte{formatExt8} // ext8 with missing length
 		d := NewDecoder(data)
 		_, err := d.Decode()
 		if err != ErrUnexpectedEOF {
@@ -5119,7 +5090,7 @@ func TestDecodeExtEOF(t *testing.T) {
 	})
 
 	t.Run("ext16 length EOF", func(t *testing.T) {
-		data := []byte{FormatExt16, 0} // ext16 with missing length
+		data := []byte{formatExt16, 0} // ext16 with missing length
 		d := NewDecoder(data)
 		_, err := d.Decode()
 		if err != ErrUnexpectedEOF {
@@ -5128,7 +5099,7 @@ func TestDecodeExtEOF(t *testing.T) {
 	})
 
 	t.Run("ext32 length EOF", func(t *testing.T) {
-		data := []byte{FormatExt32, 0, 0} // ext32 with missing length
+		data := []byte{formatExt32, 0, 0} // ext32 with missing length
 		d := NewDecoder(data)
 		_, err := d.Decode()
 		if err != ErrUnexpectedEOF {
@@ -5140,7 +5111,7 @@ func TestDecodeExtEOF(t *testing.T) {
 // TestDecodeStringAnyEOF tests decodeStringAny EOF paths
 func TestDecodeStringAnyEOF(t *testing.T) {
 	t.Run("str16 length EOF", func(t *testing.T) {
-		data := []byte{FormatStr16, 0} // str16 with missing length
+		data := []byte{formatStr16, 0} // str16 with missing length
 		d := NewDecoder(data)
 		_, err := d.DecodeAny()
 		if err != ErrUnexpectedEOF {
@@ -5149,7 +5120,7 @@ func TestDecodeStringAnyEOF(t *testing.T) {
 	})
 
 	t.Run("str32 length EOF", func(t *testing.T) {
-		data := []byte{FormatStr32, 0, 0} // str32 with missing length
+		data := []byte{formatStr32, 0, 0} // str32 with missing length
 		d := NewDecoder(data)
 		_, err := d.DecodeAny()
 		if err != ErrUnexpectedEOF {
@@ -5161,7 +5132,7 @@ func TestDecodeStringAnyEOF(t *testing.T) {
 // TestDecodeBinaryAnyEOF tests decodeBinaryAny EOF paths
 func TestDecodeBinaryAnyEOF(t *testing.T) {
 	t.Run("bin16 length EOF", func(t *testing.T) {
-		data := []byte{FormatBin16, 0} // bin16 with missing length
+		data := []byte{formatBin16, 0} // bin16 with missing length
 		d := NewDecoder(data)
 		_, err := d.DecodeAny()
 		if err != ErrUnexpectedEOF {
@@ -5170,7 +5141,7 @@ func TestDecodeBinaryAnyEOF(t *testing.T) {
 	})
 
 	t.Run("bin32 length EOF", func(t *testing.T) {
-		data := []byte{FormatBin32, 0, 0} // bin32 with missing length
+		data := []byte{formatBin32, 0, 0} // bin32 with missing length
 		d := NewDecoder(data)
 		_, err := d.DecodeAny()
 		if err != ErrUnexpectedEOF {
@@ -5182,7 +5153,7 @@ func TestDecodeBinaryAnyEOF(t *testing.T) {
 // TestDecodeMapAnyKeyEOF tests decodeMapAny key EOF paths
 func TestDecodeMapAnyKeyEOF(t *testing.T) {
 	t.Run("str8 key length EOF", func(t *testing.T) {
-		data := []byte{0x81, FormatStr8} // map with str8 key, missing length
+		data := []byte{0x81, formatStr8} // map with str8 key, missing length
 		d := NewDecoder(data)
 		_, err := d.DecodeAny()
 		if err != ErrUnexpectedEOF {
@@ -5191,7 +5162,7 @@ func TestDecodeMapAnyKeyEOF(t *testing.T) {
 	})
 
 	t.Run("str16 key length EOF", func(t *testing.T) {
-		data := []byte{0x81, FormatStr16, 0} // map with str16 key, missing length
+		data := []byte{0x81, formatStr16, 0} // map with str16 key, missing length
 		d := NewDecoder(data)
 		_, err := d.DecodeAny()
 		if err != ErrUnexpectedEOF {
@@ -5362,7 +5333,7 @@ func TestDecodeIntoStructMap16(t *testing.T) {
 
 	// Create map16 format (0xde, 2 bytes for length)
 	enc := NewEncoder(64)
-	enc.writeByte(FormatMap16)
+	enc.writeByte(formatMap16)
 	enc.writeUint16(1)
 	enc.EncodeString("a")
 	enc.EncodeInt(42)
@@ -5385,7 +5356,7 @@ func TestDecodeIntoStructMap32(t *testing.T) {
 
 	// Create map32 format (0xdf, 4 bytes for length)
 	enc := NewEncoder(64)
-	enc.writeByte(FormatMap32)
+	enc.writeByte(formatMap32)
 	enc.writeUint32(1)
 	enc.EncodeString("a")
 	enc.EncodeInt(42)
@@ -5433,7 +5404,7 @@ func TestDecodeStringKeyStr16(t *testing.T) {
 	// Create map with str16 key
 	enc := NewEncoder(64)
 	enc.EncodeMapHeader(1)
-	enc.writeByte(FormatStr16)
+	enc.writeByte(formatStr16)
 	enc.writeUint16(1)
 	enc.writeByte('a')
 	enc.EncodeInt(42)
@@ -5457,7 +5428,7 @@ func TestDecodeStringKeyStr32(t *testing.T) {
 	// Create map with str32 key
 	enc := NewEncoder(64)
 	enc.EncodeMapHeader(1)
-	enc.writeByte(FormatStr32)
+	enc.writeByte(formatStr32)
 	enc.writeUint32(1)
 	enc.writeByte('a')
 	enc.EncodeInt(42)
@@ -5479,7 +5450,7 @@ func TestDecodeStringKeyStr8EOF(t *testing.T) {
 	}
 
 	// str8 format but no length
-	data := []byte{0x81, FormatStr8}
+	data := []byte{0x81, formatStr8}
 	var s S
 	err := UnmarshalStruct(data, &s)
 	if err == nil {
@@ -5494,7 +5465,7 @@ func TestDecodeStringKeyStr16EOF(t *testing.T) {
 	}
 
 	// str16 format but no length
-	data := []byte{0x81, FormatStr16}
+	data := []byte{0x81, formatStr16}
 	var s S
 	err := UnmarshalStruct(data, &s)
 	if err == nil {
@@ -5509,7 +5480,7 @@ func TestDecodeStringKeyStr32EOF(t *testing.T) {
 	}
 
 	// str32 format but no length
-	data := []byte{0x81, FormatStr32}
+	data := []byte{0x81, formatStr32}
 	var s S
 	err := UnmarshalStruct(data, &s)
 	if err == nil {
@@ -5532,7 +5503,7 @@ func TestDecodeStringKeyStr8TooLong(t *testing.T) {
 		MaxDepth:     100,
 	}
 	// str8 format with length 5
-	data := []byte{0x81, FormatStr8, 5, 'h', 'e', 'l', 'l', 'o', 0x01}
+	data := []byte{0x81, formatStr8, 5, 'h', 'e', 'l', 'l', 'o', 0x01}
 	err := UnmarshalStructWithConfig(data, &S{}, cfg)
 	if err != ErrStringTooLong {
 		t.Errorf("expected ErrStringTooLong, got %v", err)
@@ -5553,7 +5524,7 @@ func TestDecodeValueStringReadBytesEOF(t *testing.T) {
 // TestDecodeValueBinaryReadBytesEOF tests decodeBinary readBytes EOF
 func TestDecodeValueBinaryReadBytesEOF(t *testing.T) {
 	// bin8 says 5 bytes but only 2 provided
-	data := []byte{FormatBin8, 5, 0x01, 0x02}
+	data := []byte{formatBin8, 5, 0x01, 0x02}
 	d := NewDecoder(data)
 	_, err := d.Decode()
 	if err != ErrUnexpectedEOF {
@@ -5601,7 +5572,7 @@ func TestDecodeMapValueEOF(t *testing.T) {
 // TestDecodeExtDataEOF tests decodeExt data EOF
 func TestDecodeExtDataEOF(t *testing.T) {
 	// fixext1 (1 byte data) but no data after type
-	data := []byte{FormatFixExt1, 0x01} // type=1, no data
+	data := []byte{formatFixExt1, 0x01} // type=1, no data
 	d := NewDecoder(data)
 	_, err := d.Decode()
 	if err != ErrUnexpectedEOF {
@@ -5612,7 +5583,7 @@ func TestDecodeExtDataEOF(t *testing.T) {
 // TestDecodeExtTypeEOF tests decodeExt type EOF
 func TestDecodeExtTypeEOF(t *testing.T) {
 	// ext8 format with length but no type
-	data := []byte{FormatExt8, 0x01} // length=1, no type
+	data := []byte{formatExt8, 0x01} // length=1, no type
 	d := NewDecoder(data)
 	_, err := d.Decode()
 	if err != ErrUnexpectedEOF {
@@ -5658,7 +5629,7 @@ func TestDecodeIntoStructMap16EOF(t *testing.T) {
 	}
 
 	// Map16 format but no length bytes
-	data := []byte{FormatMap16}
+	data := []byte{formatMap16}
 	var s S
 	err := UnmarshalStruct(data, &s)
 	if err == nil {
@@ -5673,7 +5644,7 @@ func TestDecodeIntoStructMap32EOF(t *testing.T) {
 	}
 
 	// Map32 format but no length bytes
-	data := []byte{FormatMap32}
+	data := []byte{formatMap32}
 	var s S
 	err := UnmarshalStruct(data, &s)
 	if err == nil {
@@ -5684,7 +5655,7 @@ func TestDecodeIntoStructMap32EOF(t *testing.T) {
 // TestDecodeValueStr16EOF tests str16 length EOF
 func TestDecodeValueStr16EOF(t *testing.T) {
 	// str16 but only 1 byte for length
-	data := []byte{FormatStr16, 0x00}
+	data := []byte{formatStr16, 0x00}
 	d := NewDecoder(data)
 	_, err := d.Decode()
 	if err != ErrUnexpectedEOF {
@@ -5695,7 +5666,7 @@ func TestDecodeValueStr16EOF(t *testing.T) {
 // TestDecodeValueStr32EOF tests str32 length EOF
 func TestDecodeValueStr32EOF(t *testing.T) {
 	// str32 but only 2 bytes for length
-	data := []byte{FormatStr32, 0x00, 0x00}
+	data := []byte{formatStr32, 0x00, 0x00}
 	d := NewDecoder(data)
 	_, err := d.Decode()
 	if err != ErrUnexpectedEOF {
@@ -5706,7 +5677,7 @@ func TestDecodeValueStr32EOF(t *testing.T) {
 // TestDecodeValueBin16EOF tests bin16 length EOF
 func TestDecodeValueBin16EOF(t *testing.T) {
 	// bin16 but only 1 byte for length
-	data := []byte{FormatBin16, 0x00}
+	data := []byte{formatBin16, 0x00}
 	d := NewDecoder(data)
 	_, err := d.Decode()
 	if err != ErrUnexpectedEOF {
@@ -5717,7 +5688,7 @@ func TestDecodeValueBin16EOF(t *testing.T) {
 // TestDecodeValueBin32EOF tests bin32 length EOF
 func TestDecodeValueBin32EOF(t *testing.T) {
 	// bin32 but only 2 bytes for length
-	data := []byte{FormatBin32, 0x00, 0x00}
+	data := []byte{formatBin32, 0x00, 0x00}
 	d := NewDecoder(data)
 	_, err := d.Decode()
 	if err != ErrUnexpectedEOF {
@@ -5728,7 +5699,7 @@ func TestDecodeValueBin32EOF(t *testing.T) {
 // TestDecodeValueArray16EOF tests array16 length EOF
 func TestDecodeValueArray16EOF(t *testing.T) {
 	// array16 but only 1 byte for length
-	data := []byte{FormatArray16, 0x00}
+	data := []byte{formatArray16, 0x00}
 	d := NewDecoder(data)
 	_, err := d.Decode()
 	if err != ErrUnexpectedEOF {
@@ -5739,7 +5710,7 @@ func TestDecodeValueArray16EOF(t *testing.T) {
 // TestDecodeValueArray32EOF tests array32 length EOF
 func TestDecodeValueArray32EOF(t *testing.T) {
 	// array32 but only 2 bytes for length
-	data := []byte{FormatArray32, 0x00, 0x00}
+	data := []byte{formatArray32, 0x00, 0x00}
 	d := NewDecoder(data)
 	_, err := d.Decode()
 	if err != ErrUnexpectedEOF {
@@ -5750,7 +5721,7 @@ func TestDecodeValueArray32EOF(t *testing.T) {
 // TestDecodeValueMap16EOF tests map16 length EOF
 func TestDecodeValueMap16EOF(t *testing.T) {
 	// map16 but only 1 byte for length
-	data := []byte{FormatMap16, 0x00}
+	data := []byte{formatMap16, 0x00}
 	d := NewDecoder(data)
 	_, err := d.Decode()
 	if err != ErrUnexpectedEOF {
@@ -5761,7 +5732,7 @@ func TestDecodeValueMap16EOF(t *testing.T) {
 // TestDecodeValueMap32EOF tests map32 length EOF
 func TestDecodeValueMap32EOF(t *testing.T) {
 	// map32 but only 2 bytes for length
-	data := []byte{FormatMap32, 0x00, 0x00}
+	data := []byte{formatMap32, 0x00, 0x00}
 	d := NewDecoder(data)
 	_, err := d.Decode()
 	if err != ErrUnexpectedEOF {
@@ -5772,7 +5743,7 @@ func TestDecodeValueMap32EOF(t *testing.T) {
 // TestDecodeValueExt8EOF tests ext8 length EOF
 func TestDecodeValueExt8EOF(t *testing.T) {
 	// ext8 but no length byte
-	data := []byte{FormatExt8}
+	data := []byte{formatExt8}
 	d := NewDecoder(data)
 	_, err := d.Decode()
 	if err != ErrUnexpectedEOF {
@@ -5783,7 +5754,7 @@ func TestDecodeValueExt8EOF(t *testing.T) {
 // TestDecodeValueExt16EOF tests ext16 length EOF
 func TestDecodeValueExt16EOF(t *testing.T) {
 	// ext16 but only 1 byte for length
-	data := []byte{FormatExt16, 0x00}
+	data := []byte{formatExt16, 0x00}
 	d := NewDecoder(data)
 	_, err := d.Decode()
 	if err != ErrUnexpectedEOF {
@@ -5794,7 +5765,7 @@ func TestDecodeValueExt16EOF(t *testing.T) {
 // TestDecodeValueExt32EOF tests ext32 length EOF
 func TestDecodeValueExt32EOF(t *testing.T) {
 	// ext32 but only 2 bytes for length
-	data := []byte{FormatExt32, 0x00, 0x00}
+	data := []byte{formatExt32, 0x00, 0x00}
 	d := NewDecoder(data)
 	_, err := d.Decode()
 	if err != ErrUnexpectedEOF {
@@ -5804,7 +5775,7 @@ func TestDecodeValueExt32EOF(t *testing.T) {
 
 // TestDecodeValueUint8EOF tests uint8 EOF
 func TestDecodeValueUint8EOF(t *testing.T) {
-	data := []byte{FormatUint8}
+	data := []byte{formatUint8}
 	d := NewDecoder(data)
 	_, err := d.Decode()
 	if err != ErrUnexpectedEOF {
@@ -5814,7 +5785,7 @@ func TestDecodeValueUint8EOF(t *testing.T) {
 
 // TestDecodeValueUint16EOF tests uint16 EOF
 func TestDecodeValueUint16EOF(t *testing.T) {
-	data := []byte{FormatUint16, 0x00}
+	data := []byte{formatUint16, 0x00}
 	d := NewDecoder(data)
 	_, err := d.Decode()
 	if err != ErrUnexpectedEOF {
@@ -5824,7 +5795,7 @@ func TestDecodeValueUint16EOF(t *testing.T) {
 
 // TestDecodeValueUint32EOF tests uint32 EOF
 func TestDecodeValueUint32EOF(t *testing.T) {
-	data := []byte{FormatUint32, 0x00, 0x00}
+	data := []byte{formatUint32, 0x00, 0x00}
 	d := NewDecoder(data)
 	_, err := d.Decode()
 	if err != ErrUnexpectedEOF {
@@ -5834,7 +5805,7 @@ func TestDecodeValueUint32EOF(t *testing.T) {
 
 // TestDecodeValueUint64EOF tests uint64 EOF
 func TestDecodeValueUint64EOF(t *testing.T) {
-	data := []byte{FormatUint64, 0x00, 0x00, 0x00, 0x00}
+	data := []byte{formatUint64, 0x00, 0x00, 0x00, 0x00}
 	d := NewDecoder(data)
 	_, err := d.Decode()
 	if err != ErrUnexpectedEOF {
@@ -5844,7 +5815,7 @@ func TestDecodeValueUint64EOF(t *testing.T) {
 
 // TestDecodeValueInt8EOF tests int8 EOF
 func TestDecodeValueInt8EOF(t *testing.T) {
-	data := []byte{FormatInt8}
+	data := []byte{formatInt8}
 	d := NewDecoder(data)
 	_, err := d.Decode()
 	if err != ErrUnexpectedEOF {
@@ -5854,7 +5825,7 @@ func TestDecodeValueInt8EOF(t *testing.T) {
 
 // TestDecodeValueInt16EOF tests int16 EOF
 func TestDecodeValueInt16EOF(t *testing.T) {
-	data := []byte{FormatInt16, 0x00}
+	data := []byte{formatInt16, 0x00}
 	d := NewDecoder(data)
 	_, err := d.Decode()
 	if err != ErrUnexpectedEOF {
@@ -5864,7 +5835,7 @@ func TestDecodeValueInt16EOF(t *testing.T) {
 
 // TestDecodeValueInt32EOF tests int32 EOF
 func TestDecodeValueInt32EOF(t *testing.T) {
-	data := []byte{FormatInt32, 0x00, 0x00}
+	data := []byte{formatInt32, 0x00, 0x00}
 	d := NewDecoder(data)
 	_, err := d.Decode()
 	if err != ErrUnexpectedEOF {
@@ -5874,7 +5845,7 @@ func TestDecodeValueInt32EOF(t *testing.T) {
 
 // TestDecodeValueInt64EOF tests int64 EOF
 func TestDecodeValueInt64EOF(t *testing.T) {
-	data := []byte{FormatInt64, 0x00, 0x00, 0x00, 0x00}
+	data := []byte{formatInt64, 0x00, 0x00, 0x00, 0x00}
 	d := NewDecoder(data)
 	_, err := d.Decode()
 	if err != ErrUnexpectedEOF {
@@ -5884,7 +5855,7 @@ func TestDecodeValueInt64EOF(t *testing.T) {
 
 // TestDecodeValueFloat32EOF tests float32 EOF
 func TestDecodeValueFloat32EOF(t *testing.T) {
-	data := []byte{FormatFloat32, 0x00, 0x00}
+	data := []byte{formatFloat32, 0x00, 0x00}
 	d := NewDecoder(data)
 	_, err := d.Decode()
 	if err != ErrUnexpectedEOF {
@@ -5894,7 +5865,7 @@ func TestDecodeValueFloat32EOF(t *testing.T) {
 
 // TestDecodeValueFloat64EOF tests float64 EOF
 func TestDecodeValueFloat64EOF(t *testing.T) {
-	data := []byte{FormatFloat64, 0x00, 0x00, 0x00, 0x00}
+	data := []byte{formatFloat64, 0x00, 0x00, 0x00, 0x00}
 	d := NewDecoder(data)
 	_, err := d.Decode()
 	if err != ErrUnexpectedEOF {
@@ -5943,10 +5914,10 @@ func TestDecodeStructNonStructError(t *testing.T) {
 	}
 }
 
-// TestDecodeStructFormatNil tests DecodeStruct with nil format
-func TestDecodeStructFormatNil(t *testing.T) {
+// TestDecodeStructformatNil tests DecodeStruct with nil format
+func TestDecodeStructformatNil(t *testing.T) {
 	type S struct{}
-	data := []byte{FormatNil}
+	data := []byte{formatNil}
 	var s S
 	err := UnmarshalStruct(data, &s)
 	if err != nil {
@@ -6091,9 +6062,9 @@ func TestDecodeAnyValueAllFormats(t *testing.T) {
 		name string
 		data []byte
 	}{
-		{"nil", []byte{FormatNil}},
-		{"false", []byte{FormatFalse}},
-		{"true", []byte{FormatTrue}},
+		{"nil", []byte{formatNil}},
+		{"false", []byte{formatFalse}},
+		{"true", []byte{formatTrue}},
 		{"pos_fixint", []byte{0x7f}},
 		{"neg_fixint", []byte{0xff}},
 		{"fixmap", []byte{0x81, 0xa1, 'a', 0x01}},
@@ -6119,7 +6090,7 @@ func TestEncodeStringStr32(t *testing.T) {
 	enc.EncodeString(longStr)
 
 	b := enc.Bytes()
-	if b[0] != FormatStr32 {
+	if b[0] != formatStr32 {
 		t.Errorf("expected str32 format (0xdb), got 0x%02x", b[0])
 	}
 }
@@ -6132,7 +6103,7 @@ func TestEncodeBinaryBin32(t *testing.T) {
 	enc.EncodeBinary(longBin)
 
 	b := enc.Bytes()
-	if b[0] != FormatBin32 {
+	if b[0] != formatBin32 {
 		t.Errorf("expected bin32 format (0xc6), got 0x%02x", b[0])
 	}
 }
@@ -6144,7 +6115,7 @@ func TestEncodeValueNilMap(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if b[0] != FormatNil {
+	if b[0] != formatNil {
 		t.Errorf("expected nil format, got 0x%02x", b[0])
 	}
 }
@@ -6156,7 +6127,7 @@ func TestEncodeValueNilSlice(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if b[0] != FormatNil {
+	if b[0] != formatNil {
 		t.Errorf("expected nil format, got 0x%02x", b[0])
 	}
 }
@@ -6168,7 +6139,7 @@ func TestEncodeValueNilPointer(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if b[0] != FormatNil {
+	if b[0] != formatNil {
 		t.Errorf("expected nil format, got 0x%02x", b[0])
 	}
 }
@@ -6180,7 +6151,7 @@ func TestEncodeValueFloat32(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if b[0] != FormatFloat32 {
+	if b[0] != formatFloat32 {
 		t.Errorf("expected float32 format, got 0x%02x", b[0])
 	}
 }
@@ -6196,7 +6167,7 @@ func TestDecodeStringAnyValidation(t *testing.T) {
 		MaxExtLen:    1024 * 1024,
 		MaxDepth:     100,
 	}
-	data := []byte{FormatStr8, 10, 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j'}
+	data := []byte{formatStr8, 10, 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j'}
 	d := NewDecoderWithConfig(data, cfg)
 	_, err := d.DecodeAny()
 	if err != ErrStringTooLong {
@@ -6207,7 +6178,7 @@ func TestDecodeStringAnyValidation(t *testing.T) {
 // TestDecodeStringAnyReadBytesEOF tests decodeStringAny readBytes EOF
 func TestDecodeStringAnyReadBytesEOF(t *testing.T) {
 	// str8 says 10 bytes but only 5 provided
-	data := []byte{FormatStr8, 10, 'a', 'b', 'c', 'd', 'e'}
+	data := []byte{formatStr8, 10, 'a', 'b', 'c', 'd', 'e'}
 	d := NewDecoder(data)
 	_, err := d.DecodeAny()
 	if err != ErrUnexpectedEOF {
@@ -6226,7 +6197,7 @@ func TestDecodeBinaryAnyValidation(t *testing.T) {
 		MaxExtLen:    1024 * 1024,
 		MaxDepth:     100,
 	}
-	data := []byte{FormatBin8, 10, 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j'}
+	data := []byte{formatBin8, 10, 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j'}
 	d := NewDecoderWithConfig(data, cfg)
 	_, err := d.DecodeAny()
 	if err != ErrBinaryTooLong {
@@ -6237,7 +6208,7 @@ func TestDecodeBinaryAnyValidation(t *testing.T) {
 // TestDecodeBinaryAnyReadBytesEOF tests decodeBinaryAny readBytes EOF
 func TestDecodeBinaryAnyReadBytesEOF(t *testing.T) {
 	// bin8 says 10 bytes but only 5 provided
-	data := []byte{FormatBin8, 10, 'a', 'b', 'c', 'd', 'e'}
+	data := []byte{formatBin8, 10, 'a', 'b', 'c', 'd', 'e'}
 	d := NewDecoder(data)
 	_, err := d.DecodeAny()
 	if err != ErrUnexpectedEOF {
@@ -6250,7 +6221,7 @@ func TestDecodeMapAnyKeyStr16(t *testing.T) {
 	enc := NewEncoder(64)
 	enc.EncodeMapHeader(1)
 	// Manually write str16 key
-	enc.writeByte(FormatStr16)
+	enc.writeByte(formatStr16)
 	enc.writeUint16(1)
 	enc.writeByte('a')
 	enc.EncodeInt(42)
@@ -6266,7 +6237,7 @@ func TestDecodeMapAnyKeyStr32(t *testing.T) {
 	enc := NewEncoder(64)
 	enc.EncodeMapHeader(1)
 	// Manually write str32 key
-	enc.writeByte(FormatStr32)
+	enc.writeByte(formatStr32)
 	enc.writeUint32(1)
 	enc.writeByte('a')
 	enc.EncodeInt(42)
@@ -6332,7 +6303,7 @@ func TestDecodeIntoValueComplex64Unsupported(t *testing.T) {
 // TestDecodeValueStringStr16 tests decodeString with str16 format
 func TestDecodeValueStringStr16(t *testing.T) {
 	enc := NewEncoder(64)
-	enc.writeByte(FormatStr16)
+	enc.writeByte(formatStr16)
 	enc.writeUint16(5)
 	enc.writeBytes([]byte("hello"))
 
@@ -6349,7 +6320,7 @@ func TestDecodeValueStringStr16(t *testing.T) {
 // TestDecodeValueStringStr32 tests decodeString with str32 format
 func TestDecodeValueStringStr32(t *testing.T) {
 	enc := NewEncoder(64)
-	enc.writeByte(FormatStr32)
+	enc.writeByte(formatStr32)
 	enc.writeUint32(5)
 	enc.writeBytes([]byte("hello"))
 
@@ -6366,7 +6337,7 @@ func TestDecodeValueStringStr32(t *testing.T) {
 // TestDecodeValueBinaryBin16 tests decodeBinary with bin16 format
 func TestDecodeValueBinaryBin16(t *testing.T) {
 	enc := NewEncoder(64)
-	enc.writeByte(FormatBin16)
+	enc.writeByte(formatBin16)
 	enc.writeUint16(3)
 	enc.writeBytes([]byte{1, 2, 3})
 
@@ -6383,7 +6354,7 @@ func TestDecodeValueBinaryBin16(t *testing.T) {
 // TestDecodeValueBinaryBin32 tests decodeBinary with bin32 format
 func TestDecodeValueBinaryBin32(t *testing.T) {
 	enc := NewEncoder(64)
-	enc.writeByte(FormatBin32)
+	enc.writeByte(formatBin32)
 	enc.writeUint32(3)
 	enc.writeBytes([]byte{1, 2, 3})
 
@@ -6409,7 +6380,7 @@ func TestDecodeExtValidation(t *testing.T) {
 	}
 	// ext8 with length 10
 	enc := NewEncoder(32)
-	enc.writeByte(FormatExt8)
+	enc.writeByte(formatExt8)
 	enc.writeByte(10) // length
 	enc.writeByte(1)  // type
 	enc.writeBytes(make([]byte, 10))
@@ -6547,7 +6518,7 @@ func TestDecodeIntoStructDepthError(t *testing.T) {
 // TestReadStringBytesStr16 tests readStringBytes with str16 format
 func TestReadStringBytesStr16(t *testing.T) {
 	enc := NewEncoder(64)
-	enc.writeByte(FormatStr16)
+	enc.writeByte(formatStr16)
 	enc.writeUint16(5)
 	enc.writeBytes([]byte("hello"))
 
@@ -6564,7 +6535,7 @@ func TestReadStringBytesStr16(t *testing.T) {
 // TestReadStringBytesStr32 tests readStringBytes with str32 format
 func TestReadStringBytesStr32(t *testing.T) {
 	enc := NewEncoder(64)
-	enc.writeByte(FormatStr32)
+	enc.writeByte(formatStr32)
 	enc.writeUint32(5)
 	enc.writeBytes([]byte("hello"))
 
@@ -6589,7 +6560,7 @@ func TestDecodeValueStringStr8Validation(t *testing.T) {
 		MaxDepth:     100,
 	}
 	enc := NewEncoder(64)
-	enc.writeByte(FormatStr8)
+	enc.writeByte(formatStr8)
 	enc.writeByte(10)
 	enc.writeBytes(make([]byte, 10))
 
@@ -6611,7 +6582,7 @@ func TestDecodeValueBinaryValidation(t *testing.T) {
 		MaxDepth:     100,
 	}
 	enc := NewEncoder(64)
-	enc.writeByte(FormatBin8)
+	enc.writeByte(formatBin8)
 	enc.writeByte(10)
 	enc.writeBytes(make([]byte, 10))
 
@@ -6719,7 +6690,7 @@ func TestDecodeIntoSliceElementError(t *testing.T) {
 	enc.EncodeArrayHeader(2)
 	enc.EncodeInt(1)
 	// Second element is incomplete - just format byte with no data
-	enc.writeByte(FormatInt32)
+	enc.writeByte(formatInt32)
 	// Only 2 bytes of the 4 needed
 	enc.writeByte(0x00)
 	enc.writeByte(0x00)
@@ -6745,7 +6716,7 @@ func TestDecodeIntoArrayElementError(t *testing.T) {
 	enc.EncodeInt(1)
 	enc.EncodeInt(2)
 	// Third element incomplete
-	enc.writeByte(FormatInt32)
+	enc.writeByte(formatInt32)
 
 	var s S
 	err := UnmarshalStruct(enc.Bytes(), &s)
@@ -6766,7 +6737,7 @@ func TestDecodeIntoMapKeyError(t *testing.T) {
 	enc.EncodeString("m")
 	enc.EncodeMapHeader(1)
 	// Incomplete string key
-	enc.writeByte(FormatStr8)
+	enc.writeByte(formatStr8)
 	enc.writeByte(10) // says 10 bytes but EOF
 
 	var s S
@@ -6789,7 +6760,7 @@ func TestDecodeIntoMapValueError(t *testing.T) {
 	enc.EncodeMapHeader(1)
 	enc.EncodeString("key")
 	// Incomplete int value
-	enc.writeByte(FormatInt32)
+	enc.writeByte(formatInt32)
 
 	var s S
 	err := UnmarshalStruct(enc.Bytes(), &s)
@@ -6802,7 +6773,7 @@ func TestDecodeIntoMapValueError(t *testing.T) {
 func TestDecodeValueStringReadBytesError(t *testing.T) {
 	// str16 with length but not enough data
 	enc := NewEncoder(64)
-	enc.writeByte(FormatStr16)
+	enc.writeByte(formatStr16)
 	enc.writeUint16(100) // says 100 bytes but only have a few
 
 	d := NewDecoder(enc.Bytes())
@@ -6816,7 +6787,7 @@ func TestDecodeValueStringReadBytesError(t *testing.T) {
 func TestDecodeValueBinaryReadBytesError(t *testing.T) {
 	// bin16 with length but not enough data
 	enc := NewEncoder(64)
-	enc.writeByte(FormatBin16)
+	enc.writeByte(formatBin16)
 	enc.writeUint16(100) // says 100 bytes but only have a few
 
 	d := NewDecoder(enc.Bytes())
@@ -6831,7 +6802,7 @@ func TestDecodeMapKeyDecodeError(t *testing.T) {
 	// Map with incomplete key value
 	enc := NewEncoder(64)
 	enc.EncodeMapHeader(1)
-	enc.writeByte(FormatInt32) // key is int but incomplete
+	enc.writeByte(formatInt32) // key is int but incomplete
 
 	d := NewDecoder(enc.Bytes())
 	_, err := d.Decode()
@@ -6844,7 +6815,7 @@ func TestDecodeMapKeyDecodeError(t *testing.T) {
 func TestDecodeExtReadBytesError(t *testing.T) {
 	// ext8 with length but not enough data for ext data
 	enc := NewEncoder(64)
-	enc.writeByte(FormatExt8)
+	enc.writeByte(formatExt8)
 	enc.writeByte(10)  // length 10
 	enc.writeByte(1)   // type
 	// Only provide 3 bytes instead of 10
@@ -6862,7 +6833,7 @@ func TestDecodeExtReadBytesError(t *testing.T) {
 // TestDecodeStringAnyStr16 tests decodeStringAny with str16 format
 func TestDecodeStringAnyStr16(t *testing.T) {
 	enc := NewEncoder(64)
-	enc.writeByte(FormatStr16)
+	enc.writeByte(formatStr16)
 	enc.writeUint16(5)
 	enc.writeBytes([]byte("hello"))
 
@@ -6879,7 +6850,7 @@ func TestDecodeStringAnyStr16(t *testing.T) {
 // TestDecodeStringAnyStr32 tests decodeStringAny with str32 format
 func TestDecodeStringAnyStr32(t *testing.T) {
 	enc := NewEncoder(64)
-	enc.writeByte(FormatStr32)
+	enc.writeByte(formatStr32)
 	enc.writeUint32(5)
 	enc.writeBytes([]byte("hello"))
 
@@ -6896,7 +6867,7 @@ func TestDecodeStringAnyStr32(t *testing.T) {
 // TestDecodeBinaryAnyBin16 tests decodeBinaryAny with bin16 format
 func TestDecodeBinaryAnyBin16(t *testing.T) {
 	enc := NewEncoder(64)
-	enc.writeByte(FormatBin16)
+	enc.writeByte(formatBin16)
 	enc.writeUint16(3)
 	enc.writeBytes([]byte{1, 2, 3})
 
@@ -6914,7 +6885,7 @@ func TestDecodeBinaryAnyBin16(t *testing.T) {
 // TestDecodeBinaryAnyBin32 tests decodeBinaryAny with bin32 format
 func TestDecodeBinaryAnyBin32(t *testing.T) {
 	enc := NewEncoder(64)
-	enc.writeByte(FormatBin32)
+	enc.writeByte(formatBin32)
 	enc.writeUint32(3)
 	enc.writeBytes([]byte{1, 2, 3})
 
@@ -6933,7 +6904,7 @@ func TestDecodeBinaryAnyBin32(t *testing.T) {
 func TestDecodeValueStringStr8ReadBytesEOF(t *testing.T) {
 	// str8 says 50 bytes but only provides 5
 	enc := NewEncoder(64)
-	enc.writeByte(FormatStr8)
+	enc.writeByte(formatStr8)
 	enc.writeByte(50)
 	enc.writeBytes([]byte("hello"))
 
@@ -6948,7 +6919,7 @@ func TestDecodeValueStringStr8ReadBytesEOF(t *testing.T) {
 func TestDecodeValueBinaryBin8ReadBytesEOF(t *testing.T) {
 	// bin8 says 50 bytes but only provides 5
 	enc := NewEncoder(64)
-	enc.writeByte(FormatBin8)
+	enc.writeByte(formatBin8)
 	enc.writeByte(50)
 	enc.writeBytes([]byte{1, 2, 3, 4, 5})
 
@@ -6976,7 +6947,7 @@ func TestDecodeStringKeyStr16Validation(t *testing.T) {
 	// Map with str16 key that exceeds max
 	enc := NewEncoder(64)
 	enc.EncodeMapHeader(1)
-	enc.writeByte(FormatStr16)
+	enc.writeByte(formatStr16)
 	enc.writeUint16(5) // length 5 exceeds MaxStringLen=1
 	enc.writeBytes([]byte("hello"))
 	enc.EncodeInt(42)
@@ -7005,7 +6976,7 @@ func TestDecodeStringKeyStr32Validation(t *testing.T) {
 	// Map with str32 key that exceeds max
 	enc := NewEncoder(64)
 	enc.EncodeMapHeader(1)
-	enc.writeByte(FormatStr32)
+	enc.writeByte(formatStr32)
 	enc.writeUint32(5) // length 5 exceeds MaxStringLen=1
 	enc.writeBytes([]byte("hello"))
 	enc.EncodeInt(42)
@@ -7027,7 +6998,7 @@ func TestDecodeIntoStructDecodeValueError(t *testing.T) {
 	enc := NewEncoder(64)
 	enc.EncodeMapHeader(1)
 	enc.EncodeString("a")
-	enc.writeByte(FormatInt32) // int32 format but no data
+	enc.writeByte(formatInt32) // int32 format but no data
 
 	var s S
 	err := UnmarshalStruct(enc.Bytes(), &s)
@@ -7074,7 +7045,7 @@ func TestDecodeIntoStructSkipNonStringKeyError(t *testing.T) {
 	enc := NewEncoder(64)
 	enc.EncodeMapHeader(1)
 	enc.EncodeInt(123)        // non-string key
-	enc.writeByte(FormatStr8) // start of value but incomplete
+	enc.writeByte(formatStr8) // start of value but incomplete
 	enc.writeByte(100)        // says 100 bytes but nothing follows
 
 	var s S
@@ -7201,7 +7172,7 @@ func TestDecodeIntoSliceArray16(t *testing.T) {
 	enc := NewEncoder(64)
 	enc.EncodeMapHeader(1)
 	enc.EncodeString("items")
-	enc.writeByte(FormatArray16)
+	enc.writeByte(formatArray16)
 	enc.writeUint16(3)
 	enc.EncodeInt(1)
 	enc.EncodeInt(2)
@@ -7226,7 +7197,7 @@ func TestDecodeIntoSliceArray32(t *testing.T) {
 	enc := NewEncoder(64)
 	enc.EncodeMapHeader(1)
 	enc.EncodeString("items")
-	enc.writeByte(FormatArray32)
+	enc.writeByte(formatArray32)
 	enc.writeUint32(2)
 	enc.EncodeInt(1)
 	enc.EncodeInt(2)
@@ -7250,7 +7221,7 @@ func TestDecodeIntoArrayArray16(t *testing.T) {
 	enc := NewEncoder(64)
 	enc.EncodeMapHeader(1)
 	enc.EncodeString("items")
-	enc.writeByte(FormatArray16)
+	enc.writeByte(formatArray16)
 	enc.writeUint16(3)
 	enc.EncodeInt(1)
 	enc.EncodeInt(2)
@@ -7275,7 +7246,7 @@ func TestDecodeIntoArrayArray32(t *testing.T) {
 	enc := NewEncoder(64)
 	enc.EncodeMapHeader(1)
 	enc.EncodeString("items")
-	enc.writeByte(FormatArray32)
+	enc.writeByte(formatArray32)
 	enc.writeUint32(2)
 	enc.EncodeInt(10)
 	enc.EncodeInt(20)
@@ -7299,7 +7270,7 @@ func TestDecodeIntoMapMap16(t *testing.T) {
 	enc := NewEncoder(64)
 	enc.EncodeMapHeader(1)
 	enc.EncodeString("m")
-	enc.writeByte(FormatMap16)
+	enc.writeByte(formatMap16)
 	enc.writeUint16(2)
 	enc.EncodeString("a")
 	enc.EncodeInt(1)
@@ -7325,7 +7296,7 @@ func TestDecodeIntoMapMap32(t *testing.T) {
 	enc := NewEncoder(64)
 	enc.EncodeMapHeader(1)
 	enc.EncodeString("m")
-	enc.writeByte(FormatMap32)
+	enc.writeByte(formatMap32)
 	enc.writeUint32(1)
 	enc.EncodeString("x")
 	enc.EncodeInt(42)
@@ -7349,7 +7320,7 @@ func TestDecodeIntoSliceArray16EOF(t *testing.T) {
 	enc := NewEncoder(64)
 	enc.EncodeMapHeader(1)
 	enc.EncodeString("items")
-	enc.writeByte(FormatArray16)
+	enc.writeByte(formatArray16)
 	// Missing length bytes
 
 	var s S
@@ -7368,7 +7339,7 @@ func TestDecodeIntoSliceArray32EOF(t *testing.T) {
 	enc := NewEncoder(64)
 	enc.EncodeMapHeader(1)
 	enc.EncodeString("items")
-	enc.writeByte(FormatArray32)
+	enc.writeByte(formatArray32)
 	// Missing length bytes
 
 	var s S
@@ -7387,7 +7358,7 @@ func TestDecodeIntoArrayArray16EOF(t *testing.T) {
 	enc := NewEncoder(64)
 	enc.EncodeMapHeader(1)
 	enc.EncodeString("items")
-	enc.writeByte(FormatArray16)
+	enc.writeByte(formatArray16)
 	// Missing length bytes
 
 	var s S
@@ -7406,7 +7377,7 @@ func TestDecodeIntoArrayArray32EOF(t *testing.T) {
 	enc := NewEncoder(64)
 	enc.EncodeMapHeader(1)
 	enc.EncodeString("items")
-	enc.writeByte(FormatArray32)
+	enc.writeByte(formatArray32)
 	// Missing length bytes
 
 	var s S
@@ -7425,7 +7396,7 @@ func TestDecodeIntoMapMap16EOF(t *testing.T) {
 	enc := NewEncoder(64)
 	enc.EncodeMapHeader(1)
 	enc.EncodeString("m")
-	enc.writeByte(FormatMap16)
+	enc.writeByte(formatMap16)
 	// Missing length bytes
 
 	var s S
@@ -7444,7 +7415,7 @@ func TestDecodeIntoMapMap32EOF(t *testing.T) {
 	enc := NewEncoder(64)
 	enc.EncodeMapHeader(1)
 	enc.EncodeString("m")
-	enc.writeByte(FormatMap32)
+	enc.writeByte(formatMap32)
 	// Missing length bytes
 
 	var s S
@@ -7465,7 +7436,7 @@ func TestDecodeValueStringStr16Validation(t *testing.T) {
 		MaxDepth:     100,
 	}
 	enc := NewEncoder(64)
-	enc.writeByte(FormatStr16)
+	enc.writeByte(formatStr16)
 	enc.writeUint16(10)
 	enc.writeBytes(make([]byte, 10))
 
@@ -7487,7 +7458,7 @@ func TestDecodeValueStringStr32Validation(t *testing.T) {
 		MaxDepth:     100,
 	}
 	enc := NewEncoder(64)
-	enc.writeByte(FormatStr32)
+	enc.writeByte(formatStr32)
 	enc.writeUint32(10)
 	enc.writeBytes(make([]byte, 10))
 
@@ -7509,7 +7480,7 @@ func TestDecodeValueBinaryBin16Validation(t *testing.T) {
 		MaxDepth:     100,
 	}
 	enc := NewEncoder(64)
-	enc.writeByte(FormatBin16)
+	enc.writeByte(formatBin16)
 	enc.writeUint16(10)
 	enc.writeBytes(make([]byte, 10))
 
@@ -7531,7 +7502,7 @@ func TestDecodeValueBinaryBin32Validation(t *testing.T) {
 		MaxDepth:     100,
 	}
 	enc := NewEncoder(64)
-	enc.writeByte(FormatBin32)
+	enc.writeByte(formatBin32)
 	enc.writeUint32(10)
 	enc.writeBytes(make([]byte, 10))
 
@@ -7574,7 +7545,7 @@ func TestDecodeStringAnyStr16Validation(t *testing.T) {
 		MaxDepth:     100,
 	}
 	enc := NewEncoder(64)
-	enc.writeByte(FormatStr16)
+	enc.writeByte(formatStr16)
 	enc.writeUint16(100)
 	enc.writeBytes(make([]byte, 100))
 
@@ -7596,7 +7567,7 @@ func TestDecodeBinaryAnyBin16Validation(t *testing.T) {
 		MaxDepth:     100,
 	}
 	enc := NewEncoder(64)
-	enc.writeByte(FormatBin16)
+	enc.writeByte(formatBin16)
 	enc.writeUint16(100)
 	enc.writeBytes(make([]byte, 100))
 
@@ -7637,7 +7608,7 @@ func TestDecodeValueStr8String(t *testing.T) {
 	enc := NewEncoder(64)
 	enc.EncodeMapHeader(1)
 	enc.EncodeString("s")
-	enc.writeByte(FormatStr8)
+	enc.writeByte(formatStr8)
 	enc.writeByte(5)
 	enc.writeBytes([]byte("hello"))
 
@@ -7660,7 +7631,7 @@ func TestDecodeValueStr16String(t *testing.T) {
 	enc := NewEncoder(64)
 	enc.EncodeMapHeader(1)
 	enc.EncodeString("s")
-	enc.writeByte(FormatStr16)
+	enc.writeByte(formatStr16)
 	enc.writeUint16(5)
 	enc.writeBytes([]byte("hello"))
 
@@ -7683,7 +7654,7 @@ func TestDecodeValueStr32String(t *testing.T) {
 	enc := NewEncoder(64)
 	enc.EncodeMapHeader(1)
 	enc.EncodeString("s")
-	enc.writeByte(FormatStr32)
+	enc.writeByte(formatStr32)
 	enc.writeUint32(5)
 	enc.writeBytes([]byte("hello"))
 
@@ -7706,7 +7677,7 @@ func TestDecodeValueBin8Bytes(t *testing.T) {
 	enc := NewEncoder(64)
 	enc.EncodeMapHeader(1)
 	enc.EncodeString("b")
-	enc.writeByte(FormatBin8)
+	enc.writeByte(formatBin8)
 	enc.writeByte(3)
 	enc.writeBytes([]byte{1, 2, 3})
 
@@ -7729,7 +7700,7 @@ func TestDecodeValueBin16Bytes(t *testing.T) {
 	enc := NewEncoder(64)
 	enc.EncodeMapHeader(1)
 	enc.EncodeString("b")
-	enc.writeByte(FormatBin16)
+	enc.writeByte(formatBin16)
 	enc.writeUint16(3)
 	enc.writeBytes([]byte{1, 2, 3})
 
@@ -7752,7 +7723,7 @@ func TestDecodeValueBin32Bytes(t *testing.T) {
 	enc := NewEncoder(64)
 	enc.EncodeMapHeader(1)
 	enc.EncodeString("b")
-	enc.writeByte(FormatBin32)
+	enc.writeByte(formatBin32)
 	enc.writeUint32(3)
 	enc.writeBytes([]byte{1, 2, 3})
 
@@ -7771,7 +7742,7 @@ func TestDecodeMapAnyKeyStr8EOF(t *testing.T) {
 	// Map with incomplete str8 key
 	enc := NewEncoder(64)
 	enc.EncodeMapHeader(1)
-	enc.writeByte(FormatStr8)
+	enc.writeByte(formatStr8)
 	// Missing length byte
 
 	d := NewDecoder(enc.Bytes())
@@ -7786,7 +7757,7 @@ func TestDecodeMapAnyKeyStr16EOF(t *testing.T) {
 	// Map with incomplete str16 key
 	enc := NewEncoder(64)
 	enc.EncodeMapHeader(1)
-	enc.writeByte(FormatStr16)
+	enc.writeByte(formatStr16)
 	// Missing length bytes
 
 	d := NewDecoder(enc.Bytes())
@@ -7801,7 +7772,7 @@ func TestDecodeMapAnyKeyStr32EOF(t *testing.T) {
 	// Map with incomplete str32 key
 	enc := NewEncoder(64)
 	enc.EncodeMapHeader(1)
-	enc.writeByte(FormatStr32)
+	enc.writeByte(formatStr32)
 	// Missing length bytes
 
 	d := NewDecoder(enc.Bytes())
@@ -7817,7 +7788,7 @@ func TestDecodeMapAnyValueError(t *testing.T) {
 	enc := NewEncoder(64)
 	enc.EncodeMapHeader(1)
 	enc.EncodeString("key")
-	enc.writeByte(FormatInt32) // int32 but no data
+	enc.writeByte(formatInt32) // int32 but no data
 
 	d := NewDecoder(enc.Bytes())
 	_, err := d.DecodeAny()
@@ -7832,7 +7803,7 @@ func TestDecodeArrayAnyElementError(t *testing.T) {
 	enc := NewEncoder(64)
 	enc.EncodeArrayHeader(2)
 	enc.EncodeInt(1)
-	enc.writeByte(FormatInt32) // int32 but no data
+	enc.writeByte(formatInt32) // int32 but no data
 
 	d := NewDecoder(enc.Bytes())
 	_, err := d.DecodeAny()
@@ -7849,7 +7820,7 @@ func TestDecodeArrayAnyElementError(t *testing.T) {
 func TestDecodeStringAnyReadBytesError(t *testing.T) {
 	// String with declared length but insufficient data
 	enc := NewEncoder(64)
-	enc.writeByte(FormatStr8)
+	enc.writeByte(formatStr8)
 	enc.writeByte(50) // length = 50
 	enc.buf = append(enc.buf, "short"...)
 	// Only 5 bytes, expected 50
@@ -7865,7 +7836,7 @@ func TestDecodeStringAnyReadBytesError(t *testing.T) {
 func TestDecodeBinaryAnyReadBytesError(t *testing.T) {
 	// Binary with declared length but insufficient data
 	enc := NewEncoder(64)
-	enc.writeByte(FormatBin8)
+	enc.writeByte(formatBin8)
 	enc.writeByte(50) // length = 50
 	enc.buf = append(enc.buf, []byte{1, 2, 3}...)
 	// Only 3 bytes, expected 50
@@ -7886,7 +7857,7 @@ func TestDecodeValueStringStr8ReadBytesError(t *testing.T) {
 	enc := NewEncoder(64)
 	enc.EncodeMapHeader(1)
 	enc.EncodeString("name")
-	enc.writeByte(FormatStr8)
+	enc.writeByte(formatStr8)
 	enc.writeByte(50) // length = 50
 	enc.buf = append(enc.buf, "short"...)
 	// Only 5 bytes, expected 50
@@ -7907,7 +7878,7 @@ func TestDecodeValueStringStr16ReadBytesError(t *testing.T) {
 	enc := NewEncoder(64)
 	enc.EncodeMapHeader(1)
 	enc.EncodeString("name")
-	enc.writeByte(FormatStr16)
+	enc.writeByte(formatStr16)
 	enc.writeUint16(50) // length = 50
 	enc.buf = append(enc.buf, "short"...)
 	// Only 5 bytes, expected 50
@@ -7928,7 +7899,7 @@ func TestDecodeValueStringStr32ReadBytesError(t *testing.T) {
 	enc := NewEncoder(64)
 	enc.EncodeMapHeader(1)
 	enc.EncodeString("name")
-	enc.writeByte(FormatStr32)
+	enc.writeByte(formatStr32)
 	enc.writeUint32(50) // length = 50
 	enc.buf = append(enc.buf, "short"...)
 	// Only 5 bytes, expected 50
@@ -7949,7 +7920,7 @@ func TestDecodeValueBytesStr8ReadBytesError(t *testing.T) {
 	enc := NewEncoder(64)
 	enc.EncodeMapHeader(1)
 	enc.EncodeString("data")
-	enc.writeByte(FormatStr8)
+	enc.writeByte(formatStr8)
 	enc.writeByte(50) // length = 50
 	enc.buf = append(enc.buf, "short"...)
 	// Only 5 bytes, expected 50
@@ -7970,7 +7941,7 @@ func TestDecodeValueBytesStr16ReadBytesError(t *testing.T) {
 	enc := NewEncoder(64)
 	enc.EncodeMapHeader(1)
 	enc.EncodeString("data")
-	enc.writeByte(FormatStr16)
+	enc.writeByte(formatStr16)
 	enc.writeUint16(50) // length = 50
 	enc.buf = append(enc.buf, "short"...)
 	// Only 5 bytes, expected 50
@@ -7991,7 +7962,7 @@ func TestDecodeValueBytesStr32ReadBytesError(t *testing.T) {
 	enc := NewEncoder(64)
 	enc.EncodeMapHeader(1)
 	enc.EncodeString("data")
-	enc.writeByte(FormatStr32)
+	enc.writeByte(formatStr32)
 	enc.writeUint32(50) // length = 50
 	enc.buf = append(enc.buf, "short"...)
 	// Only 5 bytes, expected 50
@@ -8012,7 +7983,7 @@ func TestDecodeValueBytesBin8ReadBytesError(t *testing.T) {
 	enc := NewEncoder(64)
 	enc.EncodeMapHeader(1)
 	enc.EncodeString("data")
-	enc.writeByte(FormatBin8)
+	enc.writeByte(formatBin8)
 	enc.writeByte(50) // length = 50
 	enc.buf = append(enc.buf, []byte{1, 2, 3}...)
 	// Only 3 bytes, expected 50
@@ -8033,7 +8004,7 @@ func TestDecodeValueBytesBin16ReadBytesError(t *testing.T) {
 	enc := NewEncoder(64)
 	enc.EncodeMapHeader(1)
 	enc.EncodeString("data")
-	enc.writeByte(FormatBin16)
+	enc.writeByte(formatBin16)
 	enc.writeUint16(50) // length = 50
 	enc.buf = append(enc.buf, []byte{1, 2, 3}...)
 	// Only 3 bytes, expected 50
@@ -8054,7 +8025,7 @@ func TestDecodeValueBytesBin32ReadBytesError(t *testing.T) {
 	enc := NewEncoder(64)
 	enc.EncodeMapHeader(1)
 	enc.EncodeString("data")
-	enc.writeByte(FormatBin32)
+	enc.writeByte(formatBin32)
 	enc.writeUint32(50) // length = 50
 	enc.buf = append(enc.buf, []byte{1, 2, 3}...)
 	// Only 3 bytes, expected 50
@@ -8069,7 +8040,7 @@ func TestDecodeValueBytesBin32ReadBytesError(t *testing.T) {
 // TestDecodeStringReadBytesError tests decodeString (Value) readBytes error
 func TestDecodeStringReadBytesError(t *testing.T) {
 	enc := NewEncoder(64)
-	enc.writeByte(FormatStr8)
+	enc.writeByte(formatStr8)
 	enc.writeByte(50) // length = 50
 	enc.buf = append(enc.buf, "short"...)
 	// Only 5 bytes, expected 50
@@ -8084,7 +8055,7 @@ func TestDecodeStringReadBytesError(t *testing.T) {
 // TestDecodeBinaryReadBytesError tests decodeBinary (Value) readBytes error
 func TestDecodeBinaryReadBytesError(t *testing.T) {
 	enc := NewEncoder(64)
-	enc.writeByte(FormatBin8)
+	enc.writeByte(formatBin8)
 	enc.writeByte(50) // length = 50
 	enc.buf = append(enc.buf, []byte{1, 2, 3}...)
 	// Only 3 bytes, expected 50
@@ -8099,7 +8070,7 @@ func TestDecodeBinaryReadBytesError(t *testing.T) {
 // TestDecodeStringStr16ReadBytesError tests decodeString str16 readBytes error
 func TestDecodeStringStr16ReadBytesError(t *testing.T) {
 	enc := NewEncoder(64)
-	enc.writeByte(FormatStr16)
+	enc.writeByte(formatStr16)
 	enc.writeUint16(50) // length = 50
 	enc.buf = append(enc.buf, "short"...)
 	// Only 5 bytes, expected 50
@@ -8114,7 +8085,7 @@ func TestDecodeStringStr16ReadBytesError(t *testing.T) {
 // TestDecodeStringStr32ReadBytesError tests decodeString str32 readBytes error
 func TestDecodeStringStr32ReadBytesError(t *testing.T) {
 	enc := NewEncoder(64)
-	enc.writeByte(FormatStr32)
+	enc.writeByte(formatStr32)
 	enc.writeUint32(50) // length = 50
 	enc.buf = append(enc.buf, "short"...)
 	// Only 5 bytes, expected 50
@@ -8129,7 +8100,7 @@ func TestDecodeStringStr32ReadBytesError(t *testing.T) {
 // TestDecodeBinaryBin16ReadBytesError tests decodeBinary bin16 readBytes error
 func TestDecodeBinaryBin16ReadBytesError(t *testing.T) {
 	enc := NewEncoder(64)
-	enc.writeByte(FormatBin16)
+	enc.writeByte(formatBin16)
 	enc.writeUint16(50) // length = 50
 	enc.buf = append(enc.buf, []byte{1, 2, 3}...)
 	// Only 3 bytes, expected 50
@@ -8144,7 +8115,7 @@ func TestDecodeBinaryBin16ReadBytesError(t *testing.T) {
 // TestDecodeBinaryBin32ReadBytesError tests decodeBinary bin32 readBytes error
 func TestDecodeBinaryBin32ReadBytesError(t *testing.T) {
 	enc := NewEncoder(64)
-	enc.writeByte(FormatBin32)
+	enc.writeByte(formatBin32)
 	enc.writeUint32(50) // length = 50
 	enc.buf = append(enc.buf, []byte{1, 2, 3}...)
 	// Only 3 bytes, expected 50
@@ -8165,7 +8136,7 @@ func TestDecodeValueStringStr8EOFLength(t *testing.T) {
 	enc := NewEncoder(64)
 	enc.EncodeMapHeader(1)
 	enc.EncodeString("name")
-	enc.writeByte(FormatStr8)
+	enc.writeByte(formatStr8)
 	// Missing length byte
 
 	var s TestStruct
@@ -8184,7 +8155,7 @@ func TestDecodeValueStringStr16EOFLength(t *testing.T) {
 	enc := NewEncoder(64)
 	enc.EncodeMapHeader(1)
 	enc.EncodeString("name")
-	enc.writeByte(FormatStr16)
+	enc.writeByte(formatStr16)
 	enc.writeByte(0) // Only 1 byte, need 2
 
 	var s TestStruct
@@ -8203,7 +8174,7 @@ func TestDecodeValueStringStr32EOFLength(t *testing.T) {
 	enc := NewEncoder(64)
 	enc.EncodeMapHeader(1)
 	enc.EncodeString("name")
-	enc.writeByte(FormatStr32)
+	enc.writeByte(formatStr32)
 	enc.writeByte(0)
 	enc.writeByte(0) // Only 2 bytes, need 4
 
@@ -8223,7 +8194,7 @@ func TestDecodeValueBytesStr8EOFLength(t *testing.T) {
 	enc := NewEncoder(64)
 	enc.EncodeMapHeader(1)
 	enc.EncodeString("data")
-	enc.writeByte(FormatStr8)
+	enc.writeByte(formatStr8)
 	// Missing length byte
 
 	var s TestStruct
@@ -8242,7 +8213,7 @@ func TestDecodeValueBytesStr16EOFLength(t *testing.T) {
 	enc := NewEncoder(64)
 	enc.EncodeMapHeader(1)
 	enc.EncodeString("data")
-	enc.writeByte(FormatStr16)
+	enc.writeByte(formatStr16)
 	enc.writeByte(0) // Only 1 byte, need 2
 
 	var s TestStruct
@@ -8261,7 +8232,7 @@ func TestDecodeValueBytesStr32EOFLength(t *testing.T) {
 	enc := NewEncoder(64)
 	enc.EncodeMapHeader(1)
 	enc.EncodeString("data")
-	enc.writeByte(FormatStr32)
+	enc.writeByte(formatStr32)
 	enc.writeByte(0)
 	enc.writeByte(0) // Only 2 bytes, need 4
 
@@ -8281,7 +8252,7 @@ func TestDecodeValueBytesBin8EOFLength(t *testing.T) {
 	enc := NewEncoder(64)
 	enc.EncodeMapHeader(1)
 	enc.EncodeString("data")
-	enc.writeByte(FormatBin8)
+	enc.writeByte(formatBin8)
 	// Missing length byte
 
 	var s TestStruct
@@ -8300,7 +8271,7 @@ func TestDecodeValueBytesBin16EOFLength(t *testing.T) {
 	enc := NewEncoder(64)
 	enc.EncodeMapHeader(1)
 	enc.EncodeString("data")
-	enc.writeByte(FormatBin16)
+	enc.writeByte(formatBin16)
 	enc.writeByte(0) // Only 1 byte, need 2
 
 	var s TestStruct
@@ -8319,7 +8290,7 @@ func TestDecodeValueBytesBin32EOFLength(t *testing.T) {
 	enc := NewEncoder(64)
 	enc.EncodeMapHeader(1)
 	enc.EncodeString("data")
-	enc.writeByte(FormatBin32)
+	enc.writeByte(formatBin32)
 	enc.writeByte(0)
 	enc.writeByte(0) // Only 2 bytes, need 4
 
@@ -8444,7 +8415,7 @@ func TestDecodeStringKeyStr8DataEOF(t *testing.T) {
 
 	enc := NewEncoder(64)
 	enc.EncodeMapHeader(1)
-	enc.writeByte(FormatStr8)
+	enc.writeByte(formatStr8)
 	enc.writeByte(20) // length = 20
 	enc.buf = append(enc.buf, "abc"...)
 	// Only 3 bytes for key, expected 20
@@ -8464,7 +8435,7 @@ func TestDecodeStringKeyStr16DataEOF(t *testing.T) {
 
 	enc := NewEncoder(64)
 	enc.EncodeMapHeader(1)
-	enc.writeByte(FormatStr16)
+	enc.writeByte(formatStr16)
 	enc.writeUint16(20) // length = 20
 	enc.buf = append(enc.buf, "abc"...)
 	// Only 3 bytes for key, expected 20
@@ -8484,7 +8455,7 @@ func TestDecodeStringKeyStr32DataEOF(t *testing.T) {
 
 	enc := NewEncoder(64)
 	enc.EncodeMapHeader(1)
-	enc.writeByte(FormatStr32)
+	enc.writeByte(formatStr32)
 	enc.writeUint32(20) // length = 20
 	enc.buf = append(enc.buf, "abc"...)
 	// Only 3 bytes for key, expected 20
@@ -8505,7 +8476,7 @@ func TestDecodeValueIntUint16(t *testing.T) {
 	enc := NewEncoder(64)
 	enc.EncodeMapHeader(1)
 	enc.EncodeString("value")
-	enc.writeByte(FormatUint16)
+	enc.writeByte(formatUint16)
 	enc.writeUint16(1000)
 
 	var s TestStruct
@@ -8527,7 +8498,7 @@ func TestDecodeValueIntUint32(t *testing.T) {
 	enc := NewEncoder(64)
 	enc.EncodeMapHeader(1)
 	enc.EncodeString("value")
-	enc.writeByte(FormatUint32)
+	enc.writeByte(formatUint32)
 	enc.writeUint32(100000)
 
 	var s TestStruct
@@ -8549,7 +8520,7 @@ func TestDecodeValueIntInt8(t *testing.T) {
 	enc := NewEncoder(64)
 	enc.EncodeMapHeader(1)
 	enc.EncodeString("value")
-	enc.writeByte(FormatInt8)
+	enc.writeByte(formatInt8)
 	enc.writeByte(0xCE) // -50 as int8
 
 	var s TestStruct
@@ -8571,7 +8542,7 @@ func TestDecodeValueIntInt16(t *testing.T) {
 	enc := NewEncoder(64)
 	enc.EncodeMapHeader(1)
 	enc.EncodeString("value")
-	enc.writeByte(FormatInt16)
+	enc.writeByte(formatInt16)
 	enc.writeUint16(uint16(-1000 & 0xFFFF))
 
 	var s TestStruct
@@ -8590,7 +8561,7 @@ func TestDecodeValueIntInt32(t *testing.T) {
 	enc := NewEncoder(64)
 	enc.EncodeMapHeader(1)
 	enc.EncodeString("value")
-	enc.writeByte(FormatInt32)
+	enc.writeByte(formatInt32)
 	enc.writeUint32(uint32(-100000 & 0xFFFFFFFF))
 
 	var s TestStruct
@@ -8609,7 +8580,7 @@ func TestDecodeValueUintUint16(t *testing.T) {
 	enc := NewEncoder(64)
 	enc.EncodeMapHeader(1)
 	enc.EncodeString("value")
-	enc.writeByte(FormatUint16)
+	enc.writeByte(formatUint16)
 	enc.writeUint16(1000)
 
 	var s TestStruct
@@ -8631,7 +8602,7 @@ func TestDecodeValueUintUint32(t *testing.T) {
 	enc := NewEncoder(64)
 	enc.EncodeMapHeader(1)
 	enc.EncodeString("value")
-	enc.writeByte(FormatUint32)
+	enc.writeByte(formatUint32)
 	enc.writeUint32(100000)
 
 	var s TestStruct
@@ -8653,7 +8624,7 @@ func TestDecodeValueFloatFromUint8(t *testing.T) {
 	enc := NewEncoder(64)
 	enc.EncodeMapHeader(1)
 	enc.EncodeString("value")
-	enc.writeByte(FormatUint8)
+	enc.writeByte(formatUint8)
 	enc.writeByte(42)
 
 	var s TestStruct
@@ -8675,7 +8646,7 @@ func TestDecodeValueFloatFromUint16(t *testing.T) {
 	enc := NewEncoder(64)
 	enc.EncodeMapHeader(1)
 	enc.EncodeString("value")
-	enc.writeByte(FormatUint16)
+	enc.writeByte(formatUint16)
 	enc.writeUint16(1000)
 
 	var s TestStruct
@@ -8697,7 +8668,7 @@ func TestDecodeValueFloatFromUint32(t *testing.T) {
 	enc := NewEncoder(64)
 	enc.EncodeMapHeader(1)
 	enc.EncodeString("value")
-	enc.writeByte(FormatUint32)
+	enc.writeByte(formatUint32)
 	enc.writeUint32(100000)
 
 	var s TestStruct
@@ -8719,7 +8690,7 @@ func TestDecodeValueFloatFromInt8(t *testing.T) {
 	enc := NewEncoder(64)
 	enc.EncodeMapHeader(1)
 	enc.EncodeString("value")
-	enc.writeByte(FormatInt8)
+	enc.writeByte(formatInt8)
 	enc.writeByte(0xCE) // -50 as int8
 
 	var s TestStruct
@@ -8741,7 +8712,7 @@ func TestDecodeValueFloatFromInt16(t *testing.T) {
 	enc := NewEncoder(64)
 	enc.EncodeMapHeader(1)
 	enc.EncodeString("value")
-	enc.writeByte(FormatInt16)
+	enc.writeByte(formatInt16)
 	enc.writeUint16(uint16(-1000 & 0xFFFF))
 
 	var s TestStruct
@@ -8760,7 +8731,7 @@ func TestDecodeValueFloatFromInt32(t *testing.T) {
 	enc := NewEncoder(64)
 	enc.EncodeMapHeader(1)
 	enc.EncodeString("value")
-	enc.writeByte(FormatInt32)
+	enc.writeByte(formatInt32)
 	enc.writeUint32(uint32(-100000 & 0xFFFFFFFF))
 
 	var s TestStruct
@@ -8779,7 +8750,7 @@ func TestDecodeValueFloatFromInt64(t *testing.T) {
 	enc := NewEncoder(64)
 	enc.EncodeMapHeader(1)
 	enc.EncodeString("value")
-	enc.writeByte(FormatInt64)
+	enc.writeByte(formatInt64)
 	enc.writeUint64(uint64(-1000000000 & 0xFFFFFFFFFFFFFFFF))
 
 	var s TestStruct
@@ -8908,7 +8879,7 @@ func TestDecodeIntoStructNonStringKeyValueError(t *testing.T) {
 	enc.EncodeMapHeader(1)
 	enc.EncodeInt(123) // non-string key
 	// Now we need incomplete data for the value
-	enc.writeByte(FormatStr32)
+	enc.writeByte(formatStr32)
 	// Missing length bytes for str32
 
 	var s TestStruct
@@ -8923,7 +8894,7 @@ func TestDecodeIntoStructNonStringKeyValueError(t *testing.T) {
 func TestDecodeStringAnyMaxLenValidation(t *testing.T) {
 	// Create string with declared length that exceeds max
 	enc := NewEncoder(64)
-	enc.writeByte(FormatStr8)
+	enc.writeByte(formatStr8)
 	enc.writeByte(100) // length = 100
 	for i := 0; i < 100; i++ {
 		enc.writeByte('a')
@@ -8949,7 +8920,7 @@ func TestDecodeStringAnyMaxLenValidation(t *testing.T) {
 func TestDecodeBinaryAnyMaxLenValidation(t *testing.T) {
 	// Create binary with declared length that exceeds max
 	enc := NewEncoder(200)
-	enc.writeByte(FormatBin8)
+	enc.writeByte(formatBin8)
 	enc.writeByte(100) // length = 100
 	for i := 0; i < 100; i++ {
 		enc.writeByte(byte(i))
@@ -8980,7 +8951,7 @@ func TestDecodeIntoValueInterfaceError(t *testing.T) {
 	enc := NewEncoder(64)
 	enc.EncodeMapHeader(1)
 	enc.EncodeString("value")
-	enc.writeByte(FormatStr32)
+	enc.writeByte(formatStr32)
 	// Missing length bytes
 
 	var s TestStruct
@@ -9041,7 +9012,7 @@ func TestDecodeIntoStructUnknownFieldSkipDecodeError(t *testing.T) {
 	enc := NewEncoder(64)
 	enc.EncodeMapHeader(1)
 	enc.EncodeString("unknown")
-	enc.writeByte(FormatStr32)
+	enc.writeByte(formatStr32)
 	// Missing length bytes
 
 	var s TestStruct
@@ -9082,7 +9053,7 @@ func TestDecodeValueValidationStr8(t *testing.T) {
 	enc := NewEncoder(200)
 	enc.EncodeMapHeader(1)
 	enc.EncodeString("name")
-	enc.writeByte(FormatStr8)
+	enc.writeByte(formatStr8)
 	enc.writeByte(100) // length = 100
 	for i := 0; i < 100; i++ {
 		enc.writeByte('a')
@@ -9113,7 +9084,7 @@ func TestDecodeValueValidationStr16(t *testing.T) {
 	enc := NewEncoder(200)
 	enc.EncodeMapHeader(1)
 	enc.EncodeString("name")
-	enc.writeByte(FormatStr16)
+	enc.writeByte(formatStr16)
 	enc.writeUint16(100) // length = 100
 	for i := 0; i < 100; i++ {
 		enc.writeByte('a')
@@ -9144,7 +9115,7 @@ func TestDecodeValueValidationStr32(t *testing.T) {
 	enc := NewEncoder(200)
 	enc.EncodeMapHeader(1)
 	enc.EncodeString("name")
-	enc.writeByte(FormatStr32)
+	enc.writeByte(formatStr32)
 	enc.writeUint32(100) // length = 100
 	for i := 0; i < 100; i++ {
 		enc.writeByte('a')
@@ -9175,7 +9146,7 @@ func TestDecodeValueBytesBin8Validation(t *testing.T) {
 	enc := NewEncoder(200)
 	enc.EncodeMapHeader(1)
 	enc.EncodeString("data")
-	enc.writeByte(FormatBin8)
+	enc.writeByte(formatBin8)
 	enc.writeByte(100) // length = 100
 	for i := 0; i < 100; i++ {
 		enc.writeByte(byte(i))
@@ -9208,7 +9179,7 @@ func TestDecodeIntoArrayElementDecodeError(t *testing.T) {
 	enc.EncodeString("items")
 	enc.EncodeArrayHeader(2)
 	enc.EncodeString("first")
-	enc.writeByte(FormatStr32)
+	enc.writeByte(formatStr32)
 	// Missing length bytes for second element
 
 	var s TestStruct
@@ -9229,7 +9200,7 @@ func TestDecodeIntoSliceElementDecodeError(t *testing.T) {
 	enc.EncodeString("items")
 	enc.EncodeArrayHeader(2)
 	enc.EncodeString("first")
-	enc.writeByte(FormatStr32)
+	enc.writeByte(formatStr32)
 	// Missing length bytes for second element
 
 	var s TestStruct
@@ -9249,7 +9220,7 @@ func TestDecodeIntoMapKeyDecodeError(t *testing.T) {
 	enc.EncodeMapHeader(1)
 	enc.EncodeString("data")
 	enc.EncodeMapHeader(1)
-	enc.writeByte(FormatStr32)
+	enc.writeByte(formatStr32)
 	// Missing length bytes for key
 
 	var s TestStruct
@@ -9270,7 +9241,7 @@ func TestDecodeIntoMapValueDecodeError(t *testing.T) {
 	enc.EncodeString("data")
 	enc.EncodeMapHeader(1)
 	enc.EncodeString("key")
-	enc.writeByte(FormatStr32)
+	enc.writeByte(formatStr32)
 	// Missing length bytes for value
 
 	var s TestStruct
@@ -9283,7 +9254,7 @@ func TestDecodeIntoMapValueDecodeError(t *testing.T) {
 // TestDecodeAnyValueUint64Overflow tests uint64 overflow path in decodeAnyValue
 func TestDecodeAnyValueUint64Overflow(t *testing.T) {
 	enc := NewEncoder(64)
-	enc.writeByte(FormatUint64)
+	enc.writeByte(formatUint64)
 	enc.writeUint64(0xFFFFFFFFFFFFFFFF) // Max uint64, overflows int64
 
 	d := NewDecoder(enc.Bytes())
@@ -9315,7 +9286,7 @@ func TestDecodeAnyValueFloat32(t *testing.T) {
 func TestDecodeMapAnyStr16Key(t *testing.T) {
 	enc := NewEncoder(64)
 	enc.EncodeMapHeader(1)
-	enc.writeByte(FormatStr16)
+	enc.writeByte(formatStr16)
 	enc.writeUint16(3)
 	enc.buf = append(enc.buf, "key"...)
 	enc.EncodeString("value")
@@ -9338,7 +9309,7 @@ func TestDecodeMapAnyStr16Key(t *testing.T) {
 func TestDecodeMapAnyStr32KeyFormat(t *testing.T) {
 	enc := NewEncoder(64)
 	enc.EncodeMapHeader(1)
-	enc.writeByte(FormatStr32)
+	enc.writeByte(formatStr32)
 	enc.writeUint32(3)
 	enc.buf = append(enc.buf, "key"...)
 	enc.EncodeString("value")
@@ -9355,4 +9326,198 @@ func TestDecodeMapAnyStr32KeyFormat(t *testing.T) {
 	if m["key"] != "value" {
 		t.Errorf("expected 'value', got %v", m["key"])
 	}
+}
+
+// TestTimestampRoundTrip tests timestamp encode/decode round-trip
+func TestTimestampRoundTrip(t *testing.T) {
+	testCases := []struct {
+		name string
+		ts   time.Time
+	}{
+		{"unix_epoch", time.Unix(0, 0).UTC()},
+		{"recent", time.Date(2024, 1, 15, 10, 30, 0, 0, time.UTC)},
+		{"with_nanos", time.Date(2024, 1, 15, 10, 30, 0, 123456789, time.UTC)},
+		{"max_timestamp32", time.Unix(0xFFFFFFFF, 0).UTC()},
+		{"timestamp64_range", time.Unix(0x100000000, 0).UTC()},
+		{"timestamp64_nanos", time.Unix(0x100000000, 500000000).UTC()},
+		{"negative_unix", time.Unix(-1, 0).UTC()},
+		{"far_past", time.Date(1900, 1, 1, 0, 0, 0, 0, time.UTC)},
+		{"far_future", time.Date(3000, 1, 1, 0, 0, 0, 0, time.UTC)},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			data := MarshalTimestamp(tc.ts)
+			decoded, err := UnmarshalTimestamp(data)
+			if err != nil {
+				t.Fatalf("decode failed: %v", err)
+			}
+			if !decoded.Equal(tc.ts) {
+				t.Errorf("got %v, want %v", decoded, tc.ts)
+			}
+			if decoded.Location() != time.UTC {
+				t.Errorf("expected UTC, got %v", decoded.Location())
+			}
+		})
+	}
+}
+
+// TestTimestampEncoderDecoder tests Encoder/Decoder methods
+func TestTimestampEncoderDecoder(t *testing.T) {
+	ts := time.Date(2024, 6, 15, 14, 30, 45, 123456789, time.UTC)
+
+	enc := NewEncoder(64)
+	enc.EncodeTimestamp(ts)
+	data := enc.Bytes()
+
+	dec := NewDecoder(data)
+	decoded, err := dec.DecodeTimestamp()
+	if err != nil {
+		t.Fatalf("decode failed: %v", err)
+	}
+	if !decoded.Equal(ts) {
+		t.Errorf("got %v, want %v", decoded, ts)
+	}
+}
+
+// TestTimestampFormats tests all three timestamp formats
+func TestTimestampFormats(t *testing.T) {
+	t.Run("timestamp32", func(t *testing.T) {
+		ts := time.Unix(1000000, 0).UTC()
+		data := MarshalTimestamp(ts)
+		if data[0] != formatFixExt4 {
+			t.Errorf("expected formatFixExt4, got 0x%x", data[0])
+		}
+		if data[1] != 0xff {
+			t.Errorf("expected type -1, got 0x%x", data[1])
+		}
+	})
+
+	t.Run("timestamp64", func(t *testing.T) {
+		ts := time.Unix(1000000, 500000000).UTC()
+		data := MarshalTimestamp(ts)
+		if data[0] != formatFixExt8 {
+			t.Errorf("expected formatFixExt8, got 0x%x", data[0])
+		}
+	})
+
+	t.Run("timestamp96", func(t *testing.T) {
+		ts := time.Unix(-1000000, 500000000).UTC()
+		data := MarshalTimestamp(ts)
+		if data[0] != formatExt8 {
+			t.Errorf("expected formatExt8, got 0x%x", data[0])
+		}
+		if data[1] != 12 {
+			t.Errorf("expected length 12, got %d", data[1])
+		}
+	})
+}
+
+// TestTimestampWithTimezone tests non-UTC times are converted to UTC
+func TestTimestampWithTimezone(t *testing.T) {
+	loc, err := time.LoadLocation("America/New_York")
+	if err != nil {
+		t.Skip("timezone not available")
+	}
+
+	ts := time.Date(2024, 1, 15, 10, 30, 0, 0, loc)
+	data := MarshalTimestamp(ts)
+	decoded, err := UnmarshalTimestamp(data)
+	if err != nil {
+		t.Fatalf("decode failed: %v", err)
+	}
+
+	if !decoded.Equal(ts) {
+		t.Errorf("times not equal: got %v, want %v", decoded, ts)
+	}
+	if decoded.Location() != time.UTC {
+		t.Errorf("expected UTC, got %v", decoded.Location())
+	}
+}
+
+// TestIsTimestamp tests IsTimestamp helper
+func TestIsTimestamp(t *testing.T) {
+	if !IsTimestamp(Ext{Type: -1, Data: []byte{1, 2, 3, 4}}) {
+		t.Error("expected true for type -1")
+	}
+	if IsTimestamp(Ext{Type: 1, Data: []byte{1, 2, 3, 4}}) {
+		t.Error("expected false for type 1")
+	}
+}
+
+// TestExtToTimestamp tests ExtToTimestamp conversion
+func TestExtToTimestamp(t *testing.T) {
+	ts := time.Date(2024, 1, 15, 10, 30, 0, 0, time.UTC)
+	data := MarshalTimestamp(ts)
+
+	dec := NewDecoder(data)
+	v, err := dec.Decode()
+	if err != nil {
+		t.Fatalf("decode failed: %v", err)
+	}
+	if v.Type != TypeExt {
+		t.Fatalf("expected ext type, got %v", v.Type)
+	}
+
+	decoded, err := ExtToTimestamp(v.Ext)
+	if err != nil {
+		t.Fatalf("ExtToTimestamp failed: %v", err)
+	}
+	if !decoded.Equal(ts) {
+		t.Errorf("got %v, want %v", decoded, ts)
+	}
+}
+
+// TestTimestampDecodeErrors tests error cases
+func TestTimestampDecodeErrors(t *testing.T) {
+	t.Run("wrong_format", func(t *testing.T) {
+		data := []byte{formatNil}
+		_, err := UnmarshalTimestamp(data)
+		if err != ErrTypeMismatch {
+			t.Errorf("expected ErrTypeMismatch, got %v", err)
+		}
+	})
+
+	t.Run("wrong_ext_type", func(t *testing.T) {
+		data := []byte{formatFixExt4, 0x01, 0, 0, 0, 0}
+		_, err := UnmarshalTimestamp(data)
+		if err != ErrTypeMismatch {
+			t.Errorf("expected ErrTypeMismatch, got %v", err)
+		}
+	})
+
+	t.Run("wrong_ext8_length", func(t *testing.T) {
+		data := []byte{formatExt8, 5, 0xff, 0, 0, 0, 0, 0}
+		_, err := UnmarshalTimestamp(data)
+		if err != ErrTypeMismatch {
+			t.Errorf("expected ErrTypeMismatch, got %v", err)
+		}
+	})
+
+	t.Run("truncated_data", func(t *testing.T) {
+		data := []byte{formatFixExt4, 0xff, 0, 0}
+		_, err := UnmarshalTimestamp(data)
+		if err != ErrUnexpectedEOF {
+			t.Errorf("expected ErrUnexpectedEOF, got %v", err)
+		}
+	})
+}
+
+// TestExtToTimestampErrors tests ExtToTimestamp error cases
+func TestExtToTimestampErrors(t *testing.T) {
+	t.Run("wrong_type", func(t *testing.T) {
+		ext := Ext{Type: 1, Data: []byte{0, 0, 0, 0}}
+		_, err := ExtToTimestamp(ext)
+		if err != ErrTypeMismatch {
+			t.Errorf("expected ErrTypeMismatch, got %v", err)
+		}
+	})
+
+	t.Run("wrong_length", func(t *testing.T) {
+		ext := Ext{Type: -1, Data: []byte{0, 0, 0}}
+		_, err := ExtToTimestamp(ext)
+		if err != ErrTypeMismatch {
+			t.Errorf("expected ErrTypeMismatch, got %v", err)
+		}
+	})
 }

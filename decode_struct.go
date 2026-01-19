@@ -105,21 +105,21 @@ func (d *Decoder) DecodeStruct(v any) error {
 
 	// Determine map length
 	var mapLen int
-	if IsFixmap(format) {
-		mapLen = FixmapLen(format)
-	} else if format == FormatMap16 {
+	if isFixmap(format) {
+		mapLen = fixmapLen(format)
+	} else if format == formatMap16 {
 		n, err := d.readUint16()
 		if err != nil {
 			return err
 		}
 		mapLen = int(n)
-	} else if format == FormatMap32 {
+	} else if format == formatMap32 {
 		n, err := d.readUint32()
 		if err != nil {
 			return err
 		}
 		mapLen = int(n)
-	} else if format == FormatNil {
+	} else if format == formatNil {
 		return nil // nil decodes to zero value
 	} else {
 		return ErrTypeMismatch
@@ -145,8 +145,8 @@ func (d *Decoder) DecodeStruct(v any) error {
 		}
 
 		var key []byte
-		if IsFixstr(keyFormat) {
-			keyLen := FixstrLen(keyFormat)
+		if isFixstr(keyFormat) {
+			keyLen := fixstrLen(keyFormat)
 			if err := d.validateStringLen(keyLen); err != nil {
 				return err
 			}
@@ -154,7 +154,7 @@ func (d *Decoder) DecodeStruct(v any) error {
 			if err != nil {
 				return err
 			}
-		} else if keyFormat == FormatStr8 {
+		} else if keyFormat == formatStr8 {
 			n, err := d.readUint8()
 			if err != nil {
 				return err
@@ -166,7 +166,7 @@ func (d *Decoder) DecodeStruct(v any) error {
 			if err != nil {
 				return err
 			}
-		} else if keyFormat == FormatStr16 {
+		} else if keyFormat == formatStr16 {
 			n, err := d.readUint16()
 			if err != nil {
 				return err
@@ -178,7 +178,7 @@ func (d *Decoder) DecodeStruct(v any) error {
 			if err != nil {
 				return err
 			}
-		} else if keyFormat == FormatStr32 {
+		} else if keyFormat == formatStr32 {
 			n, err := d.readUint32()
 			if err != nil {
 				return err
@@ -250,16 +250,16 @@ func (d *Decoder) decodeIntoValue(rv reflect.Value) error {
 	}
 
 	// Handle nil
-	if format == FormatNil {
+	if format == formatNil {
 		rv.Set(reflect.Zero(rv.Type()))
 		return nil
 	}
 
 	switch rv.Kind() {
 	case reflect.Bool:
-		if format == FormatTrue {
+		if format == formatTrue {
 			rv.SetBool(true)
-		} else if format == FormatFalse {
+		} else if format == formatFalse {
 			rv.SetBool(false)
 		} else {
 			return ErrTypeMismatch
@@ -346,36 +346,36 @@ func (d *Decoder) decodeIntoValue(rv reflect.Value) error {
 
 // decodeValueInt decodes an integer value
 func (d *Decoder) decodeValueInt(format byte) (int64, error) {
-	if IsPositiveFixint(format) {
+	if isPositiveFixint(format) {
 		return int64(format), nil
 	}
-	if IsNegativeFixint(format) {
+	if isNegativeFixint(format) {
 		return int64(int8(format)), nil
 	}
 
 	switch format {
-	case FormatUint8:
+	case formatUint8:
 		v, err := d.readUint8()
 		return int64(v), err
-	case FormatUint16:
+	case formatUint16:
 		v, err := d.readUint16()
 		return int64(v), err
-	case FormatUint32:
+	case formatUint32:
 		v, err := d.readUint32()
 		return int64(v), err
-	case FormatUint64:
+	case formatUint64:
 		v, err := d.readUint64()
 		return int64(v), err
-	case FormatInt8:
+	case formatInt8:
 		v, err := d.readInt8()
 		return int64(v), err
-	case FormatInt16:
+	case formatInt16:
 		v, err := d.readInt16()
 		return int64(v), err
-	case FormatInt32:
+	case formatInt32:
 		v, err := d.readInt32()
 		return int64(v), err
-	case FormatInt64:
+	case formatInt64:
 		return d.readInt64()
 	default:
 		return 0, ErrTypeMismatch
@@ -384,32 +384,32 @@ func (d *Decoder) decodeValueInt(format byte) (int64, error) {
 
 // decodeValueUint decodes an unsigned integer value
 func (d *Decoder) decodeValueUint(format byte) (uint64, error) {
-	if IsPositiveFixint(format) {
+	if isPositiveFixint(format) {
 		return uint64(format), nil
 	}
 
 	switch format {
-	case FormatUint8:
+	case formatUint8:
 		v, err := d.readUint8()
 		return uint64(v), err
-	case FormatUint16:
+	case formatUint16:
 		v, err := d.readUint16()
 		return uint64(v), err
-	case FormatUint32:
+	case formatUint32:
 		v, err := d.readUint32()
 		return uint64(v), err
-	case FormatUint64:
+	case formatUint64:
 		return d.readUint64()
-	case FormatInt8:
+	case formatInt8:
 		v, err := d.readInt8()
 		return uint64(v), err
-	case FormatInt16:
+	case formatInt16:
 		v, err := d.readInt16()
 		return uint64(v), err
-	case FormatInt32:
+	case formatInt32:
 		v, err := d.readInt32()
 		return uint64(v), err
-	case FormatInt64:
+	case formatInt64:
 		v, err := d.readInt64()
 		return uint64(v), err
 	default:
@@ -420,41 +420,41 @@ func (d *Decoder) decodeValueUint(format byte) (uint64, error) {
 // decodeValueFloat decodes a float value
 func (d *Decoder) decodeValueFloat(format byte) (float64, error) {
 	// First check if it's an integer (common in msgpack)
-	if IsPositiveFixint(format) {
+	if isPositiveFixint(format) {
 		return float64(format), nil
 	}
-	if IsNegativeFixint(format) {
+	if isNegativeFixint(format) {
 		return float64(int8(format)), nil
 	}
 
 	switch format {
-	case FormatFloat32:
+	case formatFloat32:
 		v, err := d.readFloat32()
 		return float64(v), err
-	case FormatFloat64:
+	case formatFloat64:
 		return d.readFloat64()
-	case FormatUint8:
+	case formatUint8:
 		v, err := d.readUint8()
 		return float64(v), err
-	case FormatUint16:
+	case formatUint16:
 		v, err := d.readUint16()
 		return float64(v), err
-	case FormatUint32:
+	case formatUint32:
 		v, err := d.readUint32()
 		return float64(v), err
-	case FormatUint64:
+	case formatUint64:
 		v, err := d.readUint64()
 		return float64(v), err
-	case FormatInt8:
+	case formatInt8:
 		v, err := d.readInt8()
 		return float64(v), err
-	case FormatInt16:
+	case formatInt16:
 		v, err := d.readInt16()
 		return float64(v), err
-	case FormatInt32:
+	case formatInt32:
 		v, err := d.readInt32()
 		return float64(v), err
-	case FormatInt64:
+	case formatInt64:
 		v, err := d.readInt64()
 		return float64(v), err
 	default:
@@ -466,23 +466,23 @@ func (d *Decoder) decodeValueFloat(format byte) (float64, error) {
 func (d *Decoder) decodeValueString(format byte) ([]byte, error) {
 	var length int
 
-	if IsFixstr(format) {
-		length = FixstrLen(format)
+	if isFixstr(format) {
+		length = fixstrLen(format)
 	} else {
 		switch format {
-		case FormatStr8:
+		case formatStr8:
 			n, err := d.readUint8()
 			if err != nil {
 				return nil, err
 			}
 			length = int(n)
-		case FormatStr16:
+		case formatStr16:
 			n, err := d.readUint16()
 			if err != nil {
 				return nil, err
 			}
 			length = int(n)
-		case FormatStr32:
+		case formatStr32:
 			n, err := d.readUint32()
 			if err != nil {
 				return nil, err
@@ -502,8 +502,8 @@ func (d *Decoder) decodeValueString(format byte) ([]byte, error) {
 // decodeValueBytes decodes binary or string data
 func (d *Decoder) decodeValueBytes(format byte) ([]byte, error) {
 	// Handle string formats (for []byte fields)
-	if IsFixstr(format) {
-		length := FixstrLen(format)
+	if isFixstr(format) {
+		length := fixstrLen(format)
 		if err := d.validateStringLen(length); err != nil {
 			return nil, err
 		}
@@ -512,7 +512,7 @@ func (d *Decoder) decodeValueBytes(format byte) ([]byte, error) {
 
 	var length int
 	switch format {
-	case FormatStr8:
+	case formatStr8:
 		n, err := d.readUint8()
 		if err != nil {
 			return nil, err
@@ -521,7 +521,7 @@ func (d *Decoder) decodeValueBytes(format byte) ([]byte, error) {
 		if err := d.validateStringLen(length); err != nil {
 			return nil, err
 		}
-	case FormatStr16:
+	case formatStr16:
 		n, err := d.readUint16()
 		if err != nil {
 			return nil, err
@@ -530,7 +530,7 @@ func (d *Decoder) decodeValueBytes(format byte) ([]byte, error) {
 		if err := d.validateStringLen(length); err != nil {
 			return nil, err
 		}
-	case FormatStr32:
+	case formatStr32:
 		n, err := d.readUint32()
 		if err != nil {
 			return nil, err
@@ -539,7 +539,7 @@ func (d *Decoder) decodeValueBytes(format byte) ([]byte, error) {
 		if err := d.validateStringLen(length); err != nil {
 			return nil, err
 		}
-	case FormatBin8:
+	case formatBin8:
 		n, err := d.readUint8()
 		if err != nil {
 			return nil, err
@@ -548,7 +548,7 @@ func (d *Decoder) decodeValueBytes(format byte) ([]byte, error) {
 		if err := d.validateBinaryLen(length); err != nil {
 			return nil, err
 		}
-	case FormatBin16:
+	case formatBin16:
 		n, err := d.readUint16()
 		if err != nil {
 			return nil, err
@@ -557,7 +557,7 @@ func (d *Decoder) decodeValueBytes(format byte) ([]byte, error) {
 		if err := d.validateBinaryLen(length); err != nil {
 			return nil, err
 		}
-	case FormatBin32:
+	case formatBin32:
 		n, err := d.readUint32()
 		if err != nil {
 			return nil, err
@@ -576,15 +576,15 @@ func (d *Decoder) decodeValueBytes(format byte) ([]byte, error) {
 // decodeIntoSlice decodes an array into a slice
 func (d *Decoder) decodeIntoSlice(rv reflect.Value, format byte) error {
 	var length int
-	if IsFixarray(format) {
-		length = FixarrayLen(format)
-	} else if format == FormatArray16 {
+	if isFixarray(format) {
+		length = fixarrayLen(format)
+	} else if format == formatArray16 {
 		n, err := d.readUint16()
 		if err != nil {
 			return err
 		}
 		length = int(n)
-	} else if format == FormatArray32 {
+	} else if format == formatArray32 {
 		n, err := d.readUint32()
 		if err != nil {
 			return err
@@ -615,15 +615,15 @@ func (d *Decoder) decodeIntoSlice(rv reflect.Value, format byte) error {
 // decodeIntoArray decodes into a fixed-size array
 func (d *Decoder) decodeIntoArray(rv reflect.Value, format byte) error {
 	var length int
-	if IsFixarray(format) {
-		length = FixarrayLen(format)
-	} else if format == FormatArray16 {
+	if isFixarray(format) {
+		length = fixarrayLen(format)
+	} else if format == formatArray16 {
 		n, err := d.readUint16()
 		if err != nil {
 			return err
 		}
 		length = int(n)
-	} else if format == FormatArray32 {
+	} else if format == formatArray32 {
 		n, err := d.readUint32()
 		if err != nil {
 			return err
@@ -660,15 +660,15 @@ func (d *Decoder) decodeIntoArray(rv reflect.Value, format byte) error {
 // decodeIntoMap decodes into a map
 func (d *Decoder) decodeIntoMap(rv reflect.Value, format byte) error {
 	var mapLen int
-	if IsFixmap(format) {
-		mapLen = FixmapLen(format)
-	} else if format == FormatMap16 {
+	if isFixmap(format) {
+		mapLen = fixmapLen(format)
+	} else if format == formatMap16 {
 		n, err := d.readUint16()
 		if err != nil {
 			return err
 		}
 		mapLen = int(n)
-	} else if format == FormatMap32 {
+	} else if format == formatMap32 {
 		n, err := d.readUint32()
 		if err != nil {
 			return err
@@ -712,15 +712,15 @@ func (d *Decoder) decodeIntoMap(rv reflect.Value, format byte) error {
 // decodeIntoStruct decodes a map into a struct (nested)
 func (d *Decoder) decodeIntoStruct(rv reflect.Value, format byte) error {
 	var mapLen int
-	if IsFixmap(format) {
-		mapLen = FixmapLen(format)
-	} else if format == FormatMap16 {
+	if isFixmap(format) {
+		mapLen = fixmapLen(format)
+	} else if format == formatMap16 {
 		n, err := d.readUint16()
 		if err != nil {
 			return err
 		}
 		mapLen = int(n)
-	} else if format == FormatMap32 {
+	} else if format == formatMap32 {
 		n, err := d.readUint32()
 		if err != nil {
 			return err
@@ -791,8 +791,8 @@ func (d *Decoder) decodeStringKey() ([]byte, error) {
 		return nil, err
 	}
 
-	if IsFixstr(format) {
-		length := FixstrLen(format)
+	if isFixstr(format) {
+		length := fixstrLen(format)
 		if err := d.validateStringLen(length); err != nil {
 			return nil, err
 		}
@@ -800,7 +800,7 @@ func (d *Decoder) decodeStringKey() ([]byte, error) {
 	}
 
 	switch format {
-	case FormatStr8:
+	case formatStr8:
 		n, err := d.readUint8()
 		if err != nil {
 			return nil, err
@@ -809,7 +809,7 @@ func (d *Decoder) decodeStringKey() ([]byte, error) {
 			return nil, err
 		}
 		return d.readBytes(int(n))
-	case FormatStr16:
+	case formatStr16:
 		n, err := d.readUint16()
 		if err != nil {
 			return nil, err
@@ -818,7 +818,7 @@ func (d *Decoder) decodeStringKey() ([]byte, error) {
 			return nil, err
 		}
 		return d.readBytes(int(n))
-	case FormatStr32:
+	case formatStr32:
 		n, err := d.readUint32()
 		if err != nil {
 			return nil, err

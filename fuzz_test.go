@@ -165,10 +165,10 @@ func FuzzMapDecode(f *testing.F) {
 
 	f.Fuzz(func(t *testing.T, data []byte) {
 		// Test UnmarshalMap - shouldn't panic
-		_, _ = UnmarshalMap(data)
+		_, _ = UnmarshalMapStringAny(data, false)
 
 		// Test UnmarshalMapZeroCopy - shouldn't panic
-		_, _ = UnmarshalMapZeroCopy(data)
+		_, _ = UnmarshalMapStringAny(data, true)
 
 		// Test DecodeMapFunc - shouldn't panic
 		_ = DecodeMapFunc(data, func(m map[string]any) error {
@@ -390,7 +390,7 @@ func FuzzLargeCollections(f *testing.F) {
 		_, _ = d.DecodeAny()
 
 		// Also test map decoding
-		_, _ = UnmarshalMap(data)
+		_, _ = UnmarshalMapStringAny(data, false)
 	})
 }
 

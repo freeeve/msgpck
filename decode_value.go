@@ -13,64 +13,64 @@ func (d *Decoder) Decode() (Value, error) {
 // decodeValue decodes a value given its format byte
 func (d *Decoder) decodeValue(format byte) (Value, error) {
 	// Positive fixint: 0xxxxxxx
-	if IsPositiveFixint(format) {
+	if isPositiveFixint(format) {
 		return Value{Type: TypeUint, Uint: uint64(format)}, nil
 	}
 
 	// Negative fixint: 111xxxxx
-	if IsNegativeFixint(format) {
+	if isNegativeFixint(format) {
 		return Value{Type: TypeInt, Int: int64(int8(format))}, nil
 	}
 
 	// Fixmap: 1000xxxx
-	if IsFixmap(format) {
-		return d.decodeMap(FixmapLen(format))
+	if isFixmap(format) {
+		return d.decodeMap(fixmapLen(format))
 	}
 
 	// Fixarray: 1001xxxx
-	if IsFixarray(format) {
-		return d.decodeArray(FixarrayLen(format))
+	if isFixarray(format) {
+		return d.decodeArray(fixarrayLen(format))
 	}
 
 	// Fixstr: 101xxxxx
-	if IsFixstr(format) {
-		return d.decodeString(FixstrLen(format))
+	if isFixstr(format) {
+		return d.decodeString(fixstrLen(format))
 	}
 
 	switch format {
 	// Nil
-	case FormatNil:
+	case formatNil:
 		return Value{Type: TypeNil}, nil
 
 	// Bool
-	case FormatFalse:
+	case formatFalse:
 		return Value{Type: TypeBool, Bool: false}, nil
-	case FormatTrue:
+	case formatTrue:
 		return Value{Type: TypeBool, Bool: true}, nil
 
 	// Unsigned integers
-	case FormatUint8:
+	case formatUint8:
 		v, err := d.readUint8()
 		if err != nil {
 			return Value{}, err
 		}
 		return Value{Type: TypeUint, Uint: uint64(v)}, nil
 
-	case FormatUint16:
+	case formatUint16:
 		v, err := d.readUint16()
 		if err != nil {
 			return Value{}, err
 		}
 		return Value{Type: TypeUint, Uint: uint64(v)}, nil
 
-	case FormatUint32:
+	case formatUint32:
 		v, err := d.readUint32()
 		if err != nil {
 			return Value{}, err
 		}
 		return Value{Type: TypeUint, Uint: uint64(v)}, nil
 
-	case FormatUint64:
+	case formatUint64:
 		v, err := d.readUint64()
 		if err != nil {
 			return Value{}, err
@@ -78,28 +78,28 @@ func (d *Decoder) decodeValue(format byte) (Value, error) {
 		return Value{Type: TypeUint, Uint: v}, nil
 
 	// Signed integers
-	case FormatInt8:
+	case formatInt8:
 		v, err := d.readInt8()
 		if err != nil {
 			return Value{}, err
 		}
 		return Value{Type: TypeInt, Int: int64(v)}, nil
 
-	case FormatInt16:
+	case formatInt16:
 		v, err := d.readInt16()
 		if err != nil {
 			return Value{}, err
 		}
 		return Value{Type: TypeInt, Int: int64(v)}, nil
 
-	case FormatInt32:
+	case formatInt32:
 		v, err := d.readInt32()
 		if err != nil {
 			return Value{}, err
 		}
 		return Value{Type: TypeInt, Int: int64(v)}, nil
 
-	case FormatInt64:
+	case formatInt64:
 		v, err := d.readInt64()
 		if err != nil {
 			return Value{}, err
@@ -107,14 +107,14 @@ func (d *Decoder) decodeValue(format byte) (Value, error) {
 		return Value{Type: TypeInt, Int: v}, nil
 
 	// Floats
-	case FormatFloat32:
+	case formatFloat32:
 		v, err := d.readFloat32()
 		if err != nil {
 			return Value{}, err
 		}
 		return Value{Type: TypeFloat32, Float32: v}, nil
 
-	case FormatFloat64:
+	case formatFloat64:
 		v, err := d.readFloat64()
 		if err != nil {
 			return Value{}, err
@@ -122,21 +122,21 @@ func (d *Decoder) decodeValue(format byte) (Value, error) {
 		return Value{Type: TypeFloat64, Float64: v}, nil
 
 	// Strings
-	case FormatStr8:
+	case formatStr8:
 		length, err := d.readUint8()
 		if err != nil {
 			return Value{}, err
 		}
 		return d.decodeString(int(length))
 
-	case FormatStr16:
+	case formatStr16:
 		length, err := d.readUint16()
 		if err != nil {
 			return Value{}, err
 		}
 		return d.decodeString(int(length))
 
-	case FormatStr32:
+	case formatStr32:
 		length, err := d.readUint32()
 		if err != nil {
 			return Value{}, err
@@ -144,21 +144,21 @@ func (d *Decoder) decodeValue(format byte) (Value, error) {
 		return d.decodeString(int(length))
 
 	// Binary
-	case FormatBin8:
+	case formatBin8:
 		length, err := d.readUint8()
 		if err != nil {
 			return Value{}, err
 		}
 		return d.decodeBinary(int(length))
 
-	case FormatBin16:
+	case formatBin16:
 		length, err := d.readUint16()
 		if err != nil {
 			return Value{}, err
 		}
 		return d.decodeBinary(int(length))
 
-	case FormatBin32:
+	case formatBin32:
 		length, err := d.readUint32()
 		if err != nil {
 			return Value{}, err
@@ -166,14 +166,14 @@ func (d *Decoder) decodeValue(format byte) (Value, error) {
 		return d.decodeBinary(int(length))
 
 	// Arrays
-	case FormatArray16:
+	case formatArray16:
 		length, err := d.readUint16()
 		if err != nil {
 			return Value{}, err
 		}
 		return d.decodeArray(int(length))
 
-	case FormatArray32:
+	case formatArray32:
 		length, err := d.readUint32()
 		if err != nil {
 			return Value{}, err
@@ -181,14 +181,14 @@ func (d *Decoder) decodeValue(format byte) (Value, error) {
 		return d.decodeArray(int(length))
 
 	// Maps
-	case FormatMap16:
+	case formatMap16:
 		length, err := d.readUint16()
 		if err != nil {
 			return Value{}, err
 		}
 		return d.decodeMap(int(length))
 
-	case FormatMap32:
+	case formatMap32:
 		length, err := d.readUint32()
 		if err != nil {
 			return Value{}, err
@@ -196,33 +196,33 @@ func (d *Decoder) decodeValue(format byte) (Value, error) {
 		return d.decodeMap(int(length))
 
 	// Fixed ext
-	case FormatFixExt1:
+	case formatFixExt1:
 		return d.decodeExt(1)
-	case FormatFixExt2:
+	case formatFixExt2:
 		return d.decodeExt(2)
-	case FormatFixExt4:
+	case formatFixExt4:
 		return d.decodeExt(4)
-	case FormatFixExt8:
+	case formatFixExt8:
 		return d.decodeExt(8)
-	case FormatFixExt16:
+	case formatFixExt16:
 		return d.decodeExt(16)
 
 	// Variable ext
-	case FormatExt8:
+	case formatExt8:
 		length, err := d.readUint8()
 		if err != nil {
 			return Value{}, err
 		}
 		return d.decodeExt(int(length))
 
-	case FormatExt16:
+	case formatExt16:
 		length, err := d.readUint16()
 		if err != nil {
 			return Value{}, err
 		}
 		return d.decodeExt(int(length))
 
-	case FormatExt32:
+	case formatExt32:
 		length, err := d.readUint32()
 		if err != nil {
 			return Value{}, err
@@ -299,8 +299,8 @@ func (d *Decoder) decodeMap(length int) (Value, error) {
 
 		// Key must be a string (common case) or other type
 		var key []byte
-		if IsFixstr(keyFormat) {
-			keyLen := FixstrLen(keyFormat)
+		if isFixstr(keyFormat) {
+			keyLen := fixstrLen(keyFormat)
 			if err := d.validateStringLen(keyLen); err != nil {
 				return Value{}, err
 			}

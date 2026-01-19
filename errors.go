@@ -36,9 +36,6 @@ var (
 	// ErrNotStruct is returned when DecodeStruct is called with a non-struct pointer
 	ErrNotStruct = errors.New("msgpck: decode target must be a pointer to struct")
 
-	// ErrBufferTooSmall is returned when the encode buffer is too small
-	ErrBufferTooSmall = errors.New("msgpck: buffer too small")
-
 	// ErrUnsupportedType is returned when encoding an unsupported Go type
 	ErrUnsupportedType = errors.New("msgpck: unsupported type")
 )

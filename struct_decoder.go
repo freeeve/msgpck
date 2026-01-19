@@ -14,10 +14,11 @@ type StructDecoder[T any] struct {
 }
 
 type structField struct {
-	name   string       // msgpack field name
-	offset uintptr      // field offset in struct
-	kind   reflect.Kind // field type
-	elem   reflect.Type // for slices/maps: element type
+	name       string       // msgpack field name
+	offset     uintptr      // field offset in struct
+	kind       reflect.Kind // field type
+	elem       reflect.Type // for slices/maps: element type
+	structType reflect.Type // for struct fields: the struct type
 }
 
 // newStructDecoder creates a reusable decoder for type T.
@@ -62,6 +63,8 @@ func newStructDecoder[T any]() *StructDecoder[T] {
 		}
 		if f.Type.Kind() == reflect.Slice || f.Type.Kind() == reflect.Map {
 			sf.elem = f.Type.Elem()
+		} else if f.Type.Kind() == reflect.Struct {
+			sf.structType = f.Type
 		}
 		dec.fields = append(dec.fields, sf)
 	}
@@ -95,21 +98,21 @@ func (sd *StructDecoder[T]) decodeInto(d *Decoder, ptr unsafe.Pointer) error {
 	}
 
 	var mapLen int
-	if IsFixmap(format) {
-		mapLen = FixmapLen(format)
-	} else if format == FormatMap16 {
+	if isFixmap(format) {
+		mapLen = fixmapLen(format)
+	} else if format == formatMap16 {
 		n, err := d.readUint16()
 		if err != nil {
 			return err
 		}
 		mapLen = int(n)
-	} else if format == FormatMap32 {
+	} else if format == formatMap32 {
 		n, err := d.readUint32()
 		if err != nil {
 			return err
 		}
 		mapLen = int(n)
-	} else if format == FormatNil {
+	} else if format == formatNil {
 		return nil
 	} else {
 		return ErrTypeMismatch
@@ -161,7 +164,7 @@ func (sd *StructDecoder[T]) decodeField(d *Decoder, ptr unsafe.Pointer, field *s
 		return err
 	}
 
-	if format == FormatNil {
+	if format == formatNil {
 		return nil // leave as zero value
 	}
 
@@ -223,9 +226,9 @@ func (sd *StructDecoder[T]) decodeField(d *Decoder, ptr unsafe.Pointer, field *s
 		*(*float32)(ptr) = float32(v)
 
 	case reflect.Bool:
-		if format == FormatTrue {
+		if format == formatTrue {
 			*(*bool)(ptr) = true
-		} else if format == FormatFalse {
+		} else if format == formatFalse {
 			*(*bool)(ptr) = false
 		} else {
 			return ErrTypeMismatch
@@ -270,6 +273,13 @@ func (sd *StructDecoder[T]) decodeField(d *Decoder, ptr unsafe.Pointer, field *s
 			}
 		}
 
+	case reflect.Struct:
+		// Nested struct - decode using reflection
+		d.pos-- // put format byte back
+		if err := sd.decodeNestedStruct(d, ptr, field.structType); err != nil {
+			return err
+		}
+
 	default:
 		// Unknown type - skip
 		d.pos--
@@ -283,23 +293,23 @@ func (sd *StructDecoder[T]) decodeField(d *Decoder, ptr unsafe.Pointer, field *s
 
 func (sd *StructDecoder[T]) decodeString(d *Decoder, format byte) (string, error) {
 	var length int
-	if IsFixstr(format) {
-		length = FixstrLen(format)
+	if isFixstr(format) {
+		length = fixstrLen(format)
 	} else {
 		switch format {
-		case FormatStr8:
+		case formatStr8:
 			n, err := d.readUint8()
 			if err != nil {
 				return "", err
 			}
 			length = int(n)
-		case FormatStr16:
+		case formatStr16:
 			n, err := d.readUint16()
 			if err != nil {
 				return "", err
 			}
 			length = int(n)
-		case FormatStr32:
+		case formatStr32:
 			n, err := d.readUint32()
 			if err != nil {
 				return "", err
@@ -326,15 +336,15 @@ func (sd *StructDecoder[T]) decodeString(d *Decoder, format byte) (string, error
 
 func (sd *StructDecoder[T]) decodeStringSlice(d *Decoder, format byte) ([]string, error) {
 	var arrLen int
-	if IsFixarray(format) {
-		arrLen = FixarrayLen(format)
-	} else if format == FormatArray16 {
+	if isFixarray(format) {
+		arrLen = fixarrayLen(format)
+	} else if format == formatArray16 {
 		n, err := d.readUint16()
 		if err != nil {
 			return nil, err
 		}
 		arrLen = int(n)
-	} else if format == FormatArray32 {
+	} else if format == formatArray32 {
 		n, err := d.readUint32()
 		if err != nil {
 			return nil, err
@@ -364,15 +374,15 @@ func (sd *StructDecoder[T]) decodeStringSlice(d *Decoder, format byte) ([]string
 
 func (sd *StructDecoder[T]) decodeStringMap(d *Decoder, format byte) (map[string]string, error) {
 	var mapLen int
-	if IsFixmap(format) {
-		mapLen = FixmapLen(format)
-	} else if format == FormatMap16 {
+	if isFixmap(format) {
+		mapLen = fixmapLen(format)
+	} else if format == formatMap16 {
 		n, err := d.readUint16()
 		if err != nil {
 			return nil, err
 		}
 		mapLen = int(n)
-	} else if format == FormatMap32 {
+	} else if format == formatMap32 {
 		n, err := d.readUint32()
 		if err != nil {
 			return nil, err
@@ -414,35 +424,35 @@ func (sd *StructDecoder[T]) decodeStringMap(d *Decoder, format byte) (map[string
 
 // Helper functions for decoding primitives
 func decodeInt(d *Decoder, format byte) (int64, error) {
-	if IsPositiveFixint(format) {
+	if isPositiveFixint(format) {
 		return int64(format), nil
 	}
-	if IsNegativeFixint(format) {
+	if isNegativeFixint(format) {
 		return int64(int8(format)), nil
 	}
 	switch format {
-	case FormatUint8:
+	case formatUint8:
 		v, err := d.readUint8()
 		return int64(v), err
-	case FormatUint16:
+	case formatUint16:
 		v, err := d.readUint16()
 		return int64(v), err
-	case FormatUint32:
+	case formatUint32:
 		v, err := d.readUint32()
 		return int64(v), err
-	case FormatUint64:
+	case formatUint64:
 		v, err := d.readUint64()
 		return int64(v), err
-	case FormatInt8:
+	case formatInt8:
 		v, err := d.readInt8()
 		return int64(v), err
-	case FormatInt16:
+	case formatInt16:
 		v, err := d.readInt16()
 		return int64(v), err
-	case FormatInt32:
+	case formatInt32:
 		v, err := d.readInt32()
 		return int64(v), err
-	case FormatInt64:
+	case formatInt64:
 		return d.readInt64()
 	default:
 		return 0, ErrTypeMismatch
@@ -450,20 +460,20 @@ func decodeInt(d *Decoder, format byte) (int64, error) {
 }
 
 func decodeUint(d *Decoder, format byte) (uint64, error) {
-	if IsPositiveFixint(format) {
+	if isPositiveFixint(format) {
 		return uint64(format), nil
 	}
 	switch format {
-	case FormatUint8:
+	case formatUint8:
 		v, err := d.readUint8()
 		return uint64(v), err
-	case FormatUint16:
+	case formatUint16:
 		v, err := d.readUint16()
 		return uint64(v), err
-	case FormatUint32:
+	case formatUint32:
 		v, err := d.readUint32()
 		return uint64(v), err
-	case FormatUint64:
+	case formatUint64:
 		return d.readUint64()
 	default:
 		return 0, ErrTypeMismatch
@@ -471,37 +481,37 @@ func decodeUint(d *Decoder, format byte) (uint64, error) {
 }
 
 func decodeFloat(d *Decoder, format byte) (float64, error) {
-	if IsPositiveFixint(format) {
+	if isPositiveFixint(format) {
 		return float64(format), nil
 	}
-	if IsNegativeFixint(format) {
+	if isNegativeFixint(format) {
 		return float64(int8(format)), nil
 	}
 	switch format {
-	case FormatFloat32:
+	case formatFloat32:
 		v, err := d.readFloat32()
 		return float64(v), err
-	case FormatFloat64:
+	case formatFloat64:
 		return d.readFloat64()
-	case FormatUint8:
+	case formatUint8:
 		v, err := d.readUint8()
 		return float64(v), err
-	case FormatUint16:
+	case formatUint16:
 		v, err := d.readUint16()
 		return float64(v), err
-	case FormatUint32:
+	case formatUint32:
 		v, err := d.readUint32()
 		return float64(v), err
-	case FormatInt8:
+	case formatInt8:
 		v, err := d.readInt8()
 		return float64(v), err
-	case FormatInt16:
+	case formatInt16:
 		v, err := d.readInt16()
 		return float64(v), err
-	case FormatInt32:
+	case formatInt32:
 		v, err := d.readInt32()
 		return float64(v), err
-	case FormatInt64:
+	case formatInt64:
 		v, err := d.readInt64()
 		return float64(v), err
 	default:
@@ -511,23 +521,23 @@ func decodeFloat(d *Decoder, format byte) (float64, error) {
 
 func (sd *StructDecoder[T]) decodeBytes(d *Decoder, format byte) ([]byte, error) {
 	var length int
-	if IsFixstr(format) {
-		length = FixstrLen(format)
+	if isFixstr(format) {
+		length = fixstrLen(format)
 	} else {
 		switch format {
-		case FormatStr8, FormatBin8:
+		case formatStr8, formatBin8:
 			n, err := d.readUint8()
 			if err != nil {
 				return nil, err
 			}
 			length = int(n)
-		case FormatStr16, FormatBin16:
+		case formatStr16, formatBin16:
 			n, err := d.readUint16()
 			if err != nil {
 				return nil, err
 			}
 			length = int(n)
-		case FormatStr32, FormatBin32:
+		case formatStr32, formatBin32:
 			n, err := d.readUint32()
 			if err != nil {
 				return nil, err
@@ -552,6 +562,162 @@ func (sd *StructDecoder[T]) decodeBytes(d *Decoder, format byte) ([]byte, error)
 	cp := make([]byte, length)
 	copy(cp, bytes)
 	return cp, nil
+}
+
+// decodeNestedStruct decodes a msgpack map into a nested struct using reflection.
+func (sd *StructDecoder[T]) decodeNestedStruct(d *Decoder, ptr unsafe.Pointer, structType reflect.Type) error {
+	format, err := d.readByte()
+	if err != nil {
+		return err
+	}
+
+	var mapLen int
+	if isFixmap(format) {
+		mapLen = fixmapLen(format)
+	} else if format == formatMap16 {
+		n, err := d.readUint16()
+		if err != nil {
+			return err
+		}
+		mapLen = int(n)
+	} else if format == formatMap32 {
+		n, err := d.readUint32()
+		if err != nil {
+			return err
+		}
+		mapLen = int(n)
+	} else if format == formatNil {
+		return nil
+	} else {
+		return ErrTypeMismatch
+	}
+
+	if err := d.validateMapLen(mapLen); err != nil {
+		return err
+	}
+
+	// Build field map for the nested struct type
+	fieldMap := make(map[string]reflect.StructField, structType.NumField())
+	for i := 0; i < structType.NumField(); i++ {
+		f := structType.Field(i)
+		if !f.IsExported() {
+			continue
+		}
+		name := f.Tag.Get("msgpack")
+		if name == "-" {
+			continue
+		}
+		if name == "" {
+			name = f.Name
+		}
+		for j := 0; j < len(name); j++ {
+			if name[j] == ',' {
+				name = name[:j]
+				break
+			}
+		}
+		fieldMap[name] = f
+	}
+
+	// Decode each key-value pair
+	for i := 0; i < mapLen; i++ {
+		keyBytes, err := d.readStringBytes()
+		if err != nil {
+			return err
+		}
+		key := unsafe.String(unsafe.SliceData(keyBytes), len(keyBytes))
+
+		f, ok := fieldMap[key]
+		if !ok {
+			// Skip unknown field
+			if _, err := d.Decode(); err != nil {
+				return err
+			}
+			continue
+		}
+
+		// Decode into the nested field
+		fieldPtr := unsafe.Add(ptr, f.Offset)
+		nestedField := structField{
+			name:   key,
+			offset: f.Offset,
+			kind:   f.Type.Kind(),
+		}
+		if f.Type.Kind() == reflect.Slice || f.Type.Kind() == reflect.Map {
+			nestedField.elem = f.Type.Elem()
+		} else if f.Type.Kind() == reflect.Struct {
+			nestedField.structType = f.Type
+		}
+
+		format, err := d.readByte()
+		if err != nil {
+			return err
+		}
+		if format == formatNil {
+			continue
+		}
+
+		switch nestedField.kind {
+		case reflect.String:
+			s, err := sd.decodeString(d, format)
+			if err != nil {
+				return err
+			}
+			*(*string)(fieldPtr) = s
+		case reflect.Int, reflect.Int64, reflect.Int32:
+			v, err := decodeInt(d, format)
+			if err != nil {
+				return err
+			}
+			switch nestedField.kind {
+			case reflect.Int:
+				*(*int)(fieldPtr) = int(v)
+			case reflect.Int64:
+				*(*int64)(fieldPtr) = v
+			case reflect.Int32:
+				*(*int32)(fieldPtr) = int32(v)
+			}
+		case reflect.Uint, reflect.Uint64:
+			v, err := decodeUint(d, format)
+			if err != nil {
+				return err
+			}
+			switch nestedField.kind {
+			case reflect.Uint:
+				*(*uint)(fieldPtr) = uint(v)
+			case reflect.Uint64:
+				*(*uint64)(fieldPtr) = v
+			}
+		case reflect.Float64, reflect.Float32:
+			v, err := decodeFloat(d, format)
+			if err != nil {
+				return err
+			}
+			if nestedField.kind == reflect.Float64 {
+				*(*float64)(fieldPtr) = v
+			} else {
+				*(*float32)(fieldPtr) = float32(v)
+			}
+		case reflect.Bool:
+			if format == formatTrue {
+				*(*bool)(fieldPtr) = true
+			} else if format == formatFalse {
+				*(*bool)(fieldPtr) = false
+			}
+		case reflect.Struct:
+			d.pos--
+			if err := sd.decodeNestedStruct(d, fieldPtr, nestedField.structType); err != nil {
+				return err
+			}
+		default:
+			d.pos--
+			if _, err := d.Decode(); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }
 
 // Global decoder cache for common struct types
