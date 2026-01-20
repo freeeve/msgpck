@@ -42,64 +42,43 @@ func (e *Encoder) EncodeTimestamp(t time.Time) {
 	}
 }
 
-// DecodeTimestamp decodes a msgpack timestamp extension to time.Time.
-// Returns the time in UTC.
-// Returns ErrTypeMismatch if the value is not a timestamp extension.
-func (d *Decoder) DecodeTimestamp() (time.Time, error) {
-	format, err := d.readByte()
-	if err != nil {
-		return time.Time{}, err
-	}
-
-	var dataLen int
+// decodeTimestampDataLen parses the format byte and returns the data length.
+func (d *Decoder) decodeTimestampDataLen(format byte) (int, error) {
 	switch format {
 	case formatFixExt4:
-		dataLen = 4
+		return 4, nil
 	case formatFixExt8:
-		dataLen = 8
+		return 8, nil
 	case formatExt8:
 		n, err := d.readUint8()
 		if err != nil {
-			return time.Time{}, err
+			return 0, err
 		}
-		dataLen = int(n)
-		if dataLen != 12 {
-			return time.Time{}, ErrTypeMismatch
+		if n != 12 {
+			return 0, ErrTypeMismatch
 		}
+		return 12, nil
 	default:
-		return time.Time{}, ErrTypeMismatch
+		return 0, ErrTypeMismatch
 	}
+}
 
-	// Read extension type
-	extType, err := d.readInt8()
-	if err != nil {
-		return time.Time{}, err
-	}
-	if extType != TimestampExtType {
-		return time.Time{}, ErrTypeMismatch
-	}
-
+// decodeTimestampValue decodes the timestamp value based on data length.
+func (d *Decoder) decodeTimestampValue(dataLen int) (time.Time, error) {
 	switch dataLen {
 	case 4:
-		// Timestamp 32: 4 bytes seconds as uint32
 		sec, err := d.readUint32()
 		if err != nil {
 			return time.Time{}, err
 		}
 		return time.Unix(int64(sec), 0).UTC(), nil
-
 	case 8:
-		// Timestamp 64: 8 bytes (30-bit nsec + 34-bit sec)
 		val, err := d.readUint64()
 		if err != nil {
 			return time.Time{}, err
 		}
-		nsec := int64(val >> 34)
-		sec := int64(val & 0x3FFFFFFFF)
-		return time.Unix(sec, nsec).UTC(), nil
-
+		return time.Unix(int64(val&0x3FFFFFFFF), int64(val>>34)).UTC(), nil
 	case 12:
-		// Timestamp 96: 4 bytes nsec + 8 bytes sec
 		nsec, err := d.readUint32()
 		if err != nil {
 			return time.Time{}, err
@@ -109,10 +88,34 @@ func (d *Decoder) DecodeTimestamp() (time.Time, error) {
 			return time.Time{}, err
 		}
 		return time.Unix(sec, int64(nsec)).UTC(), nil
-
 	default:
 		return time.Time{}, ErrTypeMismatch
 	}
+}
+
+// DecodeTimestamp decodes a msgpack timestamp extension to time.Time.
+// Returns the time in UTC.
+// Returns ErrTypeMismatch if the value is not a timestamp extension.
+func (d *Decoder) DecodeTimestamp() (time.Time, error) {
+	format, err := d.readByte()
+	if err != nil {
+		return time.Time{}, err
+	}
+
+	dataLen, err := d.decodeTimestampDataLen(format)
+	if err != nil {
+		return time.Time{}, err
+	}
+
+	extType, err := d.readInt8()
+	if err != nil {
+		return time.Time{}, err
+	}
+	if extType != TimestampExtType {
+		return time.Time{}, ErrTypeMismatch
+	}
+
+	return d.decodeTimestampValue(dataLen)
 }
 
 // MarshalTimestamp encodes a time.Time to msgpack timestamp bytes.
