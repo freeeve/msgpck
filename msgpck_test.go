@@ -7,6 +7,15 @@ import (
 	"testing"
 )
 
+// Test error message constants to avoid duplication
+const (
+	errMsgMarshalFailed   = "Marshal failed: %v"
+	errMsgUnmarshalFailed = "Unmarshal failed: %v"
+	errMsgStructFailed    = "UnmarshalStruct failed: %v"
+	errMsgGotWant         = "got %+v, want %+v"
+	testEmail             = "alice@example.com"
+)
+
 // TestRoundTripPrimitives tests encoding and decoding of primitive types
 func TestRoundTripPrimitives(t *testing.T) {
 	// Note: DecodeAny normalizes all integers to int64 (unless > MaxInt64)
@@ -44,12 +53,12 @@ func TestRoundTripPrimitives(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			encoded, err := Marshal(tt.value)
 			if err != nil {
-				t.Fatalf("Marshal failed: %v", err)
+				t.Fatalf(errMsgMarshalFailed, err)
 			}
 
 			decoded, err := Unmarshal(encoded)
 			if err != nil {
-				t.Fatalf("Unmarshal failed: %v", err)
+				t.Fatalf(errMsgUnmarshalFailed, err)
 			}
 
 			if !reflect.DeepEqual(decoded, tt.value) {
@@ -81,12 +90,12 @@ func TestRoundTripContainers(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			encoded, err := Marshal(tt.value)
 			if err != nil {
-				t.Fatalf("Marshal failed: %v", err)
+				t.Fatalf(errMsgMarshalFailed, err)
 			}
 
 			decoded, err := Unmarshal(encoded)
 			if err != nil {
-				t.Fatalf("Unmarshal failed: %v", err)
+				t.Fatalf(errMsgUnmarshalFailed, err)
 			}
 
 			if !reflect.DeepEqual(decoded, tt.value) {
@@ -127,18 +136,18 @@ func TestDecodeStruct(t *testing.T) {
 	original := Person{Name: "Alice", Age: 30}
 	encoded, err := Marshal(original)
 	if err != nil {
-		t.Fatalf("Marshal failed: %v", err)
+		t.Fatalf(errMsgMarshalFailed, err)
 	}
 
 	// Decode
 	var decoded Person
 	err = UnmarshalStruct(encoded, &decoded)
 	if err != nil {
-		t.Fatalf("UnmarshalStruct failed: %v", err)
+		t.Fatalf(errMsgStructFailed, err)
 	}
 
 	if decoded != original {
-		t.Errorf("got %+v, want %+v", decoded, original)
+		t.Errorf(errMsgGotWant, decoded, original)
 	}
 }
 
@@ -153,13 +162,13 @@ func TestOmitEmpty(t *testing.T) {
 	original := Data{Name: "test", Value: 0}
 	encoded, err := Marshal(original)
 	if err != nil {
-		t.Fatalf("Marshal failed: %v", err)
+		t.Fatalf(errMsgMarshalFailed, err)
 	}
 
 	// Decode as map to check fields
 	decoded, err := Unmarshal(encoded)
 	if err != nil {
-		t.Fatalf("Unmarshal failed: %v", err)
+		t.Fatalf(errMsgUnmarshalFailed, err)
 	}
 
 	m := decoded.(map[string]any)
@@ -257,12 +266,12 @@ func TestBinaryData(t *testing.T) {
 	original := []byte{0x00, 0x01, 0x02, 0xff, 0xfe}
 	encoded, err := Marshal(original)
 	if err != nil {
-		t.Fatalf("Marshal failed: %v", err)
+		t.Fatalf(errMsgMarshalFailed, err)
 	}
 
 	decoded, err := Unmarshal(encoded)
 	if err != nil {
-		t.Fatalf("Unmarshal failed: %v", err)
+		t.Fatalf(errMsgUnmarshalFailed, err)
 	}
 
 	if !bytes.Equal(decoded.([]byte), original) {
@@ -309,12 +318,12 @@ func TestFloatSpecialValues(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			encoded, err := Marshal(tt.value)
 			if err != nil {
-				t.Fatalf("Marshal failed: %v", err)
+				t.Fatalf(errMsgMarshalFailed, err)
 			}
 
 			decoded, err := Unmarshal(encoded)
 			if err != nil {
-				t.Fatalf("Unmarshal failed: %v", err)
+				t.Fatalf(errMsgUnmarshalFailed, err)
 			}
 
 			got := decoded.(float64)
@@ -346,17 +355,17 @@ func TestNestedStruct(t *testing.T) {
 
 	encoded, err := Marshal(original)
 	if err != nil {
-		t.Fatalf("Marshal failed: %v", err)
+		t.Fatalf(errMsgMarshalFailed, err)
 	}
 
 	var decoded Person
 	err = UnmarshalStruct(encoded, &decoded)
 	if err != nil {
-		t.Fatalf("UnmarshalStruct failed: %v", err)
+		t.Fatalf(errMsgStructFailed, err)
 	}
 
 	if decoded != original {
-		t.Errorf("got %+v, want %+v", decoded, original)
+		t.Errorf(errMsgGotWant, decoded, original)
 	}
 }
 
@@ -370,17 +379,17 @@ func TestSliceInStruct(t *testing.T) {
 
 	encoded, err := Marshal(original)
 	if err != nil {
-		t.Fatalf("Marshal failed: %v", err)
+		t.Fatalf(errMsgMarshalFailed, err)
 	}
 
 	var decoded Data
 	err = UnmarshalStruct(encoded, &decoded)
 	if err != nil {
-		t.Fatalf("UnmarshalStruct failed: %v", err)
+		t.Fatalf(errMsgStructFailed, err)
 	}
 
 	if !reflect.DeepEqual(decoded, original) {
-		t.Errorf("got %+v, want %+v", decoded, original)
+		t.Errorf(errMsgGotWant, decoded, original)
 	}
 }
 
@@ -394,17 +403,17 @@ func TestMapInStruct(t *testing.T) {
 
 	encoded, err := Marshal(original)
 	if err != nil {
-		t.Fatalf("Marshal failed: %v", err)
+		t.Fatalf(errMsgMarshalFailed, err)
 	}
 
 	var decoded Data
 	err = UnmarshalStruct(encoded, &decoded)
 	if err != nil {
-		t.Fatalf("UnmarshalStruct failed: %v", err)
+		t.Fatalf(errMsgStructFailed, err)
 	}
 
 	if !reflect.DeepEqual(decoded, original) {
-		t.Errorf("got %+v, want %+v", decoded, original)
+		t.Errorf(errMsgGotWant, decoded, original)
 	}
 }
 
@@ -413,7 +422,7 @@ func BenchmarkDecodeMap(b *testing.B) {
 	data := map[string]any{
 		"name":   "Alice",
 		"age":    30,
-		"email":  "alice@example.com",
+		"email":  testEmail,
 		"active": true,
 	}
 	encoded, _ := Marshal(data)
@@ -432,7 +441,7 @@ func BenchmarkDecodeMapAny(b *testing.B) {
 	data := map[string]any{
 		"name":   "Alice",
 		"age":    30,
-		"email":  "alice@example.com",
+		"email":  testEmail,
 		"active": true,
 	}
 	encoded, _ := Marshal(data)
@@ -451,7 +460,7 @@ func BenchmarkEncodeMap(b *testing.B) {
 	data := map[string]any{
 		"name":   "Alice",
 		"age":    30,
-		"email":  "alice@example.com",
+		"email":  testEmail,
 		"active": true,
 	}
 
@@ -475,7 +484,7 @@ func BenchmarkDecodeStruct(b *testing.B) {
 	data := Person{
 		Name:   "Alice",
 		Age:    30,
-		Email:  "alice@example.com",
+		Email:  testEmail,
 		Active: true,
 	}
 	encoded, _ := Marshal(data)
