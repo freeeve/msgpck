@@ -74,7 +74,7 @@ print_summary() {
     echo "Time per target: $TIME_PER_TARGET"
     echo ""
 
-    if [ -s "$CRASHED_FILE" ]; then
+    if [[ -s "$CRASHED_FILE" ]]; then
         echo "CRASHED TARGETS:"
         while read -r target; do
             echo "   - $target (see $LOG_DIR/$target.log)"
@@ -83,7 +83,7 @@ print_summary() {
     fi
 
     echo "Results:"
-    if [ -s "$RESULTS_FILE" ]; then
+    if [[ -s "$RESULTS_FILE" ]]; then
         cat "$RESULTS_FILE" | while read -r line; do
             echo "   $line"
         done
@@ -131,7 +131,7 @@ run_fuzz_target() {
     set -e
 
     # Check results
-    if [ $exit_code -ne 0 ]; then
+    if [[ $exit_code -ne 0 ]]; then
         echo "WARNING: $target exited with code $exit_code"
         echo "$target" >> "$CRASHED_FILE"
         echo "$target: CRASHED (exit $exit_code)" >> "$RESULTS_FILE"
@@ -152,7 +152,7 @@ is_in_list() {
     local target="$1"
     local list="$2"
     for item in $list; do
-        if [ "$item" = "$target" ]; then
+        if [[ "$item" = "$target" ]]; then
             return 0
         fi
     done
@@ -168,7 +168,7 @@ echo "Parallel workers: $FUZZ_PARALLEL"
 echo "Log directory: $LOG_DIR"
 echo ""
 
-if [ -n "$SPECIFIC_TARGET" ]; then
+if [[ -n "$SPECIFIC_TARGET" ]]; then
     # Run specific target
     if is_in_list "$SPECIFIC_TARGET" "$TARGETS"; then
         echo "Running specific target: $SPECIFIC_TARGET"
