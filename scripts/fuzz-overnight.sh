@@ -62,6 +62,7 @@ copy_corpus_to_testdata() {
     else
         echo "No fuzz cache found at $GOCACHE_FUZZ"
     fi
+    return 0
 }
 
 print_summary() {
