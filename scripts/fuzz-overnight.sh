@@ -97,6 +97,7 @@ print_summary() {
     echo ""
     echo "To check for failures:"
     echo "   grep -l 'FAIL\|panic\|crash' $LOG_DIR/*.log 2>/dev/null || echo 'No failures found'"
+    return 0
 }
 
 # Cleanup on exit
@@ -146,6 +147,7 @@ run_fuzz_target() {
     fi
 
     echo "Finished: $(date)"
+    return 0
 }
 
 is_in_list() {
