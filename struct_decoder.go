@@ -224,6 +224,20 @@ func (sd *StructDecoder[T]) decodeField(d *Decoder, ptr unsafe.Pointer, field *s
 		}
 		*(*int32)(ptr) = int32(v)
 
+	case reflect.Int16:
+		v, err := decodeInt(d, format)
+		if err != nil {
+			return err
+		}
+		*(*int16)(ptr) = int16(v)
+
+	case reflect.Int8:
+		v, err := decodeInt(d, format)
+		if err != nil {
+			return err
+		}
+		*(*int8)(ptr) = int8(v)
+
 	case reflect.Uint:
 		v, err := decodeUint(d, format)
 		if err != nil {
@@ -237,6 +251,27 @@ func (sd *StructDecoder[T]) decodeField(d *Decoder, ptr unsafe.Pointer, field *s
 			return err
 		}
 		*(*uint64)(ptr) = v
+
+	case reflect.Uint32:
+		v, err := decodeUint(d, format)
+		if err != nil {
+			return err
+		}
+		*(*uint32)(ptr) = uint32(v)
+
+	case reflect.Uint16:
+		v, err := decodeUint(d, format)
+		if err != nil {
+			return err
+		}
+		*(*uint16)(ptr) = uint16(v)
+
+	case reflect.Uint8:
+		v, err := decodeUint(d, format)
+		if err != nil {
+			return err
+		}
+		*(*uint8)(ptr) = uint8(v)
 
 	case reflect.Float64:
 		v, err := decodeFloat(d, format)

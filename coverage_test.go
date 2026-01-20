@@ -9395,3 +9395,78 @@ func TestExtToTimestampErrors(t *testing.T) {
 		}
 	})
 }
+
+// TestStructDecoderAllIntegerTypes tests struct decoding for all integer type sizes.
+// This is a regression test for a bug where int16, int8, uint32, uint16, uint8 were
+// not handled in the struct decoder and would silently decode as zero.
+func TestStructDecoderAllIntegerTypes(t *testing.T) {
+	type AllInts struct {
+		I   int    `msgpack:"i"`
+		I64 int64  `msgpack:"i64"`
+		I32 int32  `msgpack:"i32"`
+		I16 int16  `msgpack:"i16"`
+		I8  int8   `msgpack:"i8"`
+		U   uint   `msgpack:"u"`
+		U64 uint64 `msgpack:"u64"`
+		U32 uint32 `msgpack:"u32"`
+		U16 uint16 `msgpack:"u16"`
+		U8  uint8  `msgpack:"u8"`
+	}
+
+	original := AllInts{
+		I:   -1000000,
+		I64: -9223372036854775807,
+		I32: -2147483647,
+		I16: -32767,
+		I8:  -127,
+		U:   1000000,
+		U64: 18446744073709551615,
+		U32: 4294967295,
+		U16: 65535,
+		U8:  255,
+	}
+
+	enc := GetStructEncoder[AllInts]()
+	data, err := enc.EncodeCopy(&original)
+	if err != nil {
+		t.Fatalf("encode failed: %v", err)
+	}
+
+	dec := GetStructDecoder[AllInts](false)
+	var result AllInts
+	err = dec.Decode(data, &result)
+	if err != nil {
+		t.Fatalf("decode failed: %v", err)
+	}
+
+	if result.I != original.I {
+		t.Errorf("I: got %d, want %d", result.I, original.I)
+	}
+	if result.I64 != original.I64 {
+		t.Errorf("I64: got %d, want %d", result.I64, original.I64)
+	}
+	if result.I32 != original.I32 {
+		t.Errorf("I32: got %d, want %d", result.I32, original.I32)
+	}
+	if result.I16 != original.I16 {
+		t.Errorf("I16: got %d, want %d", result.I16, original.I16)
+	}
+	if result.I8 != original.I8 {
+		t.Errorf("I8: got %d, want %d", result.I8, original.I8)
+	}
+	if result.U != original.U {
+		t.Errorf("U: got %d, want %d", result.U, original.U)
+	}
+	if result.U64 != original.U64 {
+		t.Errorf("U64: got %d, want %d", result.U64, original.U64)
+	}
+	if result.U32 != original.U32 {
+		t.Errorf("U32: got %d, want %d", result.U32, original.U32)
+	}
+	if result.U16 != original.U16 {
+		t.Errorf("U16: got %d, want %d", result.U16, original.U16)
+	}
+	if result.U8 != original.U8 {
+		t.Errorf("U8: got %d, want %d", result.U8, original.U8)
+	}
+}
