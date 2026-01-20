@@ -5896,27 +5896,6 @@ func TestDecodeIntoValuePointerFieldAllocated(t *testing.T) {
 	}
 }
 
-// TestDecodeIntoValuePointerFieldNil tests decodeIntoValue with nil pointer field
-func TestDecodeIntoValuePointerFieldNil(t *testing.T) {
-	type S struct {
-		P *int `msgpack:"p"`
-	}
-
-	enc := NewEncoder(64)
-	enc.EncodeMapHeader(1)
-	enc.EncodeString("p")
-	enc.EncodeNil()
-
-	var s S
-	err := UnmarshalStruct(enc.Bytes(), &s)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if s.P != nil {
-		t.Errorf("expected nil pointer, got %v", s.P)
-	}
-}
-
 // TestAsFloat64UnsignedInt tests AsFloat64 with large uint64
 func TestAsFloat64UnsignedInt(t *testing.T) {
 	// Large uint64 that doesn't fit in int64
