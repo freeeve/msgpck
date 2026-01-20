@@ -125,9 +125,24 @@ func (sd *StructDecoder[T]) decodeInto(d *Decoder, ptr unsafe.Pointer) error {
 		return nil
 	}
 
-	mapLen, err := d.parseMapLen(format)
-	if err != nil {
-		return err
+	// Inline map length parsing for performance
+	var mapLen int
+	if isFixmap(format) {
+		mapLen = fixmapLen(format)
+	} else if format == formatMap16 {
+		n, err := d.readUint16()
+		if err != nil {
+			return err
+		}
+		mapLen = int(n)
+	} else if format == formatMap32 {
+		n, err := d.readUint32()
+		if err != nil {
+			return err
+		}
+		mapLen = int(n)
+	} else {
+		return ErrTypeMismatch
 	}
 
 	if err := d.validateMapLen(mapLen); err != nil {
@@ -297,9 +312,33 @@ func (sd *StructDecoder[T]) decodeField(d *Decoder, ptr unsafe.Pointer, field *s
 }
 
 func (sd *StructDecoder[T]) decodeString(d *Decoder, format byte) (string, error) {
-	length, err := d.parseStringLen(format)
-	if err != nil {
-		return "", err
+	// Inline string length parsing for performance
+	var length int
+	if isFixstr(format) {
+		length = fixstrLen(format)
+	} else {
+		switch format {
+		case formatStr8:
+			n, err := d.readUint8()
+			if err != nil {
+				return "", err
+			}
+			length = int(n)
+		case formatStr16:
+			n, err := d.readUint16()
+			if err != nil {
+				return "", err
+			}
+			length = int(n)
+		case formatStr32:
+			n, err := d.readUint32()
+			if err != nil {
+				return "", err
+			}
+			length = int(n)
+		default:
+			return "", ErrTypeMismatch
+		}
 	}
 	if err := d.validateStringLen(length); err != nil {
 		return "", err
