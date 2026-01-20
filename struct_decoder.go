@@ -180,92 +180,6 @@ func (sd *StructDecoder[T]) decodeField(d *Decoder, ptr unsafe.Pointer, field *s
 		return nil // leave as zero value
 	}
 
-	return sd.decodeFieldValue(d, ptr, field, format)
-}
-
-func (sd *StructDecoder[T]) decodeString(d *Decoder, format byte) (string, error) {
-	length, err := d.parseStringLen(format)
-	if err != nil {
-		return "", err
-	}
-	if err := d.validateStringLen(length); err != nil {
-		return "", err
-	}
-	bytes, err := d.readBytes(length)
-	if err != nil {
-		return "", err
-	}
-	if sd.zeroCopy {
-		// Zero-copy: string points into input buffer
-		return unsafe.String(unsafe.SliceData(bytes), len(bytes)), nil
-	}
-	// Copy string for safety
-	return string(bytes), nil
-}
-
-func (sd *StructDecoder[T]) decodeStringSlice(d *Decoder, format byte) ([]string, error) {
-	arrLen, err := d.parseArrayLen(format)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := d.validateArrayLen(arrLen); err != nil {
-		return nil, err
-	}
-
-	result := make([]string, arrLen)
-	for i := 0; i < arrLen; i++ {
-		f, err := d.readByte()
-		if err != nil {
-			return nil, err
-		}
-		result[i], err = sd.decodeString(d, f)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return result, nil
-}
-
-func (sd *StructDecoder[T]) decodeStringMap(d *Decoder, format byte) (map[string]string, error) {
-	mapLen, err := d.parseMapLen(format)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := d.validateMapLen(mapLen); err != nil {
-		return nil, err
-	}
-
-	result := make(map[string]string, mapLen)
-	for i := 0; i < mapLen; i++ {
-		keyBytes, err := d.readStringBytes()
-		if err != nil {
-			return nil, err
-		}
-		var key string
-		if sd.zeroCopy {
-			key = unsafe.String(unsafe.SliceData(keyBytes), len(keyBytes))
-		} else {
-			key = string(keyBytes)
-		}
-
-		f, err := d.readByte()
-		if err != nil {
-			return nil, err
-		}
-		val, err := sd.decodeString(d, f)
-		if err != nil {
-			return nil, err
-		}
-		result[key] = val
-	}
-	return result, nil
-}
-
-// decodeFieldValue decodes a value given its format byte and stores it at the field pointer.
-// This is the shared core logic used by both decodeField and decodeNestedStruct.
-func (sd *StructDecoder[T]) decodeFieldValue(d *Decoder, ptr unsafe.Pointer, field *structField, format byte) error {
 	switch field.kind {
 	case reflect.String:
 		s, err := sd.decodeString(d, format)
@@ -380,6 +294,86 @@ func (sd *StructDecoder[T]) decodeFieldValue(d *Decoder, ptr unsafe.Pointer, fie
 	}
 
 	return nil
+}
+
+func (sd *StructDecoder[T]) decodeString(d *Decoder, format byte) (string, error) {
+	length, err := d.parseStringLen(format)
+	if err != nil {
+		return "", err
+	}
+	if err := d.validateStringLen(length); err != nil {
+		return "", err
+	}
+	bytes, err := d.readBytes(length)
+	if err != nil {
+		return "", err
+	}
+	if sd.zeroCopy {
+		// Zero-copy: string points into input buffer
+		return unsafe.String(unsafe.SliceData(bytes), len(bytes)), nil
+	}
+	// Copy string for safety
+	return string(bytes), nil
+}
+
+func (sd *StructDecoder[T]) decodeStringSlice(d *Decoder, format byte) ([]string, error) {
+	arrLen, err := d.parseArrayLen(format)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := d.validateArrayLen(arrLen); err != nil {
+		return nil, err
+	}
+
+	result := make([]string, arrLen)
+	for i := 0; i < arrLen; i++ {
+		f, err := d.readByte()
+		if err != nil {
+			return nil, err
+		}
+		result[i], err = sd.decodeString(d, f)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return result, nil
+}
+
+func (sd *StructDecoder[T]) decodeStringMap(d *Decoder, format byte) (map[string]string, error) {
+	mapLen, err := d.parseMapLen(format)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := d.validateMapLen(mapLen); err != nil {
+		return nil, err
+	}
+
+	result := make(map[string]string, mapLen)
+	for i := 0; i < mapLen; i++ {
+		keyBytes, err := d.readStringBytes()
+		if err != nil {
+			return nil, err
+		}
+		var key string
+		if sd.zeroCopy {
+			key = unsafe.String(unsafe.SliceData(keyBytes), len(keyBytes))
+		} else {
+			key = string(keyBytes)
+		}
+
+		f, err := d.readByte()
+		if err != nil {
+			return nil, err
+		}
+		val, err := sd.decodeString(d, f)
+		if err != nil {
+			return nil, err
+		}
+		result[key] = val
+	}
+	return result, nil
 }
 
 // Helper functions for decoding primitives
@@ -585,8 +579,71 @@ func (sd *StructDecoder[T]) decodeNestedStruct(d *Decoder, ptr unsafe.Pointer, s
 			continue
 		}
 
-		if err := sd.decodeFieldValue(d, fieldPtr, &nestedField, format); err != nil {
-			return err
+		switch nestedField.kind {
+		case reflect.String:
+			s, err := sd.decodeString(d, format)
+			if err != nil {
+				return err
+			}
+			*(*string)(fieldPtr) = s
+		case reflect.Int:
+			v, err := decodeInt(d, format)
+			if err != nil {
+				return err
+			}
+			*(*int)(fieldPtr) = int(v)
+		case reflect.Int64:
+			v, err := decodeInt(d, format)
+			if err != nil {
+				return err
+			}
+			*(*int64)(fieldPtr) = v
+		case reflect.Int32:
+			v, err := decodeInt(d, format)
+			if err != nil {
+				return err
+			}
+			*(*int32)(fieldPtr) = int32(v)
+		case reflect.Uint:
+			v, err := decodeUint(d, format)
+			if err != nil {
+				return err
+			}
+			*(*uint)(fieldPtr) = uint(v)
+		case reflect.Uint64:
+			v, err := decodeUint(d, format)
+			if err != nil {
+				return err
+			}
+			*(*uint64)(fieldPtr) = v
+		case reflect.Float64:
+			v, err := decodeFloat(d, format)
+			if err != nil {
+				return err
+			}
+			*(*float64)(fieldPtr) = v
+		case reflect.Float32:
+			v, err := decodeFloat(d, format)
+			if err != nil {
+				return err
+			}
+			*(*float32)(fieldPtr) = float32(v)
+		case reflect.Bool:
+			if format == formatTrue {
+				*(*bool)(fieldPtr) = true
+			} else if format == formatFalse {
+				*(*bool)(fieldPtr) = false
+			}
+		case reflect.Struct:
+			d.pos--
+			if err := sd.decodeNestedStruct(d, fieldPtr, nestedField.structType); err != nil {
+				return err
+			}
+		default:
+			d.pos--
+			if _, err := d.Decode(); err != nil {
+				return err
+			}
 		}
 	}
 
