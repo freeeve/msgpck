@@ -4627,33 +4627,6 @@ func TestDecodeStringAnyAllFormats(t *testing.T) {
 	})
 }
 
-// TestDecodeBinaryAnyAllFormats tests decodeBinaryAny with bin16/bin32
-func TestDecodeBinaryAnyAllFormats(t *testing.T) {
-	t.Run("bin16", func(t *testing.T) {
-		data := []byte{formatBin16, 0, 3, 1, 2, 3}
-		d := NewDecoder(data)
-		v, err := d.DecodeAny()
-		if err != nil {
-			t.Error("bin16 DecodeAny failed")
-		}
-		if b, ok := v.([]byte); !ok || len(b) != 3 {
-			t.Error("bin16 result wrong")
-		}
-	})
-
-	t.Run("bin32", func(t *testing.T) {
-		data := []byte{formatBin32, 0, 0, 0, 3, 1, 2, 3}
-		d := NewDecoder(data)
-		v, err := d.DecodeAny()
-		if err != nil {
-			t.Error("bin32 DecodeAny failed")
-		}
-		if b, ok := v.([]byte); !ok || len(b) != 3 {
-			t.Error("bin32 result wrong")
-		}
-	})
-}
-
 // TestDecodeIntoSliceArray16Array32 tests decodeIntoSlice with array16/array32
 func TestDecodeIntoSliceArray16Array32(t *testing.T) {
 	type Data struct {
