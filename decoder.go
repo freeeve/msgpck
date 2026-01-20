@@ -199,6 +199,10 @@ func (d *Decoder) validateArrayLen(length int) error {
 	if length > d.cfg.MaxArrayLen {
 		return ErrArrayTooLong
 	}
+	// Sanity check: each element needs at least 1 byte
+	if !d.hasBytes(length) {
+		return ErrUnexpectedEOF
+	}
 	return nil
 }
 
@@ -206,6 +210,10 @@ func (d *Decoder) validateArrayLen(length int) error {
 func (d *Decoder) validateMapLen(length int) error {
 	if length > d.cfg.MaxMapLen {
 		return ErrMapTooLong
+	}
+	// Sanity check: each key-value pair needs at least 2 bytes
+	if !d.hasBytes(length * 2) {
+		return ErrUnexpectedEOF
 	}
 	return nil
 }

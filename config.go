@@ -1,13 +1,16 @@
 package msgpck
 
-// Default limits
+import "math"
+
+// Default limits - aligned with msgpack spec (max 2^32-1)
+// We use MaxInt32 for cross-platform safety (32-bit systems)
 const (
-	DefaultMaxStringLen = 1 << 20  // 1MB
-	DefaultMaxBinaryLen = 1 << 20  // 1MB
-	DefaultMaxArrayLen  = 10000
-	DefaultMaxMapLen    = 10000
-	DefaultMaxExtLen    = 1 << 20  // 1MB
-	DefaultMaxDepth     = 100
+	DefaultMaxStringLen = math.MaxInt32 // ~2GB, spec allows 2^32-1
+	DefaultMaxBinaryLen = math.MaxInt32 // ~2GB, spec allows 2^32-1
+	DefaultMaxArrayLen  = math.MaxInt32 // ~2B elements, spec allows 2^32-1
+	DefaultMaxMapLen    = math.MaxInt32 // ~2B pairs, spec allows 2^32-1
+	DefaultMaxExtLen    = math.MaxInt32 // ~2GB, spec allows 2^32-1
+	DefaultMaxDepth     = 10000         // practical limit for nested structures
 )
 
 // Config controls decoder/encoder behavior and security limits
