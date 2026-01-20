@@ -131,6 +131,35 @@ func (d *Decoder) parseArrayLen(format byte) (int, error) {
 	}
 }
 
+// parseStringLen parses the string length from a format byte.
+func (d *Decoder) parseStringLen(format byte) (int, error) {
+	if isFixstr(format) {
+		return fixstrLen(format), nil
+	}
+	switch format {
+	case formatStr8:
+		n, err := d.readUint8()
+		if err != nil {
+			return 0, err
+		}
+		return int(n), nil
+	case formatStr16:
+		n, err := d.readUint16()
+		if err != nil {
+			return 0, err
+		}
+		return int(n), nil
+	case formatStr32:
+		n, err := d.readUint32()
+		if err != nil {
+			return 0, err
+		}
+		return int(n), nil
+	default:
+		return 0, ErrTypeMismatch
+	}
+}
+
 // DecodeStruct decodes a msgpack map into a struct.
 // v must be a pointer to a struct.
 func (d *Decoder) DecodeStruct(v any) error {

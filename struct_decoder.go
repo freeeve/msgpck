@@ -21,6 +21,40 @@ type structField struct {
 	structType reflect.Type // for struct fields: the struct type
 }
 
+// parseStructTagName extracts the field name from a msgpack struct tag.
+// Handles "name,omitempty" style tags by extracting just the name part.
+func parseStructTagName(tag, defaultName string) string {
+	if tag == "" || tag == "-" {
+		if tag == "-" {
+			return "-"
+		}
+		return defaultName
+	}
+	for i := 0; i < len(tag); i++ {
+		if tag[i] == ',' {
+			return tag[:i]
+		}
+	}
+	return tag
+}
+
+// buildNestedFieldMap builds a field name to StructField map for nested struct decoding.
+func buildNestedFieldMap(structType reflect.Type) map[string]reflect.StructField {
+	fieldMap := make(map[string]reflect.StructField, structType.NumField())
+	for i := 0; i < structType.NumField(); i++ {
+		f := structType.Field(i)
+		if !f.IsExported() {
+			continue
+		}
+		name := parseStructTagName(f.Tag.Get("msgpack"), f.Name)
+		if name == "-" {
+			continue
+		}
+		fieldMap[name] = f
+	}
+	return fieldMap
+}
+
 // newStructDecoder creates a reusable decoder for type T.
 // Caches field information for fast repeated decoding.
 // Use .ZeroCopy() for zero-allocation decoding when input buffer outlives result.
@@ -41,19 +75,9 @@ func newStructDecoder[T any]() *StructDecoder[T] {
 			continue
 		}
 
-		name := f.Tag.Get("msgpack")
+		name := parseStructTagName(f.Tag.Get("msgpack"), f.Name)
 		if name == "-" {
 			continue
-		}
-		if name == "" {
-			name = f.Name
-		}
-		// Handle "name,omitempty" style tags
-		for i := 0; i < len(name); i++ {
-			if name[i] == ',' {
-				name = name[:i]
-				break
-			}
 		}
 
 		sf := structField{
@@ -97,25 +121,13 @@ func (sd *StructDecoder[T]) decodeInto(d *Decoder, ptr unsafe.Pointer) error {
 		return err
 	}
 
-	var mapLen int
-	if isFixmap(format) {
-		mapLen = fixmapLen(format)
-	} else if format == formatMap16 {
-		n, err := d.readUint16()
-		if err != nil {
-			return err
-		}
-		mapLen = int(n)
-	} else if format == formatMap32 {
-		n, err := d.readUint32()
-		if err != nil {
-			return err
-		}
-		mapLen = int(n)
-	} else if format == formatNil {
+	if format == formatNil {
 		return nil
-	} else {
-		return ErrTypeMismatch
+	}
+
+	mapLen, err := d.parseMapLen(format)
+	if err != nil {
+		return err
 	}
 
 	if err := d.validateMapLen(mapLen); err != nil {
@@ -292,32 +304,9 @@ func (sd *StructDecoder[T]) decodeField(d *Decoder, ptr unsafe.Pointer, field *s
 }
 
 func (sd *StructDecoder[T]) decodeString(d *Decoder, format byte) (string, error) {
-	var length int
-	if isFixstr(format) {
-		length = fixstrLen(format)
-	} else {
-		switch format {
-		case formatStr8:
-			n, err := d.readUint8()
-			if err != nil {
-				return "", err
-			}
-			length = int(n)
-		case formatStr16:
-			n, err := d.readUint16()
-			if err != nil {
-				return "", err
-			}
-			length = int(n)
-		case formatStr32:
-			n, err := d.readUint32()
-			if err != nil {
-				return "", err
-			}
-			length = int(n)
-		default:
-			return "", ErrTypeMismatch
-		}
+	length, err := d.parseStringLen(format)
+	if err != nil {
+		return "", err
 	}
 	if err := d.validateStringLen(length); err != nil {
 		return "", err
@@ -335,23 +324,9 @@ func (sd *StructDecoder[T]) decodeString(d *Decoder, format byte) (string, error
 }
 
 func (sd *StructDecoder[T]) decodeStringSlice(d *Decoder, format byte) ([]string, error) {
-	var arrLen int
-	if isFixarray(format) {
-		arrLen = fixarrayLen(format)
-	} else if format == formatArray16 {
-		n, err := d.readUint16()
-		if err != nil {
-			return nil, err
-		}
-		arrLen = int(n)
-	} else if format == formatArray32 {
-		n, err := d.readUint32()
-		if err != nil {
-			return nil, err
-		}
-		arrLen = int(n)
-	} else {
-		return nil, ErrTypeMismatch
+	arrLen, err := d.parseArrayLen(format)
+	if err != nil {
+		return nil, err
 	}
 
 	if err := d.validateArrayLen(arrLen); err != nil {
@@ -373,23 +348,9 @@ func (sd *StructDecoder[T]) decodeStringSlice(d *Decoder, format byte) ([]string
 }
 
 func (sd *StructDecoder[T]) decodeStringMap(d *Decoder, format byte) (map[string]string, error) {
-	var mapLen int
-	if isFixmap(format) {
-		mapLen = fixmapLen(format)
-	} else if format == formatMap16 {
-		n, err := d.readUint16()
-		if err != nil {
-			return nil, err
-		}
-		mapLen = int(n)
-	} else if format == formatMap32 {
-		n, err := d.readUint32()
-		if err != nil {
-			return nil, err
-		}
-		mapLen = int(n)
-	} else {
-		return nil, ErrTypeMismatch
+	mapLen, err := d.parseMapLen(format)
+	if err != nil {
+		return nil, err
 	}
 
 	if err := d.validateMapLen(mapLen); err != nil {
@@ -571,25 +532,13 @@ func (sd *StructDecoder[T]) decodeNestedStruct(d *Decoder, ptr unsafe.Pointer, s
 		return err
 	}
 
-	var mapLen int
-	if isFixmap(format) {
-		mapLen = fixmapLen(format)
-	} else if format == formatMap16 {
-		n, err := d.readUint16()
-		if err != nil {
-			return err
-		}
-		mapLen = int(n)
-	} else if format == formatMap32 {
-		n, err := d.readUint32()
-		if err != nil {
-			return err
-		}
-		mapLen = int(n)
-	} else if format == formatNil {
+	if format == formatNil {
 		return nil
-	} else {
-		return ErrTypeMismatch
+	}
+
+	mapLen, err := d.parseMapLen(format)
+	if err != nil {
+		return err
 	}
 
 	if err := d.validateMapLen(mapLen); err != nil {
@@ -597,27 +546,7 @@ func (sd *StructDecoder[T]) decodeNestedStruct(d *Decoder, ptr unsafe.Pointer, s
 	}
 
 	// Build field map for the nested struct type
-	fieldMap := make(map[string]reflect.StructField, structType.NumField())
-	for i := 0; i < structType.NumField(); i++ {
-		f := structType.Field(i)
-		if !f.IsExported() {
-			continue
-		}
-		name := f.Tag.Get("msgpack")
-		if name == "-" {
-			continue
-		}
-		if name == "" {
-			name = f.Name
-		}
-		for j := 0; j < len(name); j++ {
-			if name[j] == ',' {
-				name = name[:j]
-				break
-			}
-		}
-		fieldMap[name] = f
-	}
+	fieldMap := buildNestedFieldMap(structType)
 
 	// Decode each key-value pair
 	for i := 0; i < mapLen; i++ {
