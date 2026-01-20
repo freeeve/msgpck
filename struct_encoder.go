@@ -221,40 +221,97 @@ type sliceHeader struct {
 	Cap  int
 }
 
+// encodeFieldSlice encodes a slice field value.
+func (se *StructEncoder[T]) encodeFieldSlice(e *Encoder, ptr unsafe.Pointer, f *encodeField) error {
+	if f.elem != nil && f.elem.Kind() == reflect.String {
+		s := *(*[]string)(ptr)
+		e.EncodeArrayHeader(len(s))
+		for _, v := range s {
+			e.EncodeString(v)
+		}
+		return nil
+	}
+	if f.elem != nil && f.elem.Kind() == reflect.Uint8 {
+		e.EncodeBinary(*(*[]byte)(ptr))
+		return nil
+	}
+	// Generic slice - encode as array of any using reflection
+	rv := reflect.NewAt(reflect.SliceOf(f.elem), ptr).Elem()
+	e.EncodeArrayHeader(rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		if err := e.Encode(rv.Index(i).Interface()); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// encodeFieldMap encodes a map field value.
+func (se *StructEncoder[T]) encodeFieldMap(e *Encoder, ptr unsafe.Pointer, f *encodeField) error {
+	if f.elem != nil && f.elem.Kind() == reflect.String {
+		m := *(*map[string]string)(ptr)
+		e.EncodeMapHeader(len(m))
+		for k, v := range m {
+			e.EncodeString(k)
+			e.EncodeString(v)
+		}
+		return nil
+	}
+	// Generic map - use reflection
+	rv := reflect.NewAt(reflect.MapOf(reflect.TypeOf(""), f.elem), ptr).Elem()
+	e.EncodeMapHeader(rv.Len())
+	iter := rv.MapRange()
+	for iter.Next() {
+		e.EncodeString(iter.Key().String())
+		if err := e.Encode(iter.Value().Interface()); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// encodeFieldInt encodes an integer field value.
+func (se *StructEncoder[T]) encodeFieldInt(e *Encoder, ptr unsafe.Pointer, kind reflect.Kind) {
+	switch kind {
+	case reflect.Int:
+		e.EncodeInt(int64(*(*int)(ptr)))
+	case reflect.Int64:
+		e.EncodeInt(*(*int64)(ptr))
+	case reflect.Int32:
+		e.EncodeInt(int64(*(*int32)(ptr)))
+	case reflect.Int16:
+		e.EncodeInt(int64(*(*int16)(ptr)))
+	case reflect.Int8:
+		e.EncodeInt(int64(*(*int8)(ptr)))
+	}
+}
+
+// encodeFieldUint encodes an unsigned integer field value.
+func (se *StructEncoder[T]) encodeFieldUint(e *Encoder, ptr unsafe.Pointer, kind reflect.Kind) {
+	switch kind {
+	case reflect.Uint:
+		e.EncodeUint(uint64(*(*uint)(ptr)))
+	case reflect.Uint64:
+		e.EncodeUint(*(*uint64)(ptr))
+	case reflect.Uint32:
+		e.EncodeUint(uint64(*(*uint32)(ptr)))
+	case reflect.Uint16:
+		e.EncodeUint(uint64(*(*uint16)(ptr)))
+	case reflect.Uint8:
+		e.EncodeUint(uint64(*(*uint8)(ptr)))
+	}
+}
+
 func (se *StructEncoder[T]) encodeField(e *Encoder, ptr unsafe.Pointer, f *encodeField) error {
 	switch f.kind {
 	case reflect.String:
 		e.EncodeString(*(*string)(ptr))
 
-	case reflect.Int:
-		e.EncodeInt(int64(*(*int)(ptr)))
+	case reflect.Int, reflect.Int64, reflect.Int32, reflect.Int16, reflect.Int8:
+		se.encodeFieldInt(e, ptr, f.kind)
 
-	case reflect.Int64:
-		e.EncodeInt(*(*int64)(ptr))
-
-	case reflect.Int32:
-		e.EncodeInt(int64(*(*int32)(ptr)))
-
-	case reflect.Int16:
-		e.EncodeInt(int64(*(*int16)(ptr)))
-
-	case reflect.Int8:
-		e.EncodeInt(int64(*(*int8)(ptr)))
-
-	case reflect.Uint:
-		e.EncodeUint(uint64(*(*uint)(ptr)))
-
-	case reflect.Uint64:
-		e.EncodeUint(*(*uint64)(ptr))
-
-	case reflect.Uint32:
-		e.EncodeUint(uint64(*(*uint32)(ptr)))
-
-	case reflect.Uint16:
-		e.EncodeUint(uint64(*(*uint16)(ptr)))
-
-	case reflect.Uint8:
-		e.EncodeUint(uint64(*(*uint8)(ptr)))
+	case reflect.Uint, reflect.Uint64, reflect.Uint32, reflect.Uint16, reflect.Uint8:
+		se.encodeFieldUint(e, ptr, f.kind)
 
 	case reflect.Float64:
 		e.EncodeFloat64(*(*float64)(ptr))
@@ -266,59 +323,18 @@ func (se *StructEncoder[T]) encodeField(e *Encoder, ptr unsafe.Pointer, f *encod
 		e.EncodeBool(*(*bool)(ptr))
 
 	case reflect.Slice:
-		if f.elem != nil && f.elem.Kind() == reflect.String {
-			// []string
-			s := *(*[]string)(ptr)
-			e.EncodeArrayHeader(len(s))
-			for _, v := range s {
-				e.EncodeString(v)
-			}
-		} else if f.elem != nil && f.elem.Kind() == reflect.Uint8 {
-			// []byte
-			e.EncodeBinary(*(*[]byte)(ptr))
-		} else {
-			// Generic slice - encode as array of any
-			// Use reflection as fallback
-			rv := reflect.NewAt(reflect.SliceOf(f.elem), ptr).Elem()
-			e.EncodeArrayHeader(rv.Len())
-			for i := 0; i < rv.Len(); i++ {
-				if err := e.Encode(rv.Index(i).Interface()); err != nil {
-					return err
-				}
-			}
-		}
+		return se.encodeFieldSlice(e, ptr, f)
 
 	case reflect.Map:
-		if f.elem != nil && f.elem.Kind() == reflect.String {
-			// map[string]string
-			m := *(*map[string]string)(ptr)
-			e.EncodeMapHeader(len(m))
-			for k, v := range m {
-				e.EncodeString(k)
-				e.EncodeString(v)
-			}
-		} else {
-			// Generic map - use reflection
-			rv := reflect.NewAt(reflect.MapOf(reflect.TypeOf(""), f.elem), ptr).Elem()
-			e.EncodeMapHeader(rv.Len())
-			iter := rv.MapRange()
-			for iter.Next() {
-				e.EncodeString(iter.Key().String())
-				if err := e.Encode(iter.Value().Interface()); err != nil {
-					return err
-				}
-			}
-		}
+		return se.encodeFieldMap(e, ptr, f)
 
 	case reflect.Struct:
-		// Nested struct - encode recursively using reflection
 		rv := reflect.NewAt(f.typ, ptr).Elem()
 		if err := e.Encode(rv.Interface()); err != nil {
 			return err
 		}
 
 	case reflect.Ptr:
-		// Pointer to struct or other type
 		ptrVal := *(*unsafe.Pointer)(ptr)
 		if ptrVal == nil {
 			e.EncodeNil()
