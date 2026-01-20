@@ -21,6 +21,44 @@ func (d *Decoder) DecodeAny() (any, error) {
 	return d.decodeAnyValue(format)
 }
 
+// decodeAnyUintValue decodes uint8/16/32/64 formats to int64 or uint64.
+func (d *Decoder) decodeAnyUintValue(format byte) (any, error) {
+	switch format {
+	case formatUint8:
+		v, err := d.readUint8()
+		return int64(v), err
+	case formatUint16:
+		v, err := d.readUint16()
+		return int64(v), err
+	case formatUint32:
+		v, err := d.readUint32()
+		return int64(v), err
+	default: // formatUint64
+		v, err := d.readUint64()
+		if v > 9223372036854775807 {
+			return v, err
+		}
+		return int64(v), err
+	}
+}
+
+// decodeAnyIntValue decodes int8/16/32/64 formats to int64.
+func (d *Decoder) decodeAnyIntValue(format byte) (any, error) {
+	switch format {
+	case formatInt8:
+		v, err := d.readInt8()
+		return int64(v), err
+	case formatInt16:
+		v, err := d.readInt16()
+		return int64(v), err
+	case formatInt32:
+		v, err := d.readInt32()
+		return int64(v), err
+	default: // formatInt64
+		return d.readInt64()
+	}
+}
+
 // decodeAnyValue decodes directly to any, skipping intermediate Value struct
 func (d *Decoder) decodeAnyValue(format byte) (any, error) {
 	// Positive fixint: 0xxxxxxx
@@ -57,42 +95,17 @@ func (d *Decoder) decodeAnyValue(format byte) (any, error) {
 	case formatTrue:
 		return true, nil
 
-	case formatUint8:
-		v, err := d.readUint8()
-		return int64(v), err
-	case formatUint16:
-		v, err := d.readUint16()
-		return int64(v), err
-	case formatUint32:
-		v, err := d.readUint32()
-		return int64(v), err
-	case formatUint64:
-		v, err := d.readUint64()
-		// Return as uint64 only if it overflows int64
-		if v > 9223372036854775807 {
-			return v, err
-		}
-		return int64(v), err
+	case formatUint8, formatUint16, formatUint32, formatUint64:
+		return d.decodeAnyUintValue(format)
 
-	case formatInt8:
-		v, err := d.readInt8()
-		return int64(v), err
-	case formatInt16:
-		v, err := d.readInt16()
-		return int64(v), err
-	case formatInt32:
-		v, err := d.readInt32()
-		return int64(v), err
-	case formatInt64:
-		v, err := d.readInt64()
-		return v, err
+	case formatInt8, formatInt16, formatInt32, formatInt64:
+		return d.decodeAnyIntValue(format)
 
 	case formatFloat32:
 		v, err := d.readFloat32()
-		return float64(v), err // promote to float64 for consistency
+		return float64(v), err
 	case formatFloat64:
-		v, err := d.readFloat64()
-		return v, err
+		return d.readFloat64()
 
 	case formatStr8, formatStr16, formatStr32:
 		length, err := d.parseStringLenSwitch(format)
