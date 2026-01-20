@@ -2,6 +2,7 @@ package msgpck
 
 import (
 	"bytes"
+	"math"
 	"testing"
 )
 
@@ -148,7 +149,7 @@ func FuzzRoundTripFloat(f *testing.F) {
 		}
 		if v, ok := decoded.(float64); !ok || v != val {
 			// NaN special case
-			if val != val && v != v {
+			if math.IsNaN(val) && math.IsNaN(v) {
 				return // both NaN, ok
 			}
 			t.Fatalf("float64 round-trip failed: got %v, want %v", decoded, val)
