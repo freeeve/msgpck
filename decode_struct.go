@@ -294,70 +294,26 @@ func (d *Decoder) DecodeStruct(v any) error {
 
 	// Decode each key-value pair
 	for i := 0; i < mapLen; i++ {
-		// Read key
+		// Read key format
 		keyFormat, err := d.readByte()
 		if err != nil {
 			return err
 		}
 
-		var key []byte
-		if isFixstr(keyFormat) {
-			keyLen := fixstrLen(keyFormat)
-			if err := d.validateStringLen(keyLen); err != nil {
-				return err
+		// Try to decode as string key
+		key, err := d.decodeStringKeyWithFormat(keyFormat)
+		if err != nil {
+			// Non-string key - skip key and value
+			if err == ErrTypeMismatch {
+				if _, err := d.decodeValue(keyFormat); err != nil {
+					return err
+				}
+				if _, err := d.Decode(); err != nil {
+					return err
+				}
+				continue
 			}
-			key, err = d.readBytes(keyLen)
-			if err != nil {
-				return err
-			}
-		} else if keyFormat == formatStr8 {
-			n, err := d.readUint8()
-			if err != nil {
-				return err
-			}
-			if err := d.validateStringLen(int(n)); err != nil {
-				return err
-			}
-			key, err = d.readBytes(int(n))
-			if err != nil {
-				return err
-			}
-		} else if keyFormat == formatStr16 {
-			n, err := d.readUint16()
-			if err != nil {
-				return err
-			}
-			if err := d.validateStringLen(int(n)); err != nil {
-				return err
-			}
-			key, err = d.readBytes(int(n))
-			if err != nil {
-				return err
-			}
-		} else if keyFormat == formatStr32 {
-			n, err := d.readUint32()
-			if err != nil {
-				return err
-			}
-			if err := d.validateStringLen(int(n)); err != nil {
-				return err
-			}
-			key, err = d.readBytes(int(n))
-			if err != nil {
-				return err
-			}
-		} else {
-			// Skip non-string key
-			_, err := d.decodeValue(keyFormat)
-			if err != nil {
-				return err
-			}
-			// Skip the value too
-			_, err = d.Decode()
-			if err != nil {
-				return err
-			}
-			continue
+			return err
 		}
 
 		// Find matching field
@@ -877,52 +833,25 @@ func (d *Decoder) decodeIntoStruct(rv reflect.Value, format byte) error {
 	return nil
 }
 
+// decodeStringKeyWithFormat decodes a string key given a pre-read format byte.
+func (d *Decoder) decodeStringKeyWithFormat(format byte) ([]byte, error) {
+	length, err := d.parseStringLen(format)
+	if err != nil {
+		return nil, err
+	}
+	if err := d.validateStringLen(length); err != nil {
+		return nil, err
+	}
+	return d.readBytes(length)
+}
+
 // decodeStringKey reads a string key and returns it as []byte
 func (d *Decoder) decodeStringKey() ([]byte, error) {
 	format, err := d.readByte()
 	if err != nil {
 		return nil, err
 	}
-
-	if isFixstr(format) {
-		length := fixstrLen(format)
-		if err := d.validateStringLen(length); err != nil {
-			return nil, err
-		}
-		return d.readBytes(length)
-	}
-
-	switch format {
-	case formatStr8:
-		n, err := d.readUint8()
-		if err != nil {
-			return nil, err
-		}
-		if err := d.validateStringLen(int(n)); err != nil {
-			return nil, err
-		}
-		return d.readBytes(int(n))
-	case formatStr16:
-		n, err := d.readUint16()
-		if err != nil {
-			return nil, err
-		}
-		if err := d.validateStringLen(int(n)); err != nil {
-			return nil, err
-		}
-		return d.readBytes(int(n))
-	case formatStr32:
-		n, err := d.readUint32()
-		if err != nil {
-			return nil, err
-		}
-		if err := d.validateStringLen(int(n)); err != nil {
-			return nil, err
-		}
-		return d.readBytes(int(n))
-	default:
-		return nil, ErrTypeMismatch
-	}
+	return d.decodeStringKeyWithFormat(format)
 }
 
 // UnmarshalStruct is a convenience function that decodes msgpack data into a struct.
