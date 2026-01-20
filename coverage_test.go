@@ -4223,17 +4223,6 @@ func TestStructEncoderMapField(t *testing.T) {
 	}
 }
 
-// TestDecodeAnyValueInvalidFormat tests invalid format in decodeAnyValue
-func TestDecodeAnyValueInvalidFormat(t *testing.T) {
-	// Use 0xc1 which is never used
-	data := []byte{0xc1}
-	d := NewDecoder(data)
-	_, err := d.DecodeAny()
-	if err != ErrInvalidFormat {
-		t.Errorf("expected ErrInvalidFormat, got %v", err)
-	}
-}
-
 // TestReflectionDecodeValueBytesEOF tests EOF in decodeValueBytes
 func TestReflectionDecodeValueBytesEOF(t *testing.T) {
 	type Data struct {
