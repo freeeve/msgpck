@@ -49,13 +49,13 @@ copy_corpus_to_testdata() {
     echo "=========================================="
 
     local gocache_fuzz="$(go env GOCACHE)/fuzz/github.com/freeeve/msgpck"
-    local TESTDATA_FUZZ="$PROJECT_ROOT/testdata/fuzz"
+    local testdata_fuzz="$PROJECT_ROOT/testdata/fuzz"
 
     if [ -d "$gocache_fuzz" ]; then
-        mkdir -p "$TESTDATA_FUZZ"
-        local before_count=$(find "$TESTDATA_FUZZ" -type f 2>/dev/null | wc -l | tr -d ' ')
-        cp -r "$gocache_fuzz"/* "$TESTDATA_FUZZ"/ 2>/dev/null || true
-        local after_count=$(find "$TESTDATA_FUZZ" -type f | wc -l | tr -d ' ')
+        mkdir -p "$testdata_fuzz"
+        local before_count=$(find "$testdata_fuzz" -type f 2>/dev/null | wc -l | tr -d ' ')
+        cp -r "$gocache_fuzz"/* "$testdata_fuzz"/ 2>/dev/null || true
+        local after_count=$(find "$testdata_fuzz" -type f | wc -l | tr -d ' ')
         local new_count=$((after_count - before_count))
         echo "Copied corpus from Go cache to testdata/fuzz/"
         echo "New files added: $new_count (total: $after_count)"
