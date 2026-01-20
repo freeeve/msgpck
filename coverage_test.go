@@ -5,6 +5,14 @@ import (
 	"time"
 )
 
+// Test error message constants to avoid duplication
+const (
+	errMsgUnexpectedEOF = "expected ErrUnexpectedEOF, got %v"
+	errMsgEOFError      = "expected EOF error"
+	errMsgStringTooLong = "expected ErrStringTooLong, got %v"
+	errMsgTypeMismatch  = "expected ErrTypeMismatch, got %v"
+)
+
 // Tests to increase coverage of various modules
 
 // TestStructEncoderMethods tests StructEncoder methods
@@ -2612,7 +2620,7 @@ func TestValidationLimitsDecodeAny(t *testing.T) {
 		d := NewDecoderWithConfig(data, cfg)
 		_, err := d.DecodeAny()
 		if err != ErrStringTooLong {
-			t.Errorf("expected ErrStringTooLong, got %v", err)
+			t.Errorf(errMsgStringTooLong, err)
 		}
 	})
 
@@ -2670,7 +2678,7 @@ func TestValidationLimitsDecodeStruct(t *testing.T) {
 		var d Data
 		err := UnmarshalStructWithConfig(data, &d, cfg)
 		if err != ErrStringTooLong {
-			t.Errorf("expected ErrStringTooLong, got %v", err)
+			t.Errorf(errMsgStringTooLong, err)
 		}
 	})
 }
@@ -4191,7 +4199,7 @@ func TestDecodeIntoValueEOF(t *testing.T) {
 	var d Data
 	err := UnmarshalStruct(data, &d)
 	if err != ErrUnexpectedEOF {
-		t.Errorf("expected ErrUnexpectedEOF, got %v", err)
+		t.Errorf(errMsgUnexpectedEOF, err)
 	}
 }
 
@@ -4234,7 +4242,7 @@ func TestReflectionDecodeValueBytesEOF(t *testing.T) {
 	var d Data
 	err := UnmarshalStruct(data, &d)
 	if err != ErrUnexpectedEOF {
-		t.Errorf("expected ErrUnexpectedEOF, got %v", err)
+		t.Errorf(errMsgUnexpectedEOF, err)
 	}
 }
 
@@ -4249,7 +4257,7 @@ func TestReflectionDecodeSliceEOF(t *testing.T) {
 	var d Data
 	err := UnmarshalStruct(data, &d)
 	if err != ErrUnexpectedEOF {
-		t.Errorf("expected ErrUnexpectedEOF, got %v", err)
+		t.Errorf(errMsgUnexpectedEOF, err)
 	}
 }
 
@@ -4264,7 +4272,7 @@ func TestReflectionDecodeArrayEOF(t *testing.T) {
 	var d Data
 	err := UnmarshalStruct(data, &d)
 	if err != ErrUnexpectedEOF {
-		t.Errorf("expected ErrUnexpectedEOF, got %v", err)
+		t.Errorf(errMsgUnexpectedEOF, err)
 	}
 }
 
@@ -4279,7 +4287,7 @@ func TestReflectionDecodeMapEOF(t *testing.T) {
 	var d Data
 	err := UnmarshalStruct(data, &d)
 	if err != ErrUnexpectedEOF {
-		t.Errorf("expected ErrUnexpectedEOF, got %v", err)
+		t.Errorf(errMsgUnexpectedEOF, err)
 	}
 }
 
@@ -4297,7 +4305,7 @@ func TestReflectionDecodeStructEOF(t *testing.T) {
 	var o Outer
 	err := UnmarshalStruct(data, &o)
 	if err != ErrUnexpectedEOF {
-		t.Errorf("expected ErrUnexpectedEOF, got %v", err)
+		t.Errorf(errMsgUnexpectedEOF, err)
 	}
 }
 
@@ -4395,7 +4403,7 @@ func TestDecodeStructKeyReadError(t *testing.T) {
 	var d Data
 	err := UnmarshalStruct(data, &d)
 	if err != ErrUnexpectedEOF {
-		t.Errorf("expected ErrUnexpectedEOF, got %v", err)
+		t.Errorf(errMsgUnexpectedEOF, err)
 	}
 }
 
@@ -4410,7 +4418,7 @@ func TestDecodeStructStr16KeyReadError(t *testing.T) {
 	var d Data
 	err := UnmarshalStruct(data, &d)
 	if err != ErrUnexpectedEOF {
-		t.Errorf("expected ErrUnexpectedEOF, got %v", err)
+		t.Errorf(errMsgUnexpectedEOF, err)
 	}
 }
 
@@ -4425,7 +4433,7 @@ func TestDecodeStructStr32KeyReadError(t *testing.T) {
 	var d Data
 	err := UnmarshalStruct(data, &d)
 	if err != ErrUnexpectedEOF {
-		t.Errorf("expected ErrUnexpectedEOF, got %v", err)
+		t.Errorf(errMsgUnexpectedEOF, err)
 	}
 }
 
@@ -4708,7 +4716,7 @@ func TestReadBytesEOF(t *testing.T) {
 	d := NewDecoder(data)
 	_, err := d.readStringBytes()
 	if err != ErrUnexpectedEOF {
-		t.Errorf("expected ErrUnexpectedEOF, got %v", err)
+		t.Errorf(errMsgUnexpectedEOF, err)
 	}
 }
 
@@ -4743,7 +4751,7 @@ func TestDecodeValueBytesEOFPaths(t *testing.T) {
 		var d Data
 		err := UnmarshalStruct(data, &d)
 		if err != ErrUnexpectedEOF {
-			t.Errorf("expected ErrUnexpectedEOF, got %v", err)
+			t.Errorf(errMsgUnexpectedEOF, err)
 		}
 	})
 
@@ -4752,7 +4760,7 @@ func TestDecodeValueBytesEOFPaths(t *testing.T) {
 		var d Data
 		err := UnmarshalStruct(data, &d)
 		if err != ErrUnexpectedEOF {
-			t.Errorf("expected ErrUnexpectedEOF, got %v", err)
+			t.Errorf(errMsgUnexpectedEOF, err)
 		}
 	})
 
@@ -4761,7 +4769,7 @@ func TestDecodeValueBytesEOFPaths(t *testing.T) {
 		var d Data
 		err := UnmarshalStruct(data, &d)
 		if err != ErrUnexpectedEOF {
-			t.Errorf("expected ErrUnexpectedEOF, got %v", err)
+			t.Errorf(errMsgUnexpectedEOF, err)
 		}
 	})
 
@@ -4770,7 +4778,7 @@ func TestDecodeValueBytesEOFPaths(t *testing.T) {
 		var d Data
 		err := UnmarshalStruct(data, &d)
 		if err != ErrUnexpectedEOF {
-			t.Errorf("expected ErrUnexpectedEOF, got %v", err)
+			t.Errorf(errMsgUnexpectedEOF, err)
 		}
 	})
 
@@ -4779,7 +4787,7 @@ func TestDecodeValueBytesEOFPaths(t *testing.T) {
 		var d Data
 		err := UnmarshalStruct(data, &d)
 		if err != ErrUnexpectedEOF {
-			t.Errorf("expected ErrUnexpectedEOF, got %v", err)
+			t.Errorf(errMsgUnexpectedEOF, err)
 		}
 	})
 }
@@ -4796,7 +4804,7 @@ func TestDecodeValueBytesValidation(t *testing.T) {
 		var d Data
 		err := UnmarshalStructWithConfig(data, &d, cfg)
 		if err != ErrStringTooLong {
-			t.Errorf("expected ErrStringTooLong, got %v", err)
+			t.Errorf(errMsgStringTooLong, err)
 		}
 	})
 
@@ -4823,7 +4831,7 @@ func TestDecodeValueStringValidation(t *testing.T) {
 		var d Data
 		err := UnmarshalStructWithConfig(data, &d, cfg)
 		if err != ErrStringTooLong {
-			t.Errorf("expected ErrStringTooLong, got %v", err)
+			t.Errorf(errMsgStringTooLong, err)
 		}
 	})
 
@@ -4833,7 +4841,7 @@ func TestDecodeValueStringValidation(t *testing.T) {
 		var d Data
 		err := UnmarshalStructWithConfig(data, &d, cfg)
 		if err != ErrStringTooLong {
-			t.Errorf("expected ErrStringTooLong, got %v", err)
+			t.Errorf(errMsgStringTooLong, err)
 		}
 	})
 }
@@ -4936,7 +4944,7 @@ func TestDecodeMapKeyEOF(t *testing.T) {
 		d := NewDecoder(data)
 		_, err := d.Decode()
 		if err != ErrUnexpectedEOF {
-			t.Errorf("expected ErrUnexpectedEOF, got %v", err)
+			t.Errorf(errMsgUnexpectedEOF, err)
 		}
 	})
 
@@ -4945,7 +4953,7 @@ func TestDecodeMapKeyEOF(t *testing.T) {
 		d := NewDecoder(data)
 		_, err := d.Decode()
 		if err != ErrUnexpectedEOF {
-			t.Errorf("expected ErrUnexpectedEOF, got %v", err)
+			t.Errorf(errMsgUnexpectedEOF, err)
 		}
 	})
 
@@ -4954,7 +4962,7 @@ func TestDecodeMapKeyEOF(t *testing.T) {
 		d := NewDecoder(data)
 		_, err := d.Decode()
 		if err != ErrUnexpectedEOF {
-			t.Errorf("expected ErrUnexpectedEOF, got %v", err)
+			t.Errorf(errMsgUnexpectedEOF, err)
 		}
 	})
 }
@@ -4966,7 +4974,7 @@ func TestDecodeExtEOF(t *testing.T) {
 		d := NewDecoder(data)
 		_, err := d.Decode()
 		if err != ErrUnexpectedEOF {
-			t.Errorf("expected ErrUnexpectedEOF, got %v", err)
+			t.Errorf(errMsgUnexpectedEOF, err)
 		}
 	})
 
@@ -4975,7 +4983,7 @@ func TestDecodeExtEOF(t *testing.T) {
 		d := NewDecoder(data)
 		_, err := d.Decode()
 		if err != ErrUnexpectedEOF {
-			t.Errorf("expected ErrUnexpectedEOF, got %v", err)
+			t.Errorf(errMsgUnexpectedEOF, err)
 		}
 	})
 
@@ -4984,7 +4992,7 @@ func TestDecodeExtEOF(t *testing.T) {
 		d := NewDecoder(data)
 		_, err := d.Decode()
 		if err != ErrUnexpectedEOF {
-			t.Errorf("expected ErrUnexpectedEOF, got %v", err)
+			t.Errorf(errMsgUnexpectedEOF, err)
 		}
 	})
 }
@@ -4996,7 +5004,7 @@ func TestDecodeStringAnyEOF(t *testing.T) {
 		d := NewDecoder(data)
 		_, err := d.DecodeAny()
 		if err != ErrUnexpectedEOF {
-			t.Errorf("expected ErrUnexpectedEOF, got %v", err)
+			t.Errorf(errMsgUnexpectedEOF, err)
 		}
 	})
 
@@ -5005,7 +5013,7 @@ func TestDecodeStringAnyEOF(t *testing.T) {
 		d := NewDecoder(data)
 		_, err := d.DecodeAny()
 		if err != ErrUnexpectedEOF {
-			t.Errorf("expected ErrUnexpectedEOF, got %v", err)
+			t.Errorf(errMsgUnexpectedEOF, err)
 		}
 	})
 }
@@ -5017,7 +5025,7 @@ func TestDecodeBinaryAnyEOF(t *testing.T) {
 		d := NewDecoder(data)
 		_, err := d.DecodeAny()
 		if err != ErrUnexpectedEOF {
-			t.Errorf("expected ErrUnexpectedEOF, got %v", err)
+			t.Errorf(errMsgUnexpectedEOF, err)
 		}
 	})
 
@@ -5026,7 +5034,7 @@ func TestDecodeBinaryAnyEOF(t *testing.T) {
 		d := NewDecoder(data)
 		_, err := d.DecodeAny()
 		if err != ErrUnexpectedEOF {
-			t.Errorf("expected ErrUnexpectedEOF, got %v", err)
+			t.Errorf(errMsgUnexpectedEOF, err)
 		}
 	})
 }
@@ -5038,7 +5046,7 @@ func TestDecodeMapAnyKeyEOF(t *testing.T) {
 		d := NewDecoder(data)
 		_, err := d.DecodeAny()
 		if err != ErrUnexpectedEOF {
-			t.Errorf("expected ErrUnexpectedEOF, got %v", err)
+			t.Errorf(errMsgUnexpectedEOF, err)
 		}
 	})
 
@@ -5047,7 +5055,7 @@ func TestDecodeMapAnyKeyEOF(t *testing.T) {
 		d := NewDecoder(data)
 		_, err := d.DecodeAny()
 		if err != ErrUnexpectedEOF {
-			t.Errorf("expected ErrUnexpectedEOF, got %v", err)
+			t.Errorf(errMsgUnexpectedEOF, err)
 		}
 	})
 }
@@ -5335,7 +5343,7 @@ func TestDecodeStringKeyStr8EOF(t *testing.T) {
 	var s S
 	err := UnmarshalStruct(data, &s)
 	if err == nil {
-		t.Error("expected EOF error")
+		t.Error(errMsgEOFError)
 	}
 }
 
@@ -5350,7 +5358,7 @@ func TestDecodeStringKeyStr16EOF(t *testing.T) {
 	var s S
 	err := UnmarshalStruct(data, &s)
 	if err == nil {
-		t.Error("expected EOF error")
+		t.Error(errMsgEOFError)
 	}
 }
 
@@ -5365,7 +5373,7 @@ func TestDecodeStringKeyStr32EOF(t *testing.T) {
 	var s S
 	err := UnmarshalStruct(data, &s)
 	if err == nil {
-		t.Error("expected EOF error")
+		t.Error(errMsgEOFError)
 	}
 }
 
@@ -5387,7 +5395,7 @@ func TestDecodeStringKeyStr8TooLong(t *testing.T) {
 	data := []byte{0x81, formatStr8, 5, 'h', 'e', 'l', 'l', 'o', 0x01}
 	err := UnmarshalStructWithConfig(data, &S{}, cfg)
 	if err != ErrStringTooLong {
-		t.Errorf("expected ErrStringTooLong, got %v", err)
+		t.Errorf(errMsgStringTooLong, err)
 	}
 }
 
@@ -5398,7 +5406,7 @@ func TestDecodeValueStringReadBytesEOF(t *testing.T) {
 	d := NewDecoder(data)
 	_, err := d.Decode()
 	if err != ErrUnexpectedEOF {
-		t.Errorf("expected ErrUnexpectedEOF, got %v", err)
+		t.Errorf(errMsgUnexpectedEOF, err)
 	}
 }
 
@@ -5409,7 +5417,7 @@ func TestDecodeValueBinaryReadBytesEOF(t *testing.T) {
 	d := NewDecoder(data)
 	_, err := d.Decode()
 	if err != ErrUnexpectedEOF {
-		t.Errorf("expected ErrUnexpectedEOF, got %v", err)
+		t.Errorf(errMsgUnexpectedEOF, err)
 	}
 }
 
@@ -5446,7 +5454,7 @@ func TestDecodeMapValueEOF(t *testing.T) {
 	d := NewDecoder(data)
 	_, err := d.Decode()
 	if err == nil {
-		t.Error("expected EOF error")
+		t.Error(errMsgEOFError)
 	}
 }
 
@@ -5457,7 +5465,7 @@ func TestDecodeExtDataEOF(t *testing.T) {
 	d := NewDecoder(data)
 	_, err := d.Decode()
 	if err != ErrUnexpectedEOF {
-		t.Errorf("expected ErrUnexpectedEOF, got %v", err)
+		t.Errorf(errMsgUnexpectedEOF, err)
 	}
 }
 
@@ -5468,7 +5476,7 @@ func TestDecodeExtTypeEOF(t *testing.T) {
 	d := NewDecoder(data)
 	_, err := d.Decode()
 	if err != ErrUnexpectedEOF {
-		t.Errorf("expected ErrUnexpectedEOF, got %v", err)
+		t.Errorf(errMsgUnexpectedEOF, err)
 	}
 }
 
@@ -5479,7 +5487,7 @@ func TestDecodeArrayValueEOF(t *testing.T) {
 	d := NewDecoder(data)
 	_, err := d.Decode()
 	if err == nil {
-		t.Error("expected EOF error")
+		t.Error(errMsgEOFError)
 	}
 }
 
@@ -5514,7 +5522,7 @@ func TestDecodeIntoStructMap16EOF(t *testing.T) {
 	var s S
 	err := UnmarshalStruct(data, &s)
 	if err == nil {
-		t.Error("expected EOF error")
+		t.Error(errMsgEOFError)
 	}
 }
 
@@ -5529,7 +5537,7 @@ func TestDecodeIntoStructMap32EOF(t *testing.T) {
 	var s S
 	err := UnmarshalStruct(data, &s)
 	if err == nil {
-		t.Error("expected EOF error")
+		t.Error(errMsgEOFError)
 	}
 }
 
@@ -5540,7 +5548,7 @@ func TestDecodeValueStr16EOF(t *testing.T) {
 	d := NewDecoder(data)
 	_, err := d.Decode()
 	if err != ErrUnexpectedEOF {
-		t.Errorf("expected ErrUnexpectedEOF, got %v", err)
+		t.Errorf(errMsgUnexpectedEOF, err)
 	}
 }
 
@@ -5551,7 +5559,7 @@ func TestDecodeValueStr32EOF(t *testing.T) {
 	d := NewDecoder(data)
 	_, err := d.Decode()
 	if err != ErrUnexpectedEOF {
-		t.Errorf("expected ErrUnexpectedEOF, got %v", err)
+		t.Errorf(errMsgUnexpectedEOF, err)
 	}
 }
 
@@ -5562,7 +5570,7 @@ func TestDecodeValueBin16EOF(t *testing.T) {
 	d := NewDecoder(data)
 	_, err := d.Decode()
 	if err != ErrUnexpectedEOF {
-		t.Errorf("expected ErrUnexpectedEOF, got %v", err)
+		t.Errorf(errMsgUnexpectedEOF, err)
 	}
 }
 
@@ -5573,7 +5581,7 @@ func TestDecodeValueBin32EOF(t *testing.T) {
 	d := NewDecoder(data)
 	_, err := d.Decode()
 	if err != ErrUnexpectedEOF {
-		t.Errorf("expected ErrUnexpectedEOF, got %v", err)
+		t.Errorf(errMsgUnexpectedEOF, err)
 	}
 }
 
@@ -5584,7 +5592,7 @@ func TestDecodeValueArray16EOF(t *testing.T) {
 	d := NewDecoder(data)
 	_, err := d.Decode()
 	if err != ErrUnexpectedEOF {
-		t.Errorf("expected ErrUnexpectedEOF, got %v", err)
+		t.Errorf(errMsgUnexpectedEOF, err)
 	}
 }
 
@@ -5595,7 +5603,7 @@ func TestDecodeValueArray32EOF(t *testing.T) {
 	d := NewDecoder(data)
 	_, err := d.Decode()
 	if err != ErrUnexpectedEOF {
-		t.Errorf("expected ErrUnexpectedEOF, got %v", err)
+		t.Errorf(errMsgUnexpectedEOF, err)
 	}
 }
 
@@ -5606,7 +5614,7 @@ func TestDecodeValueMap16EOF(t *testing.T) {
 	d := NewDecoder(data)
 	_, err := d.Decode()
 	if err != ErrUnexpectedEOF {
-		t.Errorf("expected ErrUnexpectedEOF, got %v", err)
+		t.Errorf(errMsgUnexpectedEOF, err)
 	}
 }
 
@@ -5617,7 +5625,7 @@ func TestDecodeValueMap32EOF(t *testing.T) {
 	d := NewDecoder(data)
 	_, err := d.Decode()
 	if err != ErrUnexpectedEOF {
-		t.Errorf("expected ErrUnexpectedEOF, got %v", err)
+		t.Errorf(errMsgUnexpectedEOF, err)
 	}
 }
 
@@ -5628,7 +5636,7 @@ func TestDecodeValueExt8EOF(t *testing.T) {
 	d := NewDecoder(data)
 	_, err := d.Decode()
 	if err != ErrUnexpectedEOF {
-		t.Errorf("expected ErrUnexpectedEOF, got %v", err)
+		t.Errorf(errMsgUnexpectedEOF, err)
 	}
 }
 
@@ -5639,7 +5647,7 @@ func TestDecodeValueExt16EOF(t *testing.T) {
 	d := NewDecoder(data)
 	_, err := d.Decode()
 	if err != ErrUnexpectedEOF {
-		t.Errorf("expected ErrUnexpectedEOF, got %v", err)
+		t.Errorf(errMsgUnexpectedEOF, err)
 	}
 }
 
@@ -5650,7 +5658,7 @@ func TestDecodeValueExt32EOF(t *testing.T) {
 	d := NewDecoder(data)
 	_, err := d.Decode()
 	if err != ErrUnexpectedEOF {
-		t.Errorf("expected ErrUnexpectedEOF, got %v", err)
+		t.Errorf(errMsgUnexpectedEOF, err)
 	}
 }
 
@@ -5660,7 +5668,7 @@ func TestDecodeValueUint8EOF(t *testing.T) {
 	d := NewDecoder(data)
 	_, err := d.Decode()
 	if err != ErrUnexpectedEOF {
-		t.Errorf("expected ErrUnexpectedEOF, got %v", err)
+		t.Errorf(errMsgUnexpectedEOF, err)
 	}
 }
 
@@ -5670,7 +5678,7 @@ func TestDecodeValueUint16EOF(t *testing.T) {
 	d := NewDecoder(data)
 	_, err := d.Decode()
 	if err != ErrUnexpectedEOF {
-		t.Errorf("expected ErrUnexpectedEOF, got %v", err)
+		t.Errorf(errMsgUnexpectedEOF, err)
 	}
 }
 
@@ -5680,7 +5688,7 @@ func TestDecodeValueUint32EOF(t *testing.T) {
 	d := NewDecoder(data)
 	_, err := d.Decode()
 	if err != ErrUnexpectedEOF {
-		t.Errorf("expected ErrUnexpectedEOF, got %v", err)
+		t.Errorf(errMsgUnexpectedEOF, err)
 	}
 }
 
@@ -5690,7 +5698,7 @@ func TestDecodeValueUint64EOF(t *testing.T) {
 	d := NewDecoder(data)
 	_, err := d.Decode()
 	if err != ErrUnexpectedEOF {
-		t.Errorf("expected ErrUnexpectedEOF, got %v", err)
+		t.Errorf(errMsgUnexpectedEOF, err)
 	}
 }
 
@@ -5700,7 +5708,7 @@ func TestDecodeValueInt8EOF(t *testing.T) {
 	d := NewDecoder(data)
 	_, err := d.Decode()
 	if err != ErrUnexpectedEOF {
-		t.Errorf("expected ErrUnexpectedEOF, got %v", err)
+		t.Errorf(errMsgUnexpectedEOF, err)
 	}
 }
 
@@ -5710,7 +5718,7 @@ func TestDecodeValueInt16EOF(t *testing.T) {
 	d := NewDecoder(data)
 	_, err := d.Decode()
 	if err != ErrUnexpectedEOF {
-		t.Errorf("expected ErrUnexpectedEOF, got %v", err)
+		t.Errorf(errMsgUnexpectedEOF, err)
 	}
 }
 
@@ -5720,7 +5728,7 @@ func TestDecodeValueInt32EOF(t *testing.T) {
 	d := NewDecoder(data)
 	_, err := d.Decode()
 	if err != ErrUnexpectedEOF {
-		t.Errorf("expected ErrUnexpectedEOF, got %v", err)
+		t.Errorf(errMsgUnexpectedEOF, err)
 	}
 }
 
@@ -5730,7 +5738,7 @@ func TestDecodeValueInt64EOF(t *testing.T) {
 	d := NewDecoder(data)
 	_, err := d.Decode()
 	if err != ErrUnexpectedEOF {
-		t.Errorf("expected ErrUnexpectedEOF, got %v", err)
+		t.Errorf(errMsgUnexpectedEOF, err)
 	}
 }
 
@@ -5740,7 +5748,7 @@ func TestDecodeValueFloat32EOF(t *testing.T) {
 	d := NewDecoder(data)
 	_, err := d.Decode()
 	if err != ErrUnexpectedEOF {
-		t.Errorf("expected ErrUnexpectedEOF, got %v", err)
+		t.Errorf(errMsgUnexpectedEOF, err)
 	}
 }
 
@@ -5750,7 +5758,7 @@ func TestDecodeValueFloat64EOF(t *testing.T) {
 	d := NewDecoder(data)
 	_, err := d.Decode()
 	if err != ErrUnexpectedEOF {
-		t.Errorf("expected ErrUnexpectedEOF, got %v", err)
+		t.Errorf(errMsgUnexpectedEOF, err)
 	}
 }
 
@@ -5813,7 +5821,7 @@ func TestDecodeStructEOF(t *testing.T) {
 	var s S
 	err := UnmarshalStruct(data, &s)
 	if err != ErrUnexpectedEOF {
-		t.Errorf("expected ErrUnexpectedEOF, got %v", err)
+		t.Errorf(errMsgUnexpectedEOF, err)
 	}
 }
 
@@ -5824,7 +5832,7 @@ func TestDecodeStructTypeMismatch(t *testing.T) {
 	var s S
 	err := UnmarshalStruct(data, &s)
 	if err != ErrTypeMismatch {
-		t.Errorf("expected ErrTypeMismatch, got %v", err)
+		t.Errorf(errMsgTypeMismatch, err)
 	}
 }
 
@@ -5833,7 +5841,7 @@ func TestReadBytesInsufficientData(t *testing.T) {
 	d := NewDecoder([]byte{0x01, 0x02})
 	_, err := d.readBytes(5) // only 2 bytes available
 	if err != ErrUnexpectedEOF {
-		t.Errorf("expected ErrUnexpectedEOF, got %v", err)
+		t.Errorf(errMsgUnexpectedEOF, err)
 	}
 }
 
@@ -6052,7 +6060,7 @@ func TestDecodeStringAnyValidation(t *testing.T) {
 	d := NewDecoderWithConfig(data, cfg)
 	_, err := d.DecodeAny()
 	if err != ErrStringTooLong {
-		t.Errorf("expected ErrStringTooLong, got %v", err)
+		t.Errorf(errMsgStringTooLong, err)
 	}
 }
 
@@ -6063,7 +6071,7 @@ func TestDecodeStringAnyReadBytesEOF(t *testing.T) {
 	d := NewDecoder(data)
 	_, err := d.DecodeAny()
 	if err != ErrUnexpectedEOF {
-		t.Errorf("expected ErrUnexpectedEOF, got %v", err)
+		t.Errorf(errMsgUnexpectedEOF, err)
 	}
 }
 
@@ -6093,7 +6101,7 @@ func TestDecodeBinaryAnyReadBytesEOF(t *testing.T) {
 	d := NewDecoder(data)
 	_, err := d.DecodeAny()
 	if err != ErrUnexpectedEOF {
-		t.Errorf("expected ErrUnexpectedEOF, got %v", err)
+		t.Errorf(errMsgUnexpectedEOF, err)
 	}
 }
 
@@ -6448,7 +6456,7 @@ func TestDecodeValueStringStr8Validation(t *testing.T) {
 	d := NewDecoderWithConfig(enc.Bytes(), cfg)
 	_, err := d.Decode()
 	if err != ErrStringTooLong {
-		t.Errorf("expected ErrStringTooLong, got %v", err)
+		t.Errorf(errMsgStringTooLong, err)
 	}
 }
 
@@ -6554,7 +6562,7 @@ func TestDecodeStringKeyFixstrValidation(t *testing.T) {
 	data := []byte{0x81, 0xa5, 'h', 'e', 'l', 'l', 'o', 0x01}
 	err := UnmarshalStructWithConfig(data, &S{}, cfg)
 	if err != ErrStringTooLong {
-		t.Errorf("expected ErrStringTooLong, got %v", err)
+		t.Errorf(errMsgStringTooLong, err)
 	}
 }
 
@@ -6579,7 +6587,7 @@ func TestDecodeIntoSliceElementError(t *testing.T) {
 	var s S
 	err := UnmarshalStruct(enc.Bytes(), &s)
 	if err != ErrUnexpectedEOF {
-		t.Errorf("expected ErrUnexpectedEOF, got %v", err)
+		t.Errorf(errMsgUnexpectedEOF, err)
 	}
 }
 
@@ -6660,7 +6668,7 @@ func TestDecodeValueStringReadBytesError(t *testing.T) {
 	d := NewDecoder(enc.Bytes())
 	_, err := d.Decode()
 	if err != ErrUnexpectedEOF {
-		t.Errorf("expected ErrUnexpectedEOF, got %v", err)
+		t.Errorf(errMsgUnexpectedEOF, err)
 	}
 }
 
@@ -6674,7 +6682,7 @@ func TestDecodeValueBinaryReadBytesError(t *testing.T) {
 	d := NewDecoder(enc.Bytes())
 	_, err := d.Decode()
 	if err != ErrUnexpectedEOF {
-		t.Errorf("expected ErrUnexpectedEOF, got %v", err)
+		t.Errorf(errMsgUnexpectedEOF, err)
 	}
 }
 
@@ -6707,7 +6715,7 @@ func TestDecodeExtReadBytesError(t *testing.T) {
 	d := NewDecoder(enc.Bytes())
 	_, err := d.Decode()
 	if err != ErrUnexpectedEOF {
-		t.Errorf("expected ErrUnexpectedEOF, got %v", err)
+		t.Errorf(errMsgUnexpectedEOF, err)
 	}
 }
 
@@ -6792,7 +6800,7 @@ func TestDecodeValueStringStr8ReadBytesEOF(t *testing.T) {
 	d := NewDecoder(enc.Bytes())
 	_, err := d.Decode()
 	if err != ErrUnexpectedEOF {
-		t.Errorf("expected ErrUnexpectedEOF, got %v", err)
+		t.Errorf(errMsgUnexpectedEOF, err)
 	}
 }
 
@@ -6807,7 +6815,7 @@ func TestDecodeValueBinaryBin8ReadBytesEOF(t *testing.T) {
 	d := NewDecoder(enc.Bytes())
 	_, err := d.Decode()
 	if err != ErrUnexpectedEOF {
-		t.Errorf("expected ErrUnexpectedEOF, got %v", err)
+		t.Errorf(errMsgUnexpectedEOF, err)
 	}
 }
 
@@ -6836,7 +6844,7 @@ func TestDecodeStringKeyStr16Validation(t *testing.T) {
 	var s S
 	err := UnmarshalStructWithConfig(enc.Bytes(), &s, cfg)
 	if err != ErrStringTooLong {
-		t.Errorf("expected ErrStringTooLong, got %v", err)
+		t.Errorf(errMsgStringTooLong, err)
 	}
 }
 
@@ -6865,7 +6873,7 @@ func TestDecodeStringKeyStr32Validation(t *testing.T) {
 	var s S
 	err := UnmarshalStructWithConfig(enc.Bytes(), &s, cfg)
 	if err != ErrStringTooLong {
-		t.Errorf("expected ErrStringTooLong, got %v", err)
+		t.Errorf(errMsgStringTooLong, err)
 	}
 }
 
@@ -6950,7 +6958,7 @@ func TestDecodeValueBoolMismatch(t *testing.T) {
 	var s S
 	err := UnmarshalStruct(enc.Bytes(), &s)
 	if err != ErrTypeMismatch {
-		t.Errorf("expected ErrTypeMismatch, got %v", err)
+		t.Errorf(errMsgTypeMismatch, err)
 	}
 }
 
@@ -6968,7 +6976,7 @@ func TestDecodeValueStringMismatch(t *testing.T) {
 	var s S
 	err := UnmarshalStruct(enc.Bytes(), &s)
 	if err != ErrTypeMismatch {
-		t.Errorf("expected ErrTypeMismatch, got %v", err)
+		t.Errorf(errMsgTypeMismatch, err)
 	}
 }
 
@@ -6986,7 +6994,7 @@ func TestDecodeValueSliceMismatch(t *testing.T) {
 	var s S
 	err := UnmarshalStruct(enc.Bytes(), &s)
 	if err != ErrTypeMismatch {
-		t.Errorf("expected ErrTypeMismatch, got %v", err)
+		t.Errorf(errMsgTypeMismatch, err)
 	}
 }
 
@@ -7004,7 +7012,7 @@ func TestDecodeValueArrayMismatch(t *testing.T) {
 	var s S
 	err := UnmarshalStruct(enc.Bytes(), &s)
 	if err != ErrTypeMismatch {
-		t.Errorf("expected ErrTypeMismatch, got %v", err)
+		t.Errorf(errMsgTypeMismatch, err)
 	}
 }
 
@@ -7022,7 +7030,7 @@ func TestDecodeValueMapMismatch(t *testing.T) {
 	var s S
 	err := UnmarshalStruct(enc.Bytes(), &s)
 	if err != ErrTypeMismatch {
-		t.Errorf("expected ErrTypeMismatch, got %v", err)
+		t.Errorf(errMsgTypeMismatch, err)
 	}
 }
 
@@ -7040,7 +7048,7 @@ func TestDecodeValueBytesMismatch(t *testing.T) {
 	var s S
 	err := UnmarshalStruct(enc.Bytes(), &s)
 	if err != ErrTypeMismatch {
-		t.Errorf("expected ErrTypeMismatch, got %v", err)
+		t.Errorf(errMsgTypeMismatch, err)
 	}
 }
 
@@ -7324,7 +7332,7 @@ func TestDecodeValueStringStr16Validation(t *testing.T) {
 	d := NewDecoderWithConfig(enc.Bytes(), cfg)
 	_, err := d.Decode()
 	if err != ErrStringTooLong {
-		t.Errorf("expected ErrStringTooLong, got %v", err)
+		t.Errorf(errMsgStringTooLong, err)
 	}
 }
 
@@ -7346,7 +7354,7 @@ func TestDecodeValueStringStr32Validation(t *testing.T) {
 	d := NewDecoderWithConfig(enc.Bytes(), cfg)
 	_, err := d.Decode()
 	if err != ErrStringTooLong {
-		t.Errorf("expected ErrStringTooLong, got %v", err)
+		t.Errorf(errMsgStringTooLong, err)
 	}
 }
 
@@ -7411,7 +7419,7 @@ func TestDecodeValueStructMismatch(t *testing.T) {
 	var s S
 	err := UnmarshalStruct(enc.Bytes(), &s)
 	if err != ErrTypeMismatch {
-		t.Errorf("expected ErrTypeMismatch, got %v", err)
+		t.Errorf(errMsgTypeMismatch, err)
 	}
 }
 
@@ -7433,7 +7441,7 @@ func TestDecodeStringAnyStr16Validation(t *testing.T) {
 	d := NewDecoderWithConfig(enc.Bytes(), cfg)
 	_, err := d.DecodeAny()
 	if err != ErrStringTooLong {
-		t.Errorf("expected ErrStringTooLong, got %v", err)
+		t.Errorf(errMsgStringTooLong, err)
 	}
 }
 
@@ -7629,7 +7637,7 @@ func TestDecodeMapAnyKeyStr8EOF(t *testing.T) {
 	d := NewDecoder(enc.Bytes())
 	_, err := d.DecodeAny()
 	if err == nil {
-		t.Error("expected EOF error")
+		t.Error(errMsgEOFError)
 	}
 }
 
@@ -7644,7 +7652,7 @@ func TestDecodeMapAnyKeyStr16EOF(t *testing.T) {
 	d := NewDecoder(enc.Bytes())
 	_, err := d.DecodeAny()
 	if err == nil {
-		t.Error("expected EOF error")
+		t.Error(errMsgEOFError)
 	}
 }
 
@@ -7659,7 +7667,7 @@ func TestDecodeMapAnyKeyStr32EOF(t *testing.T) {
 	d := NewDecoder(enc.Bytes())
 	_, err := d.DecodeAny()
 	if err == nil {
-		t.Error("expected EOF error")
+		t.Error(errMsgEOFError)
 	}
 }
 
@@ -7709,7 +7717,7 @@ func TestDecodeStringAnyReadBytesError(t *testing.T) {
 	d := NewDecoder(enc.Bytes())
 	_, err := d.DecodeAny()
 	if err == nil {
-		t.Error("expected EOF error")
+		t.Error(errMsgEOFError)
 	}
 }
 
@@ -7725,7 +7733,7 @@ func TestDecodeBinaryAnyReadBytesError(t *testing.T) {
 	d := NewDecoder(enc.Bytes())
 	_, err := d.DecodeAny()
 	if err == nil {
-		t.Error("expected EOF error")
+		t.Error(errMsgEOFError)
 	}
 }
 
@@ -7746,7 +7754,7 @@ func TestDecodeValueStringStr8ReadBytesError(t *testing.T) {
 	var s TestStruct
 	err := UnmarshalStruct(enc.Bytes(), &s)
 	if err == nil {
-		t.Error("expected EOF error")
+		t.Error(errMsgEOFError)
 	}
 }
 
@@ -7767,7 +7775,7 @@ func TestDecodeValueStringStr16ReadBytesError(t *testing.T) {
 	var s TestStruct
 	err := UnmarshalStruct(enc.Bytes(), &s)
 	if err == nil {
-		t.Error("expected EOF error")
+		t.Error(errMsgEOFError)
 	}
 }
 
@@ -7788,7 +7796,7 @@ func TestDecodeValueStringStr32ReadBytesError(t *testing.T) {
 	var s TestStruct
 	err := UnmarshalStruct(enc.Bytes(), &s)
 	if err == nil {
-		t.Error("expected EOF error")
+		t.Error(errMsgEOFError)
 	}
 }
 
@@ -7809,7 +7817,7 @@ func TestDecodeValueBytesStr8ReadBytesError(t *testing.T) {
 	var s TestStruct
 	err := UnmarshalStruct(enc.Bytes(), &s)
 	if err == nil {
-		t.Error("expected EOF error")
+		t.Error(errMsgEOFError)
 	}
 }
 
@@ -7830,7 +7838,7 @@ func TestDecodeValueBytesStr16ReadBytesError(t *testing.T) {
 	var s TestStruct
 	err := UnmarshalStruct(enc.Bytes(), &s)
 	if err == nil {
-		t.Error("expected EOF error")
+		t.Error(errMsgEOFError)
 	}
 }
 
@@ -7851,7 +7859,7 @@ func TestDecodeValueBytesStr32ReadBytesError(t *testing.T) {
 	var s TestStruct
 	err := UnmarshalStruct(enc.Bytes(), &s)
 	if err == nil {
-		t.Error("expected EOF error")
+		t.Error(errMsgEOFError)
 	}
 }
 
@@ -7872,7 +7880,7 @@ func TestDecodeValueBytesBin8ReadBytesError(t *testing.T) {
 	var s TestStruct
 	err := UnmarshalStruct(enc.Bytes(), &s)
 	if err == nil {
-		t.Error("expected EOF error")
+		t.Error(errMsgEOFError)
 	}
 }
 
@@ -7893,7 +7901,7 @@ func TestDecodeValueBytesBin16ReadBytesError(t *testing.T) {
 	var s TestStruct
 	err := UnmarshalStruct(enc.Bytes(), &s)
 	if err == nil {
-		t.Error("expected EOF error")
+		t.Error(errMsgEOFError)
 	}
 }
 
@@ -7914,7 +7922,7 @@ func TestDecodeValueBytesBin32ReadBytesError(t *testing.T) {
 	var s TestStruct
 	err := UnmarshalStruct(enc.Bytes(), &s)
 	if err == nil {
-		t.Error("expected EOF error")
+		t.Error(errMsgEOFError)
 	}
 }
 
@@ -7929,7 +7937,7 @@ func TestDecodeStringReadBytesError(t *testing.T) {
 	d := NewDecoder(enc.Bytes())
 	_, err := d.Decode()
 	if err == nil {
-		t.Error("expected EOF error")
+		t.Error(errMsgEOFError)
 	}
 }
 
@@ -7944,7 +7952,7 @@ func TestDecodeBinaryReadBytesError(t *testing.T) {
 	d := NewDecoder(enc.Bytes())
 	_, err := d.Decode()
 	if err == nil {
-		t.Error("expected EOF error")
+		t.Error(errMsgEOFError)
 	}
 }
 
@@ -7959,7 +7967,7 @@ func TestDecodeStringStr16ReadBytesError(t *testing.T) {
 	d := NewDecoder(enc.Bytes())
 	_, err := d.Decode()
 	if err == nil {
-		t.Error("expected EOF error")
+		t.Error(errMsgEOFError)
 	}
 }
 
@@ -7974,7 +7982,7 @@ func TestDecodeStringStr32ReadBytesError(t *testing.T) {
 	d := NewDecoder(enc.Bytes())
 	_, err := d.Decode()
 	if err == nil {
-		t.Error("expected EOF error")
+		t.Error(errMsgEOFError)
 	}
 }
 
@@ -7989,7 +7997,7 @@ func TestDecodeBinaryBin16ReadBytesError(t *testing.T) {
 	d := NewDecoder(enc.Bytes())
 	_, err := d.Decode()
 	if err == nil {
-		t.Error("expected EOF error")
+		t.Error(errMsgEOFError)
 	}
 }
 
@@ -8004,7 +8012,7 @@ func TestDecodeBinaryBin32ReadBytesError(t *testing.T) {
 	d := NewDecoder(enc.Bytes())
 	_, err := d.Decode()
 	if err == nil {
-		t.Error("expected EOF error")
+		t.Error(errMsgEOFError)
 	}
 }
 
@@ -8023,7 +8031,7 @@ func TestDecodeValueStringStr8EOFLength(t *testing.T) {
 	var s TestStruct
 	err := UnmarshalStruct(enc.Bytes(), &s)
 	if err == nil {
-		t.Error("expected EOF error")
+		t.Error(errMsgEOFError)
 	}
 }
 
@@ -8042,7 +8050,7 @@ func TestDecodeValueStringStr16EOFLength(t *testing.T) {
 	var s TestStruct
 	err := UnmarshalStruct(enc.Bytes(), &s)
 	if err == nil {
-		t.Error("expected EOF error")
+		t.Error(errMsgEOFError)
 	}
 }
 
@@ -8062,7 +8070,7 @@ func TestDecodeValueStringStr32EOFLength(t *testing.T) {
 	var s TestStruct
 	err := UnmarshalStruct(enc.Bytes(), &s)
 	if err == nil {
-		t.Error("expected EOF error")
+		t.Error(errMsgEOFError)
 	}
 }
 
@@ -8081,7 +8089,7 @@ func TestDecodeValueBytesStr8EOFLength(t *testing.T) {
 	var s TestStruct
 	err := UnmarshalStruct(enc.Bytes(), &s)
 	if err == nil {
-		t.Error("expected EOF error")
+		t.Error(errMsgEOFError)
 	}
 }
 
@@ -8100,7 +8108,7 @@ func TestDecodeValueBytesStr16EOFLength(t *testing.T) {
 	var s TestStruct
 	err := UnmarshalStruct(enc.Bytes(), &s)
 	if err == nil {
-		t.Error("expected EOF error")
+		t.Error(errMsgEOFError)
 	}
 }
 
@@ -8120,7 +8128,7 @@ func TestDecodeValueBytesStr32EOFLength(t *testing.T) {
 	var s TestStruct
 	err := UnmarshalStruct(enc.Bytes(), &s)
 	if err == nil {
-		t.Error("expected EOF error")
+		t.Error(errMsgEOFError)
 	}
 }
 
@@ -8139,7 +8147,7 @@ func TestDecodeValueBytesBin8EOFLength(t *testing.T) {
 	var s TestStruct
 	err := UnmarshalStruct(enc.Bytes(), &s)
 	if err == nil {
-		t.Error("expected EOF error")
+		t.Error(errMsgEOFError)
 	}
 }
 
@@ -8158,7 +8166,7 @@ func TestDecodeValueBytesBin16EOFLength(t *testing.T) {
 	var s TestStruct
 	err := UnmarshalStruct(enc.Bytes(), &s)
 	if err == nil {
-		t.Error("expected EOF error")
+		t.Error(errMsgEOFError)
 	}
 }
 
@@ -8178,7 +8186,7 @@ func TestDecodeValueBytesBin32EOFLength(t *testing.T) {
 	var s TestStruct
 	err := UnmarshalStruct(enc.Bytes(), &s)
 	if err == nil {
-		t.Error("expected EOF error")
+		t.Error(errMsgEOFError)
 	}
 }
 
@@ -8304,7 +8312,7 @@ func TestDecodeStringKeyStr8DataEOF(t *testing.T) {
 	var s TestStruct
 	err := UnmarshalStruct(enc.Bytes(), &s)
 	if err == nil {
-		t.Error("expected EOF error")
+		t.Error(errMsgEOFError)
 	}
 }
 
@@ -8324,7 +8332,7 @@ func TestDecodeStringKeyStr16DataEOF(t *testing.T) {
 	var s TestStruct
 	err := UnmarshalStruct(enc.Bytes(), &s)
 	if err == nil {
-		t.Error("expected EOF error")
+		t.Error(errMsgEOFError)
 	}
 }
 
@@ -8344,7 +8352,7 @@ func TestDecodeStringKeyStr32DataEOF(t *testing.T) {
 	var s TestStruct
 	err := UnmarshalStruct(enc.Bytes(), &s)
 	if err == nil {
-		t.Error("expected EOF error")
+		t.Error(errMsgEOFError)
 	}
 }
 
@@ -8655,7 +8663,7 @@ func TestDecodeIntoMapTypeMismatchFormat(t *testing.T) {
 	var s TestStruct
 	err := UnmarshalStruct(enc.Bytes(), &s)
 	if err != ErrTypeMismatch {
-		t.Errorf("expected ErrTypeMismatch, got %v", err)
+		t.Errorf(errMsgTypeMismatch, err)
 	}
 }
 
@@ -8673,7 +8681,7 @@ func TestDecodeIntoSliceTypeMismatchFormat(t *testing.T) {
 	var s TestStruct
 	err := UnmarshalStruct(enc.Bytes(), &s)
 	if err != ErrTypeMismatch {
-		t.Errorf("expected ErrTypeMismatch, got %v", err)
+		t.Errorf(errMsgTypeMismatch, err)
 	}
 }
 
@@ -8691,7 +8699,7 @@ func TestDecodeIntoArrayTypeMismatchFormat(t *testing.T) {
 	var s TestStruct
 	err := UnmarshalStruct(enc.Bytes(), &s)
 	if err != ErrTypeMismatch {
-		t.Errorf("expected ErrTypeMismatch, got %v", err)
+		t.Errorf(errMsgTypeMismatch, err)
 	}
 }
 
@@ -8793,7 +8801,7 @@ func TestDecodeStringAnyMaxLenValidation(t *testing.T) {
 	d := NewDecoderWithConfig(enc.Bytes(), cfg)
 	_, err := d.DecodeAny()
 	if err != ErrStringTooLong {
-		t.Errorf("expected ErrStringTooLong, got %v", err)
+		t.Errorf(errMsgStringTooLong, err)
 	}
 }
 
@@ -8952,7 +8960,7 @@ func TestDecodeValueValidationStr8(t *testing.T) {
 	var s TestStruct
 	err := UnmarshalStructWithConfig(enc.Bytes(), &s, cfg)
 	if err != ErrStringTooLong {
-		t.Errorf("expected ErrStringTooLong, got %v", err)
+		t.Errorf(errMsgStringTooLong, err)
 	}
 }
 
@@ -8983,7 +8991,7 @@ func TestDecodeValueValidationStr16(t *testing.T) {
 	var s TestStruct
 	err := UnmarshalStructWithConfig(enc.Bytes(), &s, cfg)
 	if err != ErrStringTooLong {
-		t.Errorf("expected ErrStringTooLong, got %v", err)
+		t.Errorf(errMsgStringTooLong, err)
 	}
 }
 
@@ -9014,7 +9022,7 @@ func TestDecodeValueValidationStr32(t *testing.T) {
 	var s TestStruct
 	err := UnmarshalStructWithConfig(enc.Bytes(), &s, cfg)
 	if err != ErrStringTooLong {
-		t.Errorf("expected ErrStringTooLong, got %v", err)
+		t.Errorf(errMsgStringTooLong, err)
 	}
 }
 
@@ -9355,7 +9363,7 @@ func TestTimestampDecodeErrors(t *testing.T) {
 		data := []byte{formatNil}
 		_, err := UnmarshalTimestamp(data)
 		if err != ErrTypeMismatch {
-			t.Errorf("expected ErrTypeMismatch, got %v", err)
+			t.Errorf(errMsgTypeMismatch, err)
 		}
 	})
 
@@ -9363,7 +9371,7 @@ func TestTimestampDecodeErrors(t *testing.T) {
 		data := []byte{formatFixExt4, 0x01, 0, 0, 0, 0}
 		_, err := UnmarshalTimestamp(data)
 		if err != ErrTypeMismatch {
-			t.Errorf("expected ErrTypeMismatch, got %v", err)
+			t.Errorf(errMsgTypeMismatch, err)
 		}
 	})
 
@@ -9371,7 +9379,7 @@ func TestTimestampDecodeErrors(t *testing.T) {
 		data := []byte{formatExt8, 5, 0xff, 0, 0, 0, 0, 0}
 		_, err := UnmarshalTimestamp(data)
 		if err != ErrTypeMismatch {
-			t.Errorf("expected ErrTypeMismatch, got %v", err)
+			t.Errorf(errMsgTypeMismatch, err)
 		}
 	})
 
@@ -9379,7 +9387,7 @@ func TestTimestampDecodeErrors(t *testing.T) {
 		data := []byte{formatFixExt4, 0xff, 0, 0}
 		_, err := UnmarshalTimestamp(data)
 		if err != ErrUnexpectedEOF {
-			t.Errorf("expected ErrUnexpectedEOF, got %v", err)
+			t.Errorf(errMsgUnexpectedEOF, err)
 		}
 	})
 }
@@ -9390,7 +9398,7 @@ func TestExtToTimestampErrors(t *testing.T) {
 		ext := Ext{Type: 1, Data: []byte{0, 0, 0, 0}}
 		_, err := ExtToTimestamp(ext)
 		if err != ErrTypeMismatch {
-			t.Errorf("expected ErrTypeMismatch, got %v", err)
+			t.Errorf(errMsgTypeMismatch, err)
 		}
 	})
 
@@ -9398,7 +9406,7 @@ func TestExtToTimestampErrors(t *testing.T) {
 		ext := Ext{Type: -1, Data: []byte{0, 0, 0}}
 		_, err := ExtToTimestamp(ext)
 		if err != ErrTypeMismatch {
-			t.Errorf("expected ErrTypeMismatch, got %v", err)
+			t.Errorf(errMsgTypeMismatch, err)
 		}
 	})
 }
