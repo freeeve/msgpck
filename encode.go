@@ -164,16 +164,9 @@ func (e *Encoder) encodeSlice(rv reflect.Value) error {
 	return nil
 }
 
-// encodeArray encodes a fixed-size array
+// encodeArray encodes a fixed-size array (same logic as slice)
 func (e *Encoder) encodeArray(rv reflect.Value) error {
-	length := rv.Len()
-	e.EncodeArrayHeader(length)
-	for i := 0; i < length; i++ {
-		if err := e.encodeValue(rv.Index(i)); err != nil {
-			return err
-		}
-	}
-	return nil
+	return e.encodeSlice(rv)
 }
 
 // encodeMap encodes a map
