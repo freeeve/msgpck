@@ -180,127 +180,7 @@ func (sd *StructDecoder[T]) decodeField(d *Decoder, ptr unsafe.Pointer, field *s
 		return nil // leave as zero value
 	}
 
-	switch field.kind {
-	case reflect.String:
-		s, err := sd.decodeString(d, format)
-		if err != nil {
-			return err
-		}
-		*(*string)(ptr) = s
-
-	case reflect.Int:
-		v, err := decodeInt(d, format)
-		if err != nil {
-			return err
-		}
-		*(*int)(ptr) = int(v)
-
-	case reflect.Int64:
-		v, err := decodeInt(d, format)
-		if err != nil {
-			return err
-		}
-		*(*int64)(ptr) = v
-
-	case reflect.Int32:
-		v, err := decodeInt(d, format)
-		if err != nil {
-			return err
-		}
-		*(*int32)(ptr) = int32(v)
-
-	case reflect.Uint:
-		v, err := decodeUint(d, format)
-		if err != nil {
-			return err
-		}
-		*(*uint)(ptr) = uint(v)
-
-	case reflect.Uint64:
-		v, err := decodeUint(d, format)
-		if err != nil {
-			return err
-		}
-		*(*uint64)(ptr) = v
-
-	case reflect.Float64:
-		v, err := decodeFloat(d, format)
-		if err != nil {
-			return err
-		}
-		*(*float64)(ptr) = v
-
-	case reflect.Float32:
-		v, err := decodeFloat(d, format)
-		if err != nil {
-			return err
-		}
-		*(*float32)(ptr) = float32(v)
-
-	case reflect.Bool:
-		if format == formatTrue {
-			*(*bool)(ptr) = true
-		} else if format == formatFalse {
-			*(*bool)(ptr) = false
-		} else {
-			return ErrTypeMismatch
-		}
-
-	case reflect.Slice:
-		if field.elem.Kind() == reflect.String {
-			// []string
-			arr, err := sd.decodeStringSlice(d, format)
-			if err != nil {
-				return err
-			}
-			*(*[]string)(ptr) = arr
-		} else if field.elem.Kind() == reflect.Uint8 {
-			// []byte
-			b, err := sd.decodeBytes(d, format)
-			if err != nil {
-				return err
-			}
-			*(*[]byte)(ptr) = b
-		} else {
-			// Generic slice - skip for now
-			d.pos-- // put format byte back
-			if _, err := d.Decode(); err != nil {
-				return err
-			}
-		}
-
-	case reflect.Map:
-		if field.elem.Kind() == reflect.String {
-			// map[string]string
-			m, err := sd.decodeStringMap(d, format)
-			if err != nil {
-				return err
-			}
-			*(*map[string]string)(ptr) = m
-		} else {
-			// Generic map - skip for now
-			d.pos--
-			if _, err := d.Decode(); err != nil {
-				return err
-			}
-		}
-
-	case reflect.Struct:
-		// Nested struct - decode using reflection
-		d.pos-- // put format byte back
-		if err := sd.decodeNestedStruct(d, ptr, field.structType); err != nil {
-			return err
-		}
-
-	default:
-		// Unknown type - skip
-		d.pos--
-		if _, err := d.Decode(); err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return sd.decodeFieldValue(d, ptr, field, format)
 }
 
 func (sd *StructDecoder[T]) decodeString(d *Decoder, format byte) (string, error) {
@@ -381,6 +261,125 @@ func (sd *StructDecoder[T]) decodeStringMap(d *Decoder, format byte) (map[string
 		result[key] = val
 	}
 	return result, nil
+}
+
+// decodeFieldValue decodes a value given its format byte and stores it at the field pointer.
+// This is the shared core logic used by both decodeField and decodeNestedStruct.
+func (sd *StructDecoder[T]) decodeFieldValue(d *Decoder, ptr unsafe.Pointer, field *structField, format byte) error {
+	switch field.kind {
+	case reflect.String:
+		s, err := sd.decodeString(d, format)
+		if err != nil {
+			return err
+		}
+		*(*string)(ptr) = s
+
+	case reflect.Int:
+		v, err := decodeInt(d, format)
+		if err != nil {
+			return err
+		}
+		*(*int)(ptr) = int(v)
+
+	case reflect.Int64:
+		v, err := decodeInt(d, format)
+		if err != nil {
+			return err
+		}
+		*(*int64)(ptr) = v
+
+	case reflect.Int32:
+		v, err := decodeInt(d, format)
+		if err != nil {
+			return err
+		}
+		*(*int32)(ptr) = int32(v)
+
+	case reflect.Uint:
+		v, err := decodeUint(d, format)
+		if err != nil {
+			return err
+		}
+		*(*uint)(ptr) = uint(v)
+
+	case reflect.Uint64:
+		v, err := decodeUint(d, format)
+		if err != nil {
+			return err
+		}
+		*(*uint64)(ptr) = v
+
+	case reflect.Float64:
+		v, err := decodeFloat(d, format)
+		if err != nil {
+			return err
+		}
+		*(*float64)(ptr) = v
+
+	case reflect.Float32:
+		v, err := decodeFloat(d, format)
+		if err != nil {
+			return err
+		}
+		*(*float32)(ptr) = float32(v)
+
+	case reflect.Bool:
+		if format == formatTrue {
+			*(*bool)(ptr) = true
+		} else if format == formatFalse {
+			*(*bool)(ptr) = false
+		} else {
+			return ErrTypeMismatch
+		}
+
+	case reflect.Slice:
+		if field.elem.Kind() == reflect.String {
+			arr, err := sd.decodeStringSlice(d, format)
+			if err != nil {
+				return err
+			}
+			*(*[]string)(ptr) = arr
+		} else if field.elem.Kind() == reflect.Uint8 {
+			b, err := sd.decodeBytes(d, format)
+			if err != nil {
+				return err
+			}
+			*(*[]byte)(ptr) = b
+		} else {
+			d.pos--
+			if _, err := d.Decode(); err != nil {
+				return err
+			}
+		}
+
+	case reflect.Map:
+		if field.elem.Kind() == reflect.String {
+			m, err := sd.decodeStringMap(d, format)
+			if err != nil {
+				return err
+			}
+			*(*map[string]string)(ptr) = m
+		} else {
+			d.pos--
+			if _, err := d.Decode(); err != nil {
+				return err
+			}
+		}
+
+	case reflect.Struct:
+		d.pos--
+		if err := sd.decodeNestedStruct(d, ptr, field.structType); err != nil {
+			return err
+		}
+
+	default:
+		d.pos--
+		if _, err := d.Decode(); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // Helper functions for decoding primitives
@@ -586,63 +585,8 @@ func (sd *StructDecoder[T]) decodeNestedStruct(d *Decoder, ptr unsafe.Pointer, s
 			continue
 		}
 
-		switch nestedField.kind {
-		case reflect.String:
-			s, err := sd.decodeString(d, format)
-			if err != nil {
-				return err
-			}
-			*(*string)(fieldPtr) = s
-		case reflect.Int, reflect.Int64, reflect.Int32:
-			v, err := decodeInt(d, format)
-			if err != nil {
-				return err
-			}
-			switch nestedField.kind {
-			case reflect.Int:
-				*(*int)(fieldPtr) = int(v)
-			case reflect.Int64:
-				*(*int64)(fieldPtr) = v
-			case reflect.Int32:
-				*(*int32)(fieldPtr) = int32(v)
-			}
-		case reflect.Uint, reflect.Uint64:
-			v, err := decodeUint(d, format)
-			if err != nil {
-				return err
-			}
-			switch nestedField.kind {
-			case reflect.Uint:
-				*(*uint)(fieldPtr) = uint(v)
-			case reflect.Uint64:
-				*(*uint64)(fieldPtr) = v
-			}
-		case reflect.Float64, reflect.Float32:
-			v, err := decodeFloat(d, format)
-			if err != nil {
-				return err
-			}
-			if nestedField.kind == reflect.Float64 {
-				*(*float64)(fieldPtr) = v
-			} else {
-				*(*float32)(fieldPtr) = float32(v)
-			}
-		case reflect.Bool:
-			if format == formatTrue {
-				*(*bool)(fieldPtr) = true
-			} else if format == formatFalse {
-				*(*bool)(fieldPtr) = false
-			}
-		case reflect.Struct:
-			d.pos--
-			if err := sd.decodeNestedStruct(d, fieldPtr, nestedField.structType); err != nil {
-				return err
-			}
-		default:
-			d.pos--
-			if _, err := d.Decode(); err != nil {
-				return err
-			}
+		if err := sd.decodeFieldValue(d, fieldPtr, &nestedField, format); err != nil {
+			return err
 		}
 	}
 
