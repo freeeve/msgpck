@@ -333,3 +333,64 @@ func TestTypedDecodeMapStringString(t *testing.T) {
 		}
 	})
 }
+
+// TestTypedDecode tests typed decode functions
+func TestTypedDecode(t *testing.T) {
+	t.Run("UnmarshalMapStringAny zeroCopy=true", func(t *testing.T) {
+		data, _ := Marshal(map[string]any{"a": int64(1)})
+		m, err := UnmarshalMapStringAny(data, true)
+		if err != nil || m["a"] != int64(1) {
+			t.Error("zeroCopy decode failed")
+		}
+	})
+
+	t.Run("UnmarshalMapStringAny zeroCopy=false", func(t *testing.T) {
+		data, _ := Marshal(map[string]any{"a": int64(1)})
+		m, err := UnmarshalMapStringAny(data, false)
+		if err != nil || m["a"] != int64(1) {
+			t.Error("copy decode failed")
+		}
+	})
+
+	t.Run("UnmarshalMapStringString", func(t *testing.T) {
+		e := NewEncoder(64)
+		e.EncodeMapHeader(2)
+		e.EncodeString("key1")
+		e.EncodeString("value1")
+		e.EncodeString("key2")
+		e.EncodeString("value2")
+
+		m, err := UnmarshalMapStringString(e.Bytes(), true)
+		if err != nil || m["key1"] != "value1" || m["key2"] != "value2" {
+			t.Error("UnmarshalMapStringString failed")
+		}
+	})
+
+	t.Run("DecodeMapFunc", func(t *testing.T) {
+		data, _ := Marshal(map[string]any{"x": int64(42)})
+		var got int64
+		err := DecodeMapFunc(data, func(m map[string]any) error {
+			got = m["x"].(int64)
+			return nil
+		})
+		if err != nil || got != 42 {
+			t.Error("DecodeMapFunc failed")
+		}
+	})
+
+	t.Run("DecodeStringMapFunc", func(t *testing.T) {
+		e := NewEncoder(64)
+		e.EncodeMapHeader(1)
+		e.EncodeString("k")
+		e.EncodeString("v")
+
+		var got string
+		err := DecodeStringMapFunc(e.Bytes(), func(m map[string]string) error {
+			got = m["k"]
+			return nil
+		})
+		if err != nil || got != "v" {
+			t.Error("DecodeStringMapFunc failed")
+		}
+	})
+}

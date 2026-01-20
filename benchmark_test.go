@@ -282,3 +282,89 @@ func BenchmarkMsgpckStringMapCallback(b *testing.B) {
 		})
 	}
 }
+
+// ============================================================================
+// Simple Benchmarks (from msgpck_test.go)
+// ============================================================================
+
+// BenchmarkDecodeMap benchmarks map decoding (the hot path)
+func BenchmarkDecodeMap(b *testing.B) {
+	data := map[string]any{
+		"name":   "Alice",
+		"age":    30,
+		"email":  "alice@example.com",
+		"active": true,
+	}
+	encoded, _ := Marshal(data)
+
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	for i := 0; i < b.N; i++ {
+		d := NewDecoder(encoded)
+		_, _ = d.Decode()
+	}
+}
+
+// BenchmarkDecodeMapAny benchmarks decoding to map[string]any
+func BenchmarkDecodeMapAny(b *testing.B) {
+	data := map[string]any{
+		"name":   "Alice",
+		"age":    30,
+		"email":  "alice@example.com",
+		"active": true,
+	}
+	encoded, _ := Marshal(data)
+
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	for i := 0; i < b.N; i++ {
+		d := NewDecoder(encoded)
+		_, _ = d.DecodeAny()
+	}
+}
+
+// BenchmarkEncodeMap benchmarks map encoding
+func BenchmarkEncodeMap(b *testing.B) {
+	data := map[string]any{
+		"name":   "Alice",
+		"age":    30,
+		"email":  "alice@example.com",
+		"active": true,
+	}
+
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	for i := 0; i < b.N; i++ {
+		_, _ = Marshal(data)
+	}
+}
+
+// BenchmarkDecodeStruct benchmarks struct decoding
+func BenchmarkDecodeStruct(b *testing.B) {
+	type Person struct {
+		Name   string `msgpack:"name"`
+		Age    int    `msgpack:"age"`
+		Email  string `msgpack:"email"`
+		Active bool   `msgpack:"active"`
+	}
+
+	data := Person{
+		Name:   "Alice",
+		Age:    30,
+		Email:  "alice@example.com",
+		Active: true,
+	}
+	encoded, _ := Marshal(data)
+
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	for i := 0; i < b.N; i++ {
+		var p Person
+		d := NewDecoder(encoded)
+		_ = d.DecodeStruct(&p)
+	}
+}

@@ -2,6 +2,7 @@ package msgpck
 
 import (
 	"bytes"
+	"reflect"
 	"testing"
 )
 
@@ -3224,5 +3225,208 @@ func TestStructRoundtripAllMsgpackTypes(t *testing.T) {
 	}
 	if result.Nested.Label != original.Nested.Label {
 		t.Errorf("Nested.Label: got %q, want %q", result.Nested.Label, original.Nested.Label)
+	}
+}
+
+// TestDecodeStructComplex tests complex struct scenarios
+func TestDecodeStructComplex(t *testing.T) {
+	t.Run("nested struct", func(t *testing.T) {
+		type Inner struct {
+			X int `msgpack:"x"`
+		}
+		type Outer struct {
+			Inner Inner `msgpack:"inner"`
+		}
+
+		o := Outer{Inner: Inner{X: 42}}
+		b, _ := Marshal(o)
+
+		var result Outer
+		err := UnmarshalStruct(b, &result)
+		if err != nil || result.Inner.X != 42 {
+			t.Error("nested struct failed")
+		}
+	})
+
+	t.Run("slice field", func(t *testing.T) {
+		type Data struct {
+			Items []int `msgpack:"items"`
+		}
+
+		d := Data{Items: []int{1, 2, 3}}
+		b, _ := Marshal(d)
+
+		var result Data
+		err := UnmarshalStruct(b, &result)
+		if err != nil || !reflect.DeepEqual(result.Items, d.Items) {
+			t.Error("slice field failed")
+		}
+	})
+
+	t.Run("map field", func(t *testing.T) {
+		type Data struct {
+			Meta map[string]string `msgpack:"meta"`
+		}
+
+		d := Data{Meta: map[string]string{"k": "v"}}
+		b, _ := Marshal(d)
+
+		var result Data
+		err := UnmarshalStruct(b, &result)
+		if err != nil || result.Meta["k"] != "v" {
+			t.Error("map field failed")
+		}
+	})
+
+	t.Run("omitempty", func(t *testing.T) {
+		type Data struct {
+			Name  string `msgpack:"name"`
+			Value int    `msgpack:"value,omitempty"`
+		}
+
+		d := Data{Name: "test", Value: 0}
+		b, _ := Marshal(d)
+
+		m, _ := Unmarshal(b)
+		if _, ok := m.(map[string]any)["value"]; ok {
+			t.Error("omitempty field should be omitted")
+		}
+	})
+
+	// Note: Pointer to primitive fields (*int, *string, etc.) are not yet
+	// fully supported by the struct codecs. Use regular fields instead.
+}
+
+// TestDecodeStruct tests struct unmarshaling
+func TestDecodeStruct(t *testing.T) {
+	type Person struct {
+		Name string `msgpack:"name"`
+		Age  int    `msgpack:"age"`
+	}
+
+	// Encode
+	original := Person{Name: "Alice", Age: 30}
+	encoded, err := Marshal(original)
+	if err != nil {
+		t.Fatalf("Marshal failed: %v", err)
+	}
+
+	// Decode
+	var decoded Person
+	err = UnmarshalStruct(encoded, &decoded)
+	if err != nil {
+		t.Fatalf("UnmarshalStruct failed: %v", err)
+	}
+
+	if decoded != original {
+		t.Errorf("got %+v, want %+v", decoded, original)
+	}
+}
+
+// TestOmitEmpty tests omitempty tag
+func TestOmitEmpty(t *testing.T) {
+	type Data struct {
+		Name  string `msgpack:"name"`
+		Value int    `msgpack:"value,omitempty"`
+	}
+
+	// Value is zero, should be omitted
+	original := Data{Name: "test", Value: 0}
+	encoded, err := Marshal(original)
+	if err != nil {
+		t.Fatalf("Marshal failed: %v", err)
+	}
+
+	// Decode as map to check fields
+	decoded, err := Unmarshal(encoded)
+	if err != nil {
+		t.Fatalf("Unmarshal failed: %v", err)
+	}
+
+	m := decoded.(map[string]any)
+	if _, ok := m["value"]; ok {
+		t.Error("value field should be omitted")
+	}
+	if m["name"] != "test" {
+		t.Errorf("name = %v, want test", m["name"])
+	}
+}
+
+// TestNestedStruct tests nested struct decoding
+func TestNestedStruct(t *testing.T) {
+	type Address struct {
+		City string `msgpack:"city"`
+	}
+	type Person struct {
+		Name    string  `msgpack:"name"`
+		Address Address `msgpack:"address"`
+	}
+
+	original := Person{
+		Name:    "Alice",
+		Address: Address{City: "NYC"},
+	}
+
+	encoded, err := Marshal(original)
+	if err != nil {
+		t.Fatalf("Marshal failed: %v", err)
+	}
+
+	var decoded Person
+	err = UnmarshalStruct(encoded, &decoded)
+	if err != nil {
+		t.Fatalf("UnmarshalStruct failed: %v", err)
+	}
+
+	if decoded != original {
+		t.Errorf("got %+v, want %+v", decoded, original)
+	}
+}
+
+// TestSliceInStruct tests slice field in struct
+func TestSliceInStruct(t *testing.T) {
+	type Data struct {
+		Values []int `msgpack:"values"`
+	}
+
+	original := Data{Values: []int{1, 2, 3}}
+
+	encoded, err := Marshal(original)
+	if err != nil {
+		t.Fatalf("Marshal failed: %v", err)
+	}
+
+	var decoded Data
+	err = UnmarshalStruct(encoded, &decoded)
+	if err != nil {
+		t.Fatalf("UnmarshalStruct failed: %v", err)
+	}
+
+	if !reflect.DeepEqual(decoded, original) {
+		t.Errorf("got %+v, want %+v", decoded, original)
+	}
+}
+
+// TestMapInStruct tests map field in struct
+func TestMapInStruct(t *testing.T) {
+	type Data struct {
+		Meta map[string]string `msgpack:"meta"`
+	}
+
+	original := Data{Meta: map[string]string{"key": "value"}}
+
+	encoded, err := Marshal(original)
+	if err != nil {
+		t.Fatalf("Marshal failed: %v", err)
+	}
+
+	var decoded Data
+	err = UnmarshalStruct(encoded, &decoded)
+	if err != nil {
+		t.Fatalf("UnmarshalStruct failed: %v", err)
+	}
+
+	if !reflect.DeepEqual(decoded, original) {
+		t.Errorf("got %+v, want %+v", decoded, original)
 	}
 }

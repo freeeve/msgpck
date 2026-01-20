@@ -826,3 +826,79 @@ func TestStructDecoderAllIntegerTypes(t *testing.T) {
 		t.Errorf("U8: got %d, want %d", result.U8, original.U8)
 	}
 }
+
+// TestStructCodecs tests pre-registered struct codecs
+func TestStructCodecs(t *testing.T) {
+	type Person struct {
+		Name string `msgpack:"name"`
+		Age  int    `msgpack:"age"`
+	}
+
+	t.Run("StructEncoder", func(t *testing.T) {
+		enc := GetStructEncoder[Person]()
+		p := Person{Name: "Alice", Age: 30}
+		b, err := enc.Encode(&p)
+		if err != nil {
+			t.Fatal(err)
+		}
+		// Decode and verify
+		m, _ := Unmarshal(b)
+		if m.(map[string]any)["name"] != "Alice" {
+			t.Error("encode failed")
+		}
+	})
+
+	t.Run("StructDecoder", func(t *testing.T) {
+		enc := GetStructEncoder[Person]()
+		p := Person{Name: "Bob", Age: 25}
+		b, _ := enc.Encode(&p)
+
+		dec := GetStructDecoder[Person](false)
+		var result Person
+		err := dec.Decode(b, &result)
+		if err != nil || result.Name != "Bob" || result.Age != 25 {
+			t.Error("decode failed")
+		}
+	})
+
+	t.Run("StructDecoder ZeroCopy", func(t *testing.T) {
+		enc := GetStructEncoder[Person]()
+		p := Person{Name: "Carol", Age: 35}
+		b, _ := enc.Encode(&p)
+
+		dec := GetStructDecoder[Person](true)
+		var result Person
+		err := dec.Decode(b, &result)
+		if err != nil || result.Name != "Carol" {
+			t.Error("zero copy decode failed")
+		}
+	})
+
+	t.Run("GetStructDecoder", func(t *testing.T) {
+		enc := GetStructEncoder[Person]()
+		p := Person{Name: "Dave", Age: 40}
+		b, _ := enc.Encode(&p)
+
+		dec := GetStructDecoder[Person](false)
+		var result Person
+		err := dec.Decode(b, &result)
+		if err != nil || result.Name != "Dave" {
+			t.Error("GetStructDecoder failed")
+		}
+	})
+
+	t.Run("DecodeStructFunc", func(t *testing.T) {
+		enc := GetStructEncoder[Person]()
+		p := Person{Name: "Eve", Age: 45}
+		b, _ := enc.Encode(&p)
+
+		var got string
+		err := DecodeStructFunc(b, func(v *Person) error {
+			got = v.Name
+			return nil
+		})
+		if err != nil || got != "Eve" {
+			t.Error("DecodeStructFunc failed")
+		}
+	})
+}

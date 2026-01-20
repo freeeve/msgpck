@@ -1,6 +1,7 @@
 package msgpck
 
 import (
+	"math"
 	"testing"
 )
 
@@ -317,4 +318,85 @@ func TestIsEmptyValueNonEmpty(t *testing.T) {
 	if len(enc.Bytes()) < 10 {
 		t.Error("expected more data for filled struct")
 	}
+}
+
+// TestValueMethods tests Value type methods
+func TestValueMethods(t *testing.T) {
+	t.Run("AsInt from uint", func(t *testing.T) {
+		v := Value{Type: TypeUint, Uint: 42}
+		if v.AsInt() != 42 {
+			t.Error("AsInt failed")
+		}
+	})
+
+	t.Run("AsUint from int", func(t *testing.T) {
+		v := Value{Type: TypeInt, Int: 42}
+		if v.AsUint() != 42 {
+			t.Error("AsUint failed")
+		}
+	})
+
+	t.Run("AsFloat64 from int", func(t *testing.T) {
+		v := Value{Type: TypeInt, Int: 42}
+		if v.AsFloat64() != 42.0 {
+			t.Error("AsFloat64 from int failed")
+		}
+	})
+
+	t.Run("AsFloat64 from uint", func(t *testing.T) {
+		v := Value{Type: TypeUint, Uint: 42}
+		if v.AsFloat64() != 42.0 {
+			t.Error("AsFloat64 from uint failed")
+		}
+	})
+
+	t.Run("AsFloat64 from float32", func(t *testing.T) {
+		v := Value{Type: TypeFloat32, Float32: 3.14}
+		if math.Abs(v.AsFloat64()-3.14) > 0.001 {
+			t.Error("AsFloat64 from float32 failed")
+		}
+	})
+
+	t.Run("Len", func(t *testing.T) {
+		arr := Value{Type: TypeArray, Array: make([]Value, 5)}
+		if arr.Len() != 5 {
+			t.Error("Len for array failed")
+		}
+
+		m := Value{Type: TypeMap, Map: make([]KV, 3)}
+		if m.Len() != 3 {
+			t.Error("Len for map failed")
+		}
+
+		s := Value{Type: TypeString, Bytes: []byte("hello")}
+		if s.Len() != 5 {
+			t.Error("Len for string failed")
+		}
+	})
+
+	t.Run("GetString", func(t *testing.T) {
+		m := Value{
+			Type: TypeMap,
+			Map: []KV{
+				{Key: []byte("foo"), Value: Value{Type: TypeInt, Int: 42}},
+			},
+		}
+		v := m.GetString("foo")
+		if v == nil || v.Int != 42 {
+			t.Error("GetString failed")
+		}
+		if m.GetString("notfound") != nil {
+			t.Error("GetString should return nil for missing key")
+		}
+	})
+
+	t.Run("Type.String", func(t *testing.T) {
+		types := []Type{TypeNil, TypeBool, TypeInt, TypeUint, TypeFloat32, TypeFloat64, TypeString, TypeBinary, TypeArray, TypeMap, TypeExt}
+		names := []string{"nil", "bool", "int", "uint", "float32", "float64", "string", "binary", "array", "map", "ext"}
+		for i, tp := range types {
+			if tp.String() != names[i] {
+				t.Errorf("Type %d String() = %s, want %s", tp, tp.String(), names[i])
+			}
+		}
+	})
 }

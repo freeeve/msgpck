@@ -1,6 +1,9 @@
 package msgpck
 
 import (
+	"bytes"
+	"math"
+	"reflect"
 	"testing"
 )
 
@@ -417,5 +420,275 @@ func TestEncodeValueFloat32(t *testing.T) {
 	}
 	if b[0] != formatFloat32 {
 		t.Errorf("expected float32 format, got 0x%02x", b[0])
+	}
+}
+
+// TestMarshalVariants tests all Marshal variants
+func TestMarshalVariants(t *testing.T) {
+	data := map[string]any{"key": "value"}
+
+	t.Run("Marshal", func(t *testing.T) {
+		_, err := Marshal(data)
+		if err != nil {
+			t.Error(err)
+		}
+	})
+
+	t.Run("MarshalCopy", func(t *testing.T) {
+		b, err := MarshalCopy(data)
+		if err != nil {
+			t.Error(err)
+		}
+		// Verify we can use it after return
+		_, err = Unmarshal(b)
+		if err != nil {
+			t.Error(err)
+		}
+	})
+
+	t.Run("MarshalAppend", func(t *testing.T) {
+		prefix := []byte{0x01, 0x02, 0x03}
+		b, err := MarshalAppend(prefix, data)
+		if err != nil {
+			t.Error(err)
+		}
+		if !bytes.HasPrefix(b, prefix) {
+			t.Error("prefix not preserved")
+		}
+	})
+}
+
+// TestEncodeVariousTypes tests encoding of various Go types
+func TestEncodeVariousTypes(t *testing.T) {
+	t.Run("array", func(t *testing.T) {
+		arr := [3]int{1, 2, 3}
+		b, err := Marshal(arr)
+		if err != nil {
+			t.Fatal(err)
+		}
+		d := NewDecoder(b)
+		v, _ := d.Decode()
+		if v.Type != TypeArray || len(v.Array) != 3 {
+			t.Error("array encode failed")
+		}
+	})
+
+	t.Run("slice of strings", func(t *testing.T) {
+		s := []string{"a", "b", "c"}
+		b, err := Marshal(s)
+		if err != nil {
+			t.Fatal(err)
+		}
+		d := NewDecoder(b)
+		v, _ := d.Decode()
+		if v.Type != TypeArray || len(v.Array) != 3 {
+			t.Error("slice encode failed")
+		}
+	})
+
+	t.Run("map[string]int", func(t *testing.T) {
+		m := map[string]int{"a": 1, "b": 2}
+		b, err := Marshal(m)
+		if err != nil {
+			t.Fatal(err)
+		}
+		d := NewDecoder(b)
+		v, _ := d.Decode()
+		if v.Type != TypeMap || len(v.Map) != 2 {
+			t.Error("map encode failed")
+		}
+	})
+
+	t.Run("pointer", func(t *testing.T) {
+		val := 42
+		ptr := &val
+		b, err := Marshal(ptr)
+		if err != nil {
+			t.Fatal(err)
+		}
+		decoded, _ := Unmarshal(b)
+		if decoded != int64(42) {
+			t.Error("pointer encode failed")
+		}
+	})
+
+	t.Run("nil pointer", func(t *testing.T) {
+		var ptr *int
+		b, err := Marshal(ptr)
+		if err != nil {
+			t.Fatal(err)
+		}
+		decoded, _ := Unmarshal(b)
+		if decoded != nil {
+			t.Error("nil pointer encode failed")
+		}
+	})
+
+	t.Run("nil slice", func(t *testing.T) {
+		var s []int
+		b, err := Marshal(s)
+		if err != nil {
+			t.Fatal(err)
+		}
+		decoded, _ := Unmarshal(b)
+		if decoded != nil {
+			t.Error("nil slice encode failed")
+		}
+	})
+
+	t.Run("nil map", func(t *testing.T) {
+		var m map[string]int
+		b, err := Marshal(m)
+		if err != nil {
+			t.Fatal(err)
+		}
+		decoded, _ := Unmarshal(b)
+		if decoded != nil {
+			t.Error("nil map encode failed")
+		}
+	})
+}
+
+// TestRoundTripPrimitives tests encoding and decoding of primitive types
+func TestRoundTripPrimitives(t *testing.T) {
+	// Note: DecodeAny normalizes all integers to int64 (unless > MaxInt64)
+	// and float32 to float64 for consistent types
+	tests := []struct {
+		name  string
+		value any
+	}{
+		{"nil", nil},
+		{"true", true},
+		{"false", false},
+		{"zero", int64(0)},
+		{"positive fixint", int64(42)},
+		{"max fixint", int64(127)},
+		{"negative fixint", int64(-1)},
+		{"min fixint", int64(-32)},
+		{"uint8", int64(200)},
+		{"uint16", int64(1000)},
+		{"uint32", int64(100000)},
+		{"uint64", int64(1 << 40)},
+		{"int8", int64(-100)},
+		{"int16", int64(-1000)},
+		{"int32", int64(-100000)},
+		{"int64", int64(-1 << 40)},
+		{"float32", float64(3.140000104904175)}, // float32 promoted to float64
+		{"float64", float64(3.14159265359)},
+		{"empty string", ""},
+		{"short string", "hello"},
+		{"fixstr max", string(make([]byte, 31))},
+		{"str8", string(make([]byte, 100))},
+		{"str16", string(make([]byte, 300))},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			encoded, err := Marshal(tt.value)
+			if err != nil {
+				t.Fatalf("Marshal failed: %v", err)
+			}
+
+			decoded, err := Unmarshal(encoded)
+			if err != nil {
+				t.Fatalf("Unmarshal failed: %v", err)
+			}
+
+			if !reflect.DeepEqual(decoded, tt.value) {
+				t.Errorf("got %v (%T), want %v (%T)", decoded, decoded, tt.value, tt.value)
+			}
+		})
+	}
+}
+
+// TestRoundTripContainers tests arrays and maps
+func TestRoundTripContainers(t *testing.T) {
+	// Note: all integers decode to int64
+	tests := []struct {
+		name  string
+		value any
+	}{
+		{"empty array", []any{}},
+		{"int array", []any{int64(1), int64(2), int64(3)}},
+		{"mixed array", []any{int64(1), "hello", true, nil}},
+		{"empty map", map[string]any{}},
+		{"string map", map[string]any{"a": int64(1), "b": int64(2)}},
+		{"nested map", map[string]any{
+			"inner": map[string]any{"x": int64(10)},
+		}},
+		{"nested array", []any{[]any{int64(1), int64(2)}, []any{int64(3), int64(4)}}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			encoded, err := Marshal(tt.value)
+			if err != nil {
+				t.Fatalf("Marshal failed: %v", err)
+			}
+
+			decoded, err := Unmarshal(encoded)
+			if err != nil {
+				t.Fatalf("Unmarshal failed: %v", err)
+			}
+
+			if !reflect.DeepEqual(decoded, tt.value) {
+				t.Errorf("got %v, want %v", decoded, tt.value)
+			}
+		})
+	}
+}
+
+// TestBinaryData tests encoding/decoding of binary data
+func TestBinaryData(t *testing.T) {
+	original := []byte{0x00, 0x01, 0x02, 0xff, 0xfe}
+	encoded, err := Marshal(original)
+	if err != nil {
+		t.Fatalf("Marshal failed: %v", err)
+	}
+
+	decoded, err := Unmarshal(encoded)
+	if err != nil {
+		t.Fatalf("Unmarshal failed: %v", err)
+	}
+
+	if !bytes.Equal(decoded.([]byte), original) {
+		t.Errorf("got %v, want %v", decoded, original)
+	}
+}
+
+// TestFloatSpecialValues tests special float values
+func TestFloatSpecialValues(t *testing.T) {
+	tests := []struct {
+		name  string
+		value float64
+	}{
+		{"positive infinity", math.Inf(1)},
+		{"negative infinity", math.Inf(-1)},
+		{"NaN", math.NaN()},
+		{"max float64", math.MaxFloat64},
+		{"smallest positive", math.SmallestNonzeroFloat64},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			encoded, err := Marshal(tt.value)
+			if err != nil {
+				t.Fatalf("Marshal failed: %v", err)
+			}
+
+			decoded, err := Unmarshal(encoded)
+			if err != nil {
+				t.Fatalf("Unmarshal failed: %v", err)
+			}
+
+			got := decoded.(float64)
+			if math.IsNaN(tt.value) {
+				if !math.IsNaN(got) {
+					t.Errorf("expected NaN, got %v", got)
+				}
+			} else if got != tt.value {
+				t.Errorf("got %v, want %v", got, tt.value)
+			}
+		})
 	}
 }

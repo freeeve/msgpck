@@ -1318,3 +1318,141 @@ func TestDecodeStringKeyTypeMismatch(t *testing.T) {
 		t.Errorf("expected to skip non-string key, got error: %v", err)
 	}
 }
+
+// TestDecoderHelpers tests Decoder helper methods
+func TestDecoderHelpers(t *testing.T) {
+	data := []byte{0x01, 0x02, 0x03}
+	d := NewDecoder(data)
+
+	if d.Remaining() != 3 {
+		t.Error("Remaining failed")
+	}
+
+	if d.Position() != 0 {
+		t.Error("Position failed")
+	}
+
+	d.readByte()
+
+	if d.Position() != 1 {
+		t.Error("Position after read failed")
+	}
+	if d.Remaining() != 2 {
+		t.Error("Remaining after read failed")
+	}
+}
+
+// TestErrorCases tests various error conditions
+func TestErrorCases(t *testing.T) {
+	t.Run("invalid format", func(t *testing.T) {
+		d := NewDecoder([]byte{0xc1}) // reserved/never used
+		_, err := d.Decode()
+		if err != ErrInvalidFormat {
+			t.Error("expected ErrInvalidFormat")
+		}
+	})
+
+	t.Run("DecodeStruct not pointer", func(t *testing.T) {
+		type S struct{}
+		var s S
+		d := NewDecoder([]byte{0x80})
+		err := d.DecodeStruct(s)
+		if err != ErrNotPointer {
+			t.Error("expected ErrNotPointer")
+		}
+	})
+
+	t.Run("DecodeStruct not struct", func(t *testing.T) {
+		var i int
+		d := NewDecoder([]byte{0x80})
+		err := d.DecodeStruct(&i)
+		if err != ErrNotStruct {
+			t.Error("expected ErrNotStruct")
+		}
+	})
+
+	t.Run("binary too long", func(t *testing.T) {
+		cfg := DefaultConfig().WithMaxBinaryLen(5)
+		data := []byte{formatBin8, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+		d := NewDecoderWithConfig(data, cfg)
+		_, err := d.Decode()
+		if err != ErrBinaryTooLong {
+			t.Error("expected ErrBinaryTooLong")
+		}
+	})
+
+	t.Run("ext too long", func(t *testing.T) {
+		cfg := DefaultConfig().WithMaxExtLen(5)
+		data := []byte{formatExt8, 10, 0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+		d := NewDecoderWithConfig(data, cfg)
+		_, err := d.Decode()
+		if err != ErrExtTooLong {
+			t.Error("expected ErrExtTooLong")
+		}
+	})
+
+	t.Run("UnmarshalWithConfig", func(t *testing.T) {
+		cfg := DefaultConfig().WithMaxMapLen(1)
+		data := []byte{0x82, 0xa1, 'a', 0x01, 0xa1, 'b', 0x02}
+		_, err := UnmarshalWithConfig(data, cfg)
+		if err != ErrMapTooLong {
+			t.Error("expected ErrMapTooLong")
+		}
+	})
+
+	t.Run("UnmarshalStructWithConfig", func(t *testing.T) {
+		type S struct {
+			A int `msgpack:"a"`
+		}
+		cfg := DefaultConfig().WithMaxMapLen(0)
+		data := []byte{0x81, 0xa1, 'a', 0x01}
+		var s S
+		err := UnmarshalStructWithConfig(data, &s, cfg)
+		if err != ErrMapTooLong {
+			t.Error("expected ErrMapTooLong")
+		}
+	})
+}
+
+// TestZeroCopyDecode tests that string data points into source buffer
+func TestZeroCopyDecode(t *testing.T) {
+	data := []byte{0xa5, 'h', 'e', 'l', 'l', 'o'} // fixstr "hello"
+
+	d := NewDecoder(data)
+	v, err := d.Decode()
+	if err != nil {
+		t.Fatalf("Decode failed: %v", err)
+	}
+
+	if v.Type != TypeString {
+		t.Fatalf("expected TypeString, got %v", v.Type)
+	}
+
+	// Check that Bytes points into the original data
+	if &v.Bytes[0] != &data[1] {
+		t.Error("string bytes not pointing into source buffer (not zero-copy)")
+	}
+}
+
+// TestUnexpectedEOF tests handling of truncated data
+func TestUnexpectedEOF(t *testing.T) {
+	tests := []struct {
+		name string
+		data []byte
+	}{
+		{"empty", []byte{}},
+		{"truncated uint16", []byte{formatUint16, 0x01}},
+		{"truncated string", []byte{0xa5, 'h', 'e'}}, // fixstr 5, only 2 chars
+		{"truncated array", []byte{0x92, 0x01}},      // fixarray 2, only 1 element
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			d := NewDecoder(tt.data)
+			_, err := d.Decode()
+			if err != ErrUnexpectedEOF {
+				t.Errorf("expected ErrUnexpectedEOF, got %v", err)
+			}
+		})
+	}
+}

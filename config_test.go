@@ -56,3 +56,61 @@ func TestConfigChaining(t *testing.T) {
 		t.Error("MaxDepth not set")
 	}
 }
+
+// TestSecurityLimits tests that security limits are enforced
+func TestSecurityLimits(t *testing.T) {
+	t.Run("string too long", func(t *testing.T) {
+		cfg := DefaultConfig().WithMaxStringLen(10)
+		// str8 with length 100
+		data := []byte{formatStr8, 100}
+		data = append(data, make([]byte, 100)...)
+
+		d := NewDecoderWithConfig(data, cfg)
+		_, err := d.Decode()
+		if err != ErrStringTooLong {
+			t.Errorf("expected ErrStringTooLong, got %v", err)
+		}
+	})
+
+	t.Run("array too long", func(t *testing.T) {
+		cfg := DefaultConfig().WithMaxArrayLen(5)
+		// array16 with length 1000
+		data := []byte{formatArray16, 0x03, 0xe8} // 1000
+
+		d := NewDecoderWithConfig(data, cfg)
+		_, err := d.Decode()
+		if err != ErrArrayTooLong {
+			t.Errorf("expected ErrArrayTooLong, got %v", err)
+		}
+	})
+
+	t.Run("map too long", func(t *testing.T) {
+		cfg := DefaultConfig().WithMaxMapLen(5)
+		// map16 with length 1000
+		data := []byte{formatMap16, 0x03, 0xe8}
+
+		d := NewDecoderWithConfig(data, cfg)
+		_, err := d.Decode()
+		if err != ErrMapTooLong {
+			t.Errorf("expected ErrMapTooLong, got %v", err)
+		}
+	})
+
+	t.Run("max depth exceeded", func(t *testing.T) {
+		cfg := DefaultConfig().WithMaxDepth(3)
+		// Deeply nested arrays: [[[[1]]]]
+		data := []byte{
+			0x91, // fixarray 1
+			0x91, // fixarray 1
+			0x91, // fixarray 1
+			0x91, // fixarray 1 - this exceeds depth 3
+			0x01, // fixint 1
+		}
+
+		d := NewDecoderWithConfig(data, cfg)
+		_, err := d.Decode()
+		if err != ErrMaxDepthExceeded {
+			t.Errorf("expected ErrMaxDepthExceeded, got %v", err)
+		}
+	})
+}
