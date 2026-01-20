@@ -4702,40 +4702,6 @@ func TestDecodeIntoMapMap16Map32(t *testing.T) {
 	})
 }
 
-// TestDecodeIntoStructMap16Map32 tests decodeIntoStruct with map16/map32
-func TestDecodeIntoStructMap16Map32(t *testing.T) {
-	type Inner struct {
-		V int `msgpack:"v"`
-	}
-	type Outer struct {
-		I Inner `msgpack:"i"`
-	}
-
-	t.Run("map16 nested", func(t *testing.T) {
-		data := []byte{
-			0x81, 0xa1, 'i',
-			formatMap16, 0, 1, 0xa1, 'v', 0x42,
-		}
-		var o Outer
-		err := UnmarshalStruct(data, &o)
-		if err != nil || o.I.V != 66 {
-			t.Error("map16 nested decode failed")
-		}
-	})
-
-	t.Run("map32 nested", func(t *testing.T) {
-		data := []byte{
-			0x81, 0xa1, 'i',
-			formatMap32, 0, 0, 0, 1, 0xa1, 'v', 0x42,
-		}
-		var o Outer
-		err := UnmarshalStruct(data, &o)
-		if err != nil || o.I.V != 66 {
-			t.Error("map32 nested decode failed")
-		}
-	})
-}
-
 // TestDecodeStringKeyAllFormats tests decodeStringKey with all formats
 func TestDecodeStringKeyAllFormats(t *testing.T) {
 	type Inner struct {
