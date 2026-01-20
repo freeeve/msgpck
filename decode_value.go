@@ -122,78 +122,36 @@ func (d *Decoder) decodeValue(format byte) (Value, error) {
 		return Value{Type: TypeFloat64, Float64: v}, nil
 
 	// Strings
-	case formatStr8:
-		length, err := d.readUint8()
+	case formatStr8, formatStr16, formatStr32:
+		length, err := d.parseStringLenSwitch(format)
 		if err != nil {
 			return Value{}, err
 		}
-		return d.decodeString(int(length))
-
-	case formatStr16:
-		length, err := d.readUint16()
-		if err != nil {
-			return Value{}, err
-		}
-		return d.decodeString(int(length))
-
-	case formatStr32:
-		length, err := d.readUint32()
-		if err != nil {
-			return Value{}, err
-		}
-		return d.decodeString(int(length))
+		return d.decodeString(length)
 
 	// Binary
-	case formatBin8:
-		length, err := d.readUint8()
+	case formatBin8, formatBin16, formatBin32:
+		length, err := d.parseBinaryLen(format)
 		if err != nil {
 			return Value{}, err
 		}
-		return d.decodeBinary(int(length))
-
-	case formatBin16:
-		length, err := d.readUint16()
-		if err != nil {
-			return Value{}, err
-		}
-		return d.decodeBinary(int(length))
-
-	case formatBin32:
-		length, err := d.readUint32()
-		if err != nil {
-			return Value{}, err
-		}
-		return d.decodeBinary(int(length))
+		return d.decodeBinary(length)
 
 	// Arrays
-	case formatArray16:
-		length, err := d.readUint16()
+	case formatArray16, formatArray32:
+		length, err := d.parseArrayLenSwitch(format)
 		if err != nil {
 			return Value{}, err
 		}
-		return d.decodeArray(int(length))
-
-	case formatArray32:
-		length, err := d.readUint32()
-		if err != nil {
-			return Value{}, err
-		}
-		return d.decodeArray(int(length))
+		return d.decodeArray(length)
 
 	// Maps
-	case formatMap16:
-		length, err := d.readUint16()
+	case formatMap16, formatMap32:
+		length, err := d.parseMapLenSwitch(format)
 		if err != nil {
 			return Value{}, err
 		}
-		return d.decodeMap(int(length))
-
-	case formatMap32:
-		length, err := d.readUint32()
-		if err != nil {
-			return Value{}, err
-		}
-		return d.decodeMap(int(length))
+		return d.decodeMap(length)
 
 	// Fixed ext
 	case formatFixExt1:
@@ -279,6 +237,34 @@ func (d *Decoder) decodeArray(length int) (Value, error) {
 	return Value{Type: TypeArray, Array: arr}, nil
 }
 
+// decodeMapKey decodes a map key (usually string, but handles other types).
+func (d *Decoder) decodeMapKey() ([]byte, error) {
+	keyFormat, err := d.readByte()
+	if err != nil {
+		return nil, err
+	}
+
+	// Try to parse as string (common case)
+	keyLen, err := d.parseStringLen(keyFormat)
+	if err == nil {
+		if err := d.validateStringLen(keyLen); err != nil {
+			return nil, err
+		}
+		return d.readBytes(keyLen)
+	}
+
+	// Non-string key - decode as value and extract bytes if string
+	keyVal, err := d.decodeValue(keyFormat)
+	if err != nil {
+		return nil, err
+	}
+	if keyVal.Type == TypeString {
+		return keyVal.Bytes, nil
+	}
+	// For non-string keys, return nil (limitation)
+	return nil, nil
+}
+
 // decodeMap decodes a map of known length
 func (d *Decoder) decodeMap(length int) (Value, error) {
 	if err := d.validateMapLen(length); err != nil {
@@ -292,35 +278,9 @@ func (d *Decoder) decodeMap(length int) (Value, error) {
 	kvs := make([]KV, length)
 	for i := 0; i < length; i++ {
 		// Read key
-		keyFormat, err := d.readByte()
+		key, err := d.decodeMapKey()
 		if err != nil {
 			return Value{}, err
-		}
-
-		// Key must be a string (common case) or other type
-		var key []byte
-		if isFixstr(keyFormat) {
-			keyLen := fixstrLen(keyFormat)
-			if err := d.validateStringLen(keyLen); err != nil {
-				return Value{}, err
-			}
-			key, err = d.readBytes(keyLen)
-			if err != nil {
-				return Value{}, err
-			}
-		} else {
-			// Non-string key - decode as value and use its bytes
-			keyVal, err := d.decodeValue(keyFormat)
-			if err != nil {
-				return Value{}, err
-			}
-			if keyVal.Type == TypeString {
-				key = keyVal.Bytes
-			} else {
-				// For non-string keys, we need to store the original bytes
-				// This is a limitation - we'll use nil for non-string keys
-				key = nil
-			}
 		}
 
 		// Read value
