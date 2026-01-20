@@ -2,8 +2,6 @@ package msgpck
 
 import (
 	"testing"
-
-	vmihailenco "github.com/vmihailenco/msgpack/v5"
 )
 
 // Test structs
@@ -59,12 +57,6 @@ var (
 // Map Encoding Benchmarks
 // ============================================================================
 
-func BenchmarkVmihailenco_SmallMap_Marshal(b *testing.B) {
-	for i := 0; i < b.N; i++ {
-		vmihailenco.Marshal(smallMap)
-	}
-}
-
 func BenchmarkMsgpck_SmallMap_Marshal(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		Marshal(smallMap)
@@ -74,12 +66,6 @@ func BenchmarkMsgpck_SmallMap_Marshal(b *testing.B) {
 func BenchmarkMsgpck_SmallMap_MarshalCopy(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		MarshalCopy(smallMap)
-	}
-}
-
-func BenchmarkVmihailenco_MediumMap_Marshal(b *testing.B) {
-	for i := 0; i < b.N; i++ {
-		vmihailenco.Marshal(mediumMap)
 	}
 }
 
@@ -99,17 +85,8 @@ func BenchmarkMsgpck_MediumMap_MarshalCopy(b *testing.B) {
 // Map Decoding Benchmarks
 // ============================================================================
 
-func BenchmarkVmihailenco_SmallMap_Unmarshal(b *testing.B) {
-	data, _ := vmihailenco.Marshal(smallMap)
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		var m map[string]any
-		vmihailenco.Unmarshal(data, &m)
-	}
-}
-
 func BenchmarkMsgpck_SmallMap_Unmarshal(b *testing.B) {
-	data, _ := vmihailenco.Marshal(smallMap)
+	data, _ := MarshalCopy(smallMap)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		UnmarshalMapStringAny(data, false)
@@ -117,24 +94,15 @@ func BenchmarkMsgpck_SmallMap_Unmarshal(b *testing.B) {
 }
 
 func BenchmarkMsgpck_SmallMap_UnmarshalZeroCopy(b *testing.B) {
-	data, _ := vmihailenco.Marshal(smallMap)
+	data, _ := MarshalCopy(smallMap)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		UnmarshalMapStringAny(data, true)
 	}
 }
 
-func BenchmarkVmihailenco_MediumMap_Unmarshal(b *testing.B) {
-	data, _ := vmihailenco.Marshal(mediumMap)
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		var m map[string]any
-		vmihailenco.Unmarshal(data, &m)
-	}
-}
-
 func BenchmarkMsgpck_MediumMap_Unmarshal(b *testing.B) {
-	data, _ := vmihailenco.Marshal(mediumMap)
+	data, _ := MarshalCopy(mediumMap)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		UnmarshalMapStringAny(data, false)
@@ -142,7 +110,7 @@ func BenchmarkMsgpck_MediumMap_Unmarshal(b *testing.B) {
 }
 
 func BenchmarkMsgpck_MediumMap_UnmarshalZeroCopy(b *testing.B) {
-	data, _ := vmihailenco.Marshal(mediumMap)
+	data, _ := MarshalCopy(mediumMap)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		UnmarshalMapStringAny(data, true)
@@ -153,17 +121,8 @@ func BenchmarkMsgpck_MediumMap_UnmarshalZeroCopy(b *testing.B) {
 // Typed Map Decoding Benchmarks
 // ============================================================================
 
-func BenchmarkVmihailenco_StringMap_Unmarshal(b *testing.B) {
-	data, _ := vmihailenco.Marshal(stringMap)
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		var m map[string]string
-		vmihailenco.Unmarshal(data, &m)
-	}
-}
-
 func BenchmarkMsgpck_StringMap_Unmarshal(b *testing.B) {
-	data, _ := vmihailenco.Marshal(stringMap)
+	data, _ := MarshalCopy(stringMap)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		UnmarshalMapStringString(data, false)
@@ -171,7 +130,7 @@ func BenchmarkMsgpck_StringMap_Unmarshal(b *testing.B) {
 }
 
 func BenchmarkMsgpck_StringMap_UnmarshalZeroCopy(b *testing.B) {
-	data, _ := vmihailenco.Marshal(stringMap)
+	data, _ := MarshalCopy(stringMap)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		UnmarshalMapStringString(data, true)
@@ -181,12 +140,6 @@ func BenchmarkMsgpck_StringMap_UnmarshalZeroCopy(b *testing.B) {
 // ============================================================================
 // Struct Encoding Benchmarks
 // ============================================================================
-
-func BenchmarkVmihailenco_SmallStruct_Marshal(b *testing.B) {
-	for i := 0; i < b.N; i++ {
-		vmihailenco.Marshal(smallStruct)
-	}
-}
 
 func BenchmarkMsgpck_SmallStruct_Marshal(b *testing.B) {
 	for i := 0; i < b.N; i++ {
@@ -203,12 +156,6 @@ func BenchmarkMsgpck_SmallStruct_MarshalPreReg(b *testing.B) {
 func BenchmarkMsgpck_SmallStruct_MarshalPreRegCopy(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		smallStructEnc.EncodeCopy(&smallStruct)
-	}
-}
-
-func BenchmarkVmihailenco_MediumStruct_Marshal(b *testing.B) {
-	for i := 0; i < b.N; i++ {
-		vmihailenco.Marshal(mediumStruct)
 	}
 }
 
@@ -234,17 +181,8 @@ func BenchmarkMsgpck_MediumStruct_MarshalPreRegCopy(b *testing.B) {
 // Struct Decoding Benchmarks
 // ============================================================================
 
-func BenchmarkVmihailenco_SmallStruct_Unmarshal(b *testing.B) {
-	data, _ := vmihailenco.Marshal(smallStruct)
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		var s SmallStruct
-		vmihailenco.Unmarshal(data, &s)
-	}
-}
-
 func BenchmarkMsgpck_SmallStruct_Unmarshal(b *testing.B) {
-	data, _ := vmihailenco.Marshal(smallStruct)
+	data, _ := MarshalCopy(smallStruct)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		var s SmallStruct
@@ -253,7 +191,7 @@ func BenchmarkMsgpck_SmallStruct_Unmarshal(b *testing.B) {
 }
 
 func BenchmarkMsgpck_SmallStruct_UnmarshalPreReg(b *testing.B) {
-	data, _ := vmihailenco.Marshal(smallStruct)
+	data, _ := MarshalCopy(smallStruct)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		var s SmallStruct
@@ -262,7 +200,7 @@ func BenchmarkMsgpck_SmallStruct_UnmarshalPreReg(b *testing.B) {
 }
 
 func BenchmarkMsgpck_SmallStruct_UnmarshalZeroCopy(b *testing.B) {
-	data, _ := vmihailenco.Marshal(smallStruct)
+	data, _ := MarshalCopy(smallStruct)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		var s SmallStruct
@@ -270,17 +208,8 @@ func BenchmarkMsgpck_SmallStruct_UnmarshalZeroCopy(b *testing.B) {
 	}
 }
 
-func BenchmarkVmihailenco_MediumStruct_Unmarshal(b *testing.B) {
-	data, _ := vmihailenco.Marshal(mediumStruct)
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		var s MediumStruct
-		vmihailenco.Unmarshal(data, &s)
-	}
-}
-
 func BenchmarkMsgpck_MediumStruct_Unmarshal(b *testing.B) {
-	data, _ := vmihailenco.Marshal(mediumStruct)
+	data, _ := MarshalCopy(mediumStruct)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		var s MediumStruct
@@ -289,7 +218,7 @@ func BenchmarkMsgpck_MediumStruct_Unmarshal(b *testing.B) {
 }
 
 func BenchmarkMsgpck_MediumStruct_UnmarshalPreReg(b *testing.B) {
-	data, _ := vmihailenco.Marshal(mediumStruct)
+	data, _ := MarshalCopy(mediumStruct)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		var s MediumStruct
@@ -298,7 +227,7 @@ func BenchmarkMsgpck_MediumStruct_UnmarshalPreReg(b *testing.B) {
 }
 
 func BenchmarkMsgpck_MediumStruct_UnmarshalZeroCopy(b *testing.B) {
-	data, _ := vmihailenco.Marshal(mediumStruct)
+	data, _ := MarshalCopy(mediumStruct)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		var s MediumStruct
@@ -311,7 +240,7 @@ func BenchmarkMsgpck_MediumStruct_UnmarshalZeroCopy(b *testing.B) {
 // ============================================================================
 
 func BenchmarkMsgpck_SmallStruct_Callback(b *testing.B) {
-	data, _ := vmihailenco.Marshal(smallStruct)
+	data, _ := MarshalCopy(smallStruct)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		DecodeStructFunc(data, func(s *SmallStruct) error {
@@ -322,7 +251,7 @@ func BenchmarkMsgpck_SmallStruct_Callback(b *testing.B) {
 }
 
 func BenchmarkMsgpck_MediumStruct_Callback(b *testing.B) {
-	data, _ := vmihailenco.Marshal(mediumStruct)
+	data, _ := MarshalCopy(mediumStruct)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		DecodeStructFunc(data, func(s *MediumStruct) error {
@@ -333,7 +262,7 @@ func BenchmarkMsgpck_MediumStruct_Callback(b *testing.B) {
 }
 
 func BenchmarkMsgpck_SmallMap_Callback(b *testing.B) {
-	data, _ := vmihailenco.Marshal(smallMap)
+	data, _ := MarshalCopy(smallMap)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		DecodeMapFunc(data, func(m map[string]any) error {
@@ -344,7 +273,7 @@ func BenchmarkMsgpck_SmallMap_Callback(b *testing.B) {
 }
 
 func BenchmarkMsgpck_StringMap_Callback(b *testing.B) {
-	data, _ := vmihailenco.Marshal(stringMap)
+	data, _ := MarshalCopy(stringMap)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		DecodeStringMapFunc(data, func(m map[string]string) error {
