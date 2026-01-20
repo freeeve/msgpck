@@ -11,6 +11,12 @@ const (
 	errMsgEOFError      = "expected EOF error"
 	errMsgStringTooLong = "expected ErrStringTooLong, got %v"
 	errMsgTypeMismatch  = "expected ErrTypeMismatch, got %v"
+	errMsgUnexpectedErr = "unexpected error: %v"
+	errMsgExpectedErr   = "expected error"
+	errMsgGot42         = "got %d, want 42"
+	errMsgBinaryTooLong = "expected ErrBinaryTooLong, got %v"
+	errMsgArrayTooLong  = "expected ErrArrayTooLong, got %v"
+	errMsgMapTooLong    = "expected ErrMapTooLong, got %v"
 )
 
 // Tests to increase coverage of various modules
@@ -2630,7 +2636,7 @@ func TestValidationLimitsDecodeAny(t *testing.T) {
 		d := NewDecoderWithConfig(data, cfg)
 		_, err := d.DecodeAny()
 		if err != ErrBinaryTooLong {
-			t.Errorf("expected ErrBinaryTooLong, got %v", err)
+			t.Errorf(errMsgBinaryTooLong, err)
 		}
 	})
 
@@ -2640,7 +2646,7 @@ func TestValidationLimitsDecodeAny(t *testing.T) {
 		d := NewDecoderWithConfig(data, cfg)
 		_, err := d.DecodeAny()
 		if err != ErrArrayTooLong {
-			t.Errorf("expected ErrArrayTooLong, got %v", err)
+			t.Errorf(errMsgArrayTooLong, err)
 		}
 	})
 
@@ -2650,7 +2656,7 @@ func TestValidationLimitsDecodeAny(t *testing.T) {
 		d := NewDecoderWithConfig(data, cfg)
 		_, err := d.DecodeAny()
 		if err != ErrMapTooLong {
-			t.Errorf("expected ErrMapTooLong, got %v", err)
+			t.Errorf(errMsgMapTooLong, err)
 		}
 	})
 
@@ -4584,7 +4590,7 @@ func TestDecodeStructValidationErrors(t *testing.T) {
 		var d Data
 		err := UnmarshalStructWithConfig(data, &d, cfg)
 		if err != ErrMapTooLong {
-			t.Errorf("expected ErrMapTooLong, got %v", err)
+			t.Errorf(errMsgMapTooLong, err)
 		}
 	})
 }
@@ -4814,7 +4820,7 @@ func TestDecodeValueBytesValidation(t *testing.T) {
 		var d Data
 		err := UnmarshalStructWithConfig(data, &d, cfg)
 		if err != ErrBinaryTooLong {
-			t.Errorf("expected ErrBinaryTooLong, got %v", err)
+			t.Errorf(errMsgBinaryTooLong, err)
 		}
 	})
 }
@@ -4858,7 +4864,7 @@ func TestDecodeIntoSliceValidation(t *testing.T) {
 		var d Data
 		err := UnmarshalStructWithConfig(data, &d, cfg)
 		if err != ErrArrayTooLong {
-			t.Errorf("expected ErrArrayTooLong, got %v", err)
+			t.Errorf(errMsgArrayTooLong, err)
 		}
 	})
 
@@ -4868,7 +4874,7 @@ func TestDecodeIntoSliceValidation(t *testing.T) {
 		var d Data
 		err := UnmarshalStructWithConfig(data, &d, cfg)
 		if err != ErrArrayTooLong {
-			t.Errorf("expected ErrArrayTooLong, got %v", err)
+			t.Errorf(errMsgArrayTooLong, err)
 		}
 	})
 }
@@ -4885,7 +4891,7 @@ func TestDecodeIntoArrayValidation(t *testing.T) {
 		var d Data
 		err := UnmarshalStructWithConfig(data, &d, cfg)
 		if err != ErrArrayTooLong {
-			t.Errorf("expected ErrArrayTooLong, got %v", err)
+			t.Errorf(errMsgArrayTooLong, err)
 		}
 	})
 }
@@ -4902,7 +4908,7 @@ func TestDecodeIntoMapValidation(t *testing.T) {
 		var d Data
 		err := UnmarshalStructWithConfig(data, &d, cfg)
 		if err != ErrMapTooLong {
-			t.Errorf("expected ErrMapTooLong, got %v", err)
+			t.Errorf(errMsgMapTooLong, err)
 		}
 	})
 
@@ -4912,7 +4918,7 @@ func TestDecodeIntoMapValidation(t *testing.T) {
 		var d Data
 		err := UnmarshalStructWithConfig(data, &d, cfg)
 		if err != ErrMapTooLong {
-			t.Errorf("expected ErrMapTooLong, got %v", err)
+			t.Errorf(errMsgMapTooLong, err)
 		}
 	})
 }
@@ -4932,7 +4938,7 @@ func TestDecodeIntoStructValidation(t *testing.T) {
 		var o Outer
 		err := UnmarshalStructWithConfig(data, &o, cfg)
 		if err != ErrMapTooLong {
-			t.Errorf("expected ErrMapTooLong, got %v", err)
+			t.Errorf(errMsgMapTooLong, err)
 		}
 	})
 }
@@ -5233,7 +5239,7 @@ func TestDecodeIntoStructMap16(t *testing.T) {
 		t.Fatal(err)
 	}
 	if s.A != 42 {
-		t.Errorf("got %d, want 42", s.A)
+		t.Errorf(errMsgGot42, s.A)
 	}
 }
 
@@ -5256,7 +5262,7 @@ func TestDecodeIntoStructMap32(t *testing.T) {
 		t.Fatal(err)
 	}
 	if s.A != 42 {
-		t.Errorf("got %d, want 42", s.A)
+		t.Errorf(errMsgGot42, s.A)
 	}
 }
 
@@ -5280,7 +5286,7 @@ func TestDecodeIntoStructNonStringKey(t *testing.T) {
 		t.Fatal(err)
 	}
 	if s.A != 42 {
-		t.Errorf("got %d, want 42", s.A)
+		t.Errorf(errMsgGot42, s.A)
 	}
 }
 
@@ -5304,7 +5310,7 @@ func TestDecodeStringKeyStr16(t *testing.T) {
 		t.Fatal(err)
 	}
 	if s.A != 42 {
-		t.Errorf("got %d, want 42", s.A)
+		t.Errorf(errMsgGot42, s.A)
 	}
 }
 
@@ -5328,7 +5334,7 @@ func TestDecodeStringKeyStr32(t *testing.T) {
 		t.Fatal(err)
 	}
 	if s.A != 42 {
-		t.Errorf("got %d, want 42", s.A)
+		t.Errorf(errMsgGot42, s.A)
 	}
 }
 
@@ -5867,7 +5873,7 @@ func TestDecodeIntoValueNestedStruct(t *testing.T) {
 		t.Fatal(err)
 	}
 	if o.Inner.X != 42 {
-		t.Errorf("got %d, want 42", o.Inner.X)
+		t.Errorf(errMsgGot42, o.Inner.X)
 	}
 }
 
@@ -6069,7 +6075,7 @@ func TestDecodeBinaryAnyValidation(t *testing.T) {
 	d := NewDecoderWithConfig(data, cfg)
 	_, err := d.DecodeAny()
 	if err != ErrBinaryTooLong {
-		t.Errorf("expected ErrBinaryTooLong, got %v", err)
+		t.Errorf(errMsgBinaryTooLong, err)
 	}
 }
 
@@ -6286,7 +6292,7 @@ func TestDecodeIntoSliceValidationError(t *testing.T) {
 	var s S
 	err := UnmarshalStructWithConfig(enc.Bytes(), &s, cfg)
 	if err != ErrArrayTooLong {
-		t.Errorf("expected ErrArrayTooLong, got %v", err)
+		t.Errorf(errMsgArrayTooLong, err)
 	}
 }
 
@@ -6316,7 +6322,7 @@ func TestDecodeIntoArrayValidationError(t *testing.T) {
 	var s S
 	err := UnmarshalStructWithConfig(enc.Bytes(), &s, cfg)
 	if err != ErrArrayTooLong {
-		t.Errorf("expected ErrArrayTooLong, got %v", err)
+		t.Errorf(errMsgArrayTooLong, err)
 	}
 }
 
@@ -6347,7 +6353,7 @@ func TestDecodeIntoMapValidationError(t *testing.T) {
 	var s S
 	err := UnmarshalStructWithConfig(enc.Bytes(), &s, cfg)
 	if err != ErrMapTooLong {
-		t.Errorf("expected ErrMapTooLong, got %v", err)
+		t.Errorf(errMsgMapTooLong, err)
 	}
 }
 
@@ -6457,7 +6463,7 @@ func TestDecodeValueBinaryValidation(t *testing.T) {
 	d := NewDecoderWithConfig(enc.Bytes(), cfg)
 	_, err := d.Decode()
 	if err != ErrBinaryTooLong {
-		t.Errorf("expected ErrBinaryTooLong, got %v", err)
+		t.Errorf(errMsgBinaryTooLong, err)
 	}
 }
 
@@ -6500,7 +6506,7 @@ func TestDecodeIntoStructUnknownField(t *testing.T) {
 		t.Fatal(err)
 	}
 	if s.A != 42 {
-		t.Errorf("got %d, want 42", s.A)
+		t.Errorf(errMsgGot42, s.A)
 	}
 }
 
@@ -6899,7 +6905,7 @@ func TestDecodeIntoStructSkipNonStringKeyValue(t *testing.T) {
 		t.Fatal(err)
 	}
 	if s.A != 42 {
-		t.Errorf("got %d, want 42", s.A)
+		t.Errorf(errMsgGot42, s.A)
 	}
 }
 
@@ -7355,7 +7361,7 @@ func TestDecodeValueBinaryBin16Validation(t *testing.T) {
 	d := NewDecoderWithConfig(enc.Bytes(), cfg)
 	_, err := d.Decode()
 	if err != ErrBinaryTooLong {
-		t.Errorf("expected ErrBinaryTooLong, got %v", err)
+		t.Errorf(errMsgBinaryTooLong, err)
 	}
 }
 
@@ -7377,7 +7383,7 @@ func TestDecodeValueBinaryBin32Validation(t *testing.T) {
 	d := NewDecoderWithConfig(enc.Bytes(), cfg)
 	_, err := d.Decode()
 	if err != ErrBinaryTooLong {
-		t.Errorf("expected ErrBinaryTooLong, got %v", err)
+		t.Errorf(errMsgBinaryTooLong, err)
 	}
 }
 
@@ -7442,7 +7448,7 @@ func TestDecodeBinaryAnyBin16Validation(t *testing.T) {
 	d := NewDecoderWithConfig(enc.Bytes(), cfg)
 	_, err := d.DecodeAny()
 	if err != ErrBinaryTooLong {
-		t.Errorf("expected ErrBinaryTooLong, got %v", err)
+		t.Errorf(errMsgBinaryTooLong, err)
 	}
 }
 
@@ -8183,7 +8189,7 @@ func TestDecodeIntoValuePointerNil(t *testing.T) {
 	var s TestStruct
 	err := UnmarshalStruct(enc.Bytes(), &s)
 	if err != nil {
-		t.Errorf("unexpected error: %v", err)
+		t.Errorf(errMsgUnexpectedErr, err)
 	}
 	if s.Name != nil {
 		t.Errorf("expected nil, got %v", s.Name)
@@ -8204,7 +8210,7 @@ func TestDecodeIntoValueInterfaceField(t *testing.T) {
 	var s TestStruct
 	err := UnmarshalStruct(enc.Bytes(), &s)
 	if err != nil {
-		t.Errorf("unexpected error: %v", err)
+		t.Errorf(errMsgUnexpectedErr, err)
 	}
 }
 
@@ -8224,7 +8230,7 @@ func TestDecodeIntoValueInterfaceFieldMap(t *testing.T) {
 	var s TestStruct
 	err := UnmarshalStruct(enc.Bytes(), &s)
 	if err != nil {
-		t.Errorf("unexpected error: %v", err)
+		t.Errorf(errMsgUnexpectedErr, err)
 	}
 }
 
@@ -8244,7 +8250,7 @@ func TestDecodeIntoValueInterfaceFieldArray(t *testing.T) {
 	var s TestStruct
 	err := UnmarshalStruct(enc.Bytes(), &s)
 	if err != nil {
-		t.Errorf("unexpected error: %v", err)
+		t.Errorf(errMsgUnexpectedErr, err)
 	}
 }
 
@@ -8268,7 +8274,7 @@ func TestDecodeIntoStructNonStringKeySkip(t *testing.T) {
 	err := UnmarshalStruct(enc.Bytes(), &s)
 	// Should skip non-string key and process valid key
 	if err != nil {
-		t.Errorf("unexpected error: %v", err)
+		t.Errorf(errMsgUnexpectedErr, err)
 	}
 	if s.Name != "Alice" {
 		t.Errorf("expected 'Alice', got %q", s.Name)
@@ -8350,7 +8356,7 @@ func TestDecodeValueIntUint16(t *testing.T) {
 	var s TestStruct
 	err := UnmarshalStruct(enc.Bytes(), &s)
 	if err != nil {
-		t.Errorf("unexpected error: %v", err)
+		t.Errorf(errMsgUnexpectedErr, err)
 	}
 	if s.Value != 1000 {
 		t.Errorf("expected 1000, got %d", s.Value)
@@ -8372,7 +8378,7 @@ func TestDecodeValueIntUint32(t *testing.T) {
 	var s TestStruct
 	err := UnmarshalStruct(enc.Bytes(), &s)
 	if err != nil {
-		t.Errorf("unexpected error: %v", err)
+		t.Errorf(errMsgUnexpectedErr, err)
 	}
 	if s.Value != 100000 {
 		t.Errorf("expected 100000, got %d", s.Value)
@@ -8394,7 +8400,7 @@ func TestDecodeValueIntInt8(t *testing.T) {
 	var s TestStruct
 	err := UnmarshalStruct(enc.Bytes(), &s)
 	if err != nil {
-		t.Errorf("unexpected error: %v", err)
+		t.Errorf(errMsgUnexpectedErr, err)
 	}
 	if s.Value != -50 {
 		t.Errorf("expected -50, got %d", s.Value)
@@ -8416,7 +8422,7 @@ func TestDecodeValueIntInt16(t *testing.T) {
 	var s TestStruct
 	err := UnmarshalStruct(enc.Bytes(), &s)
 	if err != nil {
-		t.Errorf("unexpected error: %v", err)
+		t.Errorf(errMsgUnexpectedErr, err)
 	}
 }
 
@@ -8435,7 +8441,7 @@ func TestDecodeValueIntInt32(t *testing.T) {
 	var s TestStruct
 	err := UnmarshalStruct(enc.Bytes(), &s)
 	if err != nil {
-		t.Errorf("unexpected error: %v", err)
+		t.Errorf(errMsgUnexpectedErr, err)
 	}
 }
 
@@ -8454,7 +8460,7 @@ func TestDecodeValueUintUint16(t *testing.T) {
 	var s TestStruct
 	err := UnmarshalStruct(enc.Bytes(), &s)
 	if err != nil {
-		t.Errorf("unexpected error: %v", err)
+		t.Errorf(errMsgUnexpectedErr, err)
 	}
 	if s.Value != 1000 {
 		t.Errorf("expected 1000, got %d", s.Value)
@@ -8476,7 +8482,7 @@ func TestDecodeValueUintUint32(t *testing.T) {
 	var s TestStruct
 	err := UnmarshalStruct(enc.Bytes(), &s)
 	if err != nil {
-		t.Errorf("unexpected error: %v", err)
+		t.Errorf(errMsgUnexpectedErr, err)
 	}
 	if s.Value != 100000 {
 		t.Errorf("expected 100000, got %d", s.Value)
@@ -8498,7 +8504,7 @@ func TestDecodeValueFloatFromUint8(t *testing.T) {
 	var s TestStruct
 	err := UnmarshalStruct(enc.Bytes(), &s)
 	if err != nil {
-		t.Errorf("unexpected error: %v", err)
+		t.Errorf(errMsgUnexpectedErr, err)
 	}
 	if s.Value != 42.0 {
 		t.Errorf("expected 42.0, got %f", s.Value)
@@ -8520,7 +8526,7 @@ func TestDecodeValueFloatFromUint16(t *testing.T) {
 	var s TestStruct
 	err := UnmarshalStruct(enc.Bytes(), &s)
 	if err != nil {
-		t.Errorf("unexpected error: %v", err)
+		t.Errorf(errMsgUnexpectedErr, err)
 	}
 	if s.Value != 1000.0 {
 		t.Errorf("expected 1000.0, got %f", s.Value)
@@ -8542,7 +8548,7 @@ func TestDecodeValueFloatFromUint32(t *testing.T) {
 	var s TestStruct
 	err := UnmarshalStruct(enc.Bytes(), &s)
 	if err != nil {
-		t.Errorf("unexpected error: %v", err)
+		t.Errorf(errMsgUnexpectedErr, err)
 	}
 	if s.Value != 100000.0 {
 		t.Errorf("expected 100000.0, got %f", s.Value)
@@ -8564,7 +8570,7 @@ func TestDecodeValueFloatFromInt8(t *testing.T) {
 	var s TestStruct
 	err := UnmarshalStruct(enc.Bytes(), &s)
 	if err != nil {
-		t.Errorf("unexpected error: %v", err)
+		t.Errorf(errMsgUnexpectedErr, err)
 	}
 	if s.Value != -50.0 {
 		t.Errorf("expected -50.0, got %f", s.Value)
@@ -8586,7 +8592,7 @@ func TestDecodeValueFloatFromInt16(t *testing.T) {
 	var s TestStruct
 	err := UnmarshalStruct(enc.Bytes(), &s)
 	if err != nil {
-		t.Errorf("unexpected error: %v", err)
+		t.Errorf(errMsgUnexpectedErr, err)
 	}
 }
 
@@ -8605,7 +8611,7 @@ func TestDecodeValueFloatFromInt32(t *testing.T) {
 	var s TestStruct
 	err := UnmarshalStruct(enc.Bytes(), &s)
 	if err != nil {
-		t.Errorf("unexpected error: %v", err)
+		t.Errorf(errMsgUnexpectedErr, err)
 	}
 }
 
@@ -8624,7 +8630,7 @@ func TestDecodeValueFloatFromInt64(t *testing.T) {
 	var s TestStruct
 	err := UnmarshalStruct(enc.Bytes(), &s)
 	if err != nil {
-		t.Errorf("unexpected error: %v", err)
+		t.Errorf(errMsgUnexpectedErr, err)
 	}
 }
 
@@ -8699,7 +8705,7 @@ func TestBuildStructFieldsPrivateField(t *testing.T) {
 	var s TestStruct
 	err := UnmarshalStruct(enc.Bytes(), &s)
 	if err != nil {
-		t.Errorf("unexpected error: %v", err)
+		t.Errorf(errMsgUnexpectedErr, err)
 	}
 	if s.Public != "value" {
 		t.Errorf("expected 'value', got %q", s.Public)
@@ -8726,7 +8732,7 @@ func TestBuildStructFieldsSkipTag(t *testing.T) {
 	var s TestStruct
 	err := UnmarshalStruct(enc.Bytes(), &s)
 	if err != nil {
-		t.Errorf("unexpected error: %v", err)
+		t.Errorf(errMsgUnexpectedErr, err)
 	}
 	if s.Name != "Alice" {
 		t.Errorf("expected 'Alice', got %q", s.Name)
@@ -8754,7 +8760,7 @@ func TestDecodeIntoStructNonStringKeyValueError(t *testing.T) {
 	err := UnmarshalStruct(enc.Bytes(), &s)
 	// Should fail when trying to skip the value
 	if err == nil {
-		t.Error("expected error")
+		t.Error(errMsgExpectedErr)
 	}
 }
 
@@ -8806,7 +8812,7 @@ func TestDecodeBinaryAnyMaxLenValidation(t *testing.T) {
 	d := NewDecoderWithConfig(enc.Bytes(), cfg)
 	_, err := d.DecodeAny()
 	if err != ErrBinaryTooLong {
-		t.Errorf("expected ErrBinaryTooLong, got %v", err)
+		t.Errorf(errMsgBinaryTooLong, err)
 	}
 }
 
@@ -8825,7 +8831,7 @@ func TestDecodeIntoValueInterfaceError(t *testing.T) {
 	var s TestStruct
 	err := UnmarshalStruct(enc.Bytes(), &s)
 	if err == nil {
-		t.Error("expected error")
+		t.Error(errMsgExpectedErr)
 	}
 }
 
@@ -8864,7 +8870,7 @@ func TestDecodeIntoStructUnknownFieldSkip(t *testing.T) {
 	var s TestStruct
 	err := UnmarshalStruct(enc.Bytes(), &s)
 	if err != nil {
-		t.Errorf("unexpected error: %v", err)
+		t.Errorf(errMsgUnexpectedErr, err)
 	}
 	if s.Name != "Alice" {
 		t.Errorf("expected 'Alice', got %q", s.Name)
@@ -8886,7 +8892,7 @@ func TestDecodeIntoStructUnknownFieldSkipDecodeError(t *testing.T) {
 	var s TestStruct
 	err := UnmarshalStruct(enc.Bytes(), &s)
 	if err == nil {
-		t.Error("expected error")
+		t.Error(errMsgExpectedErr)
 	}
 }
 
@@ -8905,7 +8911,7 @@ func TestDecodeIntoStructUnexportedFieldSkip(t *testing.T) {
 	var s TestStruct
 	err := UnmarshalStruct(enc.Bytes(), &s)
 	if err != nil {
-		t.Errorf("unexpected error: %v", err)
+		t.Errorf(errMsgUnexpectedErr, err)
 	}
 	if s.Name != "Alice" {
 		t.Errorf("expected 'Alice', got %q", s.Name)
@@ -9032,7 +9038,7 @@ func TestDecodeValueBytesBin8Validation(t *testing.T) {
 	var s TestStruct
 	err := UnmarshalStructWithConfig(enc.Bytes(), &s, cfg)
 	if err != ErrBinaryTooLong {
-		t.Errorf("expected ErrBinaryTooLong, got %v", err)
+		t.Errorf(errMsgBinaryTooLong, err)
 	}
 }
 
@@ -9053,7 +9059,7 @@ func TestDecodeIntoArrayElementDecodeError(t *testing.T) {
 	var s TestStruct
 	err := UnmarshalStruct(enc.Bytes(), &s)
 	if err == nil {
-		t.Error("expected error")
+		t.Error(errMsgExpectedErr)
 	}
 }
 
@@ -9074,7 +9080,7 @@ func TestDecodeIntoSliceElementDecodeError(t *testing.T) {
 	var s TestStruct
 	err := UnmarshalStruct(enc.Bytes(), &s)
 	if err == nil {
-		t.Error("expected error")
+		t.Error(errMsgExpectedErr)
 	}
 }
 
@@ -9094,7 +9100,7 @@ func TestDecodeIntoMapKeyDecodeError(t *testing.T) {
 	var s TestStruct
 	err := UnmarshalStruct(enc.Bytes(), &s)
 	if err == nil {
-		t.Error("expected error")
+		t.Error(errMsgExpectedErr)
 	}
 }
 
@@ -9115,7 +9121,7 @@ func TestDecodeIntoMapValueDecodeError(t *testing.T) {
 	var s TestStruct
 	err := UnmarshalStruct(enc.Bytes(), &s)
 	if err == nil {
-		t.Error("expected error")
+		t.Error(errMsgExpectedErr)
 	}
 }
 
@@ -9128,7 +9134,7 @@ func TestDecodeAnyValueUint64Overflow(t *testing.T) {
 	d := NewDecoder(enc.Bytes())
 	v, err := d.DecodeAny()
 	if err != nil {
-		t.Errorf("unexpected error: %v", err)
+		t.Errorf(errMsgUnexpectedErr, err)
 	}
 	if _, ok := v.(uint64); !ok {
 		t.Errorf("expected uint64, got %T", v)
@@ -9143,7 +9149,7 @@ func TestDecodeAnyValueFloat32(t *testing.T) {
 	d := NewDecoder(enc.Bytes())
 	v, err := d.DecodeAny()
 	if err != nil {
-		t.Errorf("unexpected error: %v", err)
+		t.Errorf(errMsgUnexpectedErr, err)
 	}
 	if _, ok := v.(float64); !ok {
 		t.Errorf("expected float64, got %T", v)
@@ -9162,7 +9168,7 @@ func TestDecodeMapAnyStr16Key(t *testing.T) {
 	d := NewDecoder(enc.Bytes())
 	v, err := d.DecodeAny()
 	if err != nil {
-		t.Errorf("unexpected error: %v", err)
+		t.Errorf(errMsgUnexpectedErr, err)
 	}
 	m, ok := v.(map[string]any)
 	if !ok {
@@ -9185,7 +9191,7 @@ func TestDecodeMapAnyStr32KeyFormat(t *testing.T) {
 	d := NewDecoder(enc.Bytes())
 	v, err := d.DecodeAny()
 	if err != nil {
-		t.Errorf("unexpected error: %v", err)
+		t.Errorf(errMsgUnexpectedErr, err)
 	}
 	m, ok := v.(map[string]any)
 	if !ok {
