@@ -12,31 +12,27 @@ func UnmarshalMapStringAny(data []byte, zeroCopy bool) (map[string]any, error) {
 	return m, err
 }
 
+// bytesToString converts bytes to string based on zeroCopy flag.
+func bytesToString(b []byte, zeroCopy bool) string {
+	if zeroCopy {
+		return unsafe.String(unsafe.SliceData(b), len(b))
+	}
+	return string(b)
+}
+
 func decodeMapStringAny(d *Decoder, zeroCopy bool) (map[string]any, error) {
 	format, err := d.readByte()
 	if err != nil {
 		return nil, err
 	}
 
-	var mapLen int
-	if isFixmap(format) {
-		mapLen = fixmapLen(format)
-	} else if format == formatMap16 {
-		n, err := d.readUint16()
-		if err != nil {
-			return nil, err
-		}
-		mapLen = int(n)
-	} else if format == formatMap32 {
-		n, err := d.readUint32()
-		if err != nil {
-			return nil, err
-		}
-		mapLen = int(n)
-	} else if format == formatNil {
+	if format == formatNil {
 		return nil, nil
-	} else {
-		return nil, ErrTypeMismatch
+	}
+
+	mapLen, err := d.parseMapLen(format)
+	if err != nil {
+		return nil, err
 	}
 
 	if err := d.validateMapLen(mapLen); err != nil {
@@ -45,19 +41,12 @@ func decodeMapStringAny(d *Decoder, zeroCopy bool) (map[string]any, error) {
 
 	m := make(map[string]any, mapLen)
 	for i := 0; i < mapLen; i++ {
-		// Read key
 		keyBytes, err := d.readStringBytes()
 		if err != nil {
 			return nil, err
 		}
-		var key string
-		if zeroCopy {
-			key = unsafe.String(unsafe.SliceData(keyBytes), len(keyBytes))
-		} else {
-			key = string(keyBytes)
-		}
+		key := bytesToString(keyBytes, zeroCopy)
 
-		// Read value
 		val, err := decodeAnyValue(d, zeroCopy)
 		if err != nil {
 			return nil, err
@@ -65,6 +54,80 @@ func decodeMapStringAny(d *Decoder, zeroCopy bool) (map[string]any, error) {
 		m[key] = val
 	}
 	return m, nil
+}
+
+// decodeAnyUint decodes uint format bytes to int64 (or uint64 for overflow).
+func decodeAnyUint(d *Decoder, format byte) (any, error) {
+	switch format {
+	case formatUint8:
+		v, err := d.readUint8()
+		return int64(v), err
+	case formatUint16:
+		v, err := d.readUint16()
+		return int64(v), err
+	case formatUint32:
+		v, err := d.readUint32()
+		return int64(v), err
+	default: // formatUint64
+		v, err := d.readUint64()
+		if v > 9223372036854775807 {
+			return v, err
+		}
+		return int64(v), err
+	}
+}
+
+// decodeAnyInt decodes int format bytes to int64.
+func decodeAnyInt(d *Decoder, format byte) (any, error) {
+	switch format {
+	case formatInt8:
+		v, err := d.readInt8()
+		return int64(v), err
+	case formatInt16:
+		v, err := d.readInt16()
+		return int64(v), err
+	case formatInt32:
+		v, err := d.readInt32()
+		return int64(v), err
+	default: // formatInt64
+		return d.readInt64()
+	}
+}
+
+// decodeAnyStr decodes str8/16/32 format bytes to string.
+func decodeAnyStr(d *Decoder, format byte, zeroCopy bool) (string, error) {
+	length, err := d.parseStringLenSwitch(format)
+	if err != nil {
+		return "", err
+	}
+	return decodeStringWithLen(d, length, zeroCopy)
+}
+
+// decodeAnyBin decodes bin8/16/32 format bytes to []byte.
+func decodeAnyBin(d *Decoder, format byte, zeroCopy bool) ([]byte, error) {
+	length, err := d.parseBinaryLen(format)
+	if err != nil {
+		return nil, err
+	}
+	return decodeBinaryWithLen(d, length, zeroCopy)
+}
+
+// decodeAnyArray decodes array16/32 format bytes to []any.
+func decodeAnyArray(d *Decoder, format byte, zeroCopy bool) ([]any, error) {
+	length, err := d.parseArrayLenSwitch(format)
+	if err != nil {
+		return nil, err
+	}
+	return decodeArrayAnyWithLen(d, length, zeroCopy)
+}
+
+// decodeAnyMap decodes map16/32 format bytes to map[string]any.
+func decodeAnyMap(d *Decoder, format byte, zeroCopy bool) (map[string]any, error) {
+	length, err := d.parseMapLenSwitch(format)
+	if err != nil {
+		return nil, err
+	}
+	return decodeMapStringAnyWithLen(d, length, zeroCopy)
 }
 
 func decodeAnyValue(d *Decoder, zeroCopy bool) (any, error) {
@@ -107,33 +170,11 @@ func decodeAnyValue(d *Decoder, zeroCopy bool) (any, error) {
 	case formatTrue:
 		return true, nil
 
-	case formatUint8:
-		v, err := d.readUint8()
-		return int64(v), err
-	case formatUint16:
-		v, err := d.readUint16()
-		return int64(v), err
-	case formatUint32:
-		v, err := d.readUint32()
-		return int64(v), err
-	case formatUint64:
-		v, err := d.readUint64()
-		if v > 9223372036854775807 {
-			return v, err
-		}
-		return int64(v), err
+	case formatUint8, formatUint16, formatUint32, formatUint64:
+		return decodeAnyUint(d, format)
 
-	case formatInt8:
-		v, err := d.readInt8()
-		return int64(v), err
-	case formatInt16:
-		v, err := d.readInt16()
-		return int64(v), err
-	case formatInt32:
-		v, err := d.readInt32()
-		return int64(v), err
-	case formatInt64:
-		return d.readInt64()
+	case formatInt8, formatInt16, formatInt32, formatInt64:
+		return decodeAnyInt(d, format)
 
 	case formatFloat32:
 		v, err := d.readFloat32()
@@ -141,69 +182,17 @@ func decodeAnyValue(d *Decoder, zeroCopy bool) (any, error) {
 	case formatFloat64:
 		return d.readFloat64()
 
-	case formatStr8:
-		n, err := d.readUint8()
-		if err != nil {
-			return nil, err
-		}
-		return decodeStringWithLen(d, int(n), zeroCopy)
-	case formatStr16:
-		n, err := d.readUint16()
-		if err != nil {
-			return nil, err
-		}
-		return decodeStringWithLen(d, int(n), zeroCopy)
-	case formatStr32:
-		n, err := d.readUint32()
-		if err != nil {
-			return nil, err
-		}
-		return decodeStringWithLen(d, int(n), zeroCopy)
+	case formatStr8, formatStr16, formatStr32:
+		return decodeAnyStr(d, format, zeroCopy)
 
-	case formatBin8:
-		n, err := d.readUint8()
-		if err != nil {
-			return nil, err
-		}
-		return decodeBinaryWithLen(d, int(n), zeroCopy)
-	case formatBin16:
-		n, err := d.readUint16()
-		if err != nil {
-			return nil, err
-		}
-		return decodeBinaryWithLen(d, int(n), zeroCopy)
-	case formatBin32:
-		n, err := d.readUint32()
-		if err != nil {
-			return nil, err
-		}
-		return decodeBinaryWithLen(d, int(n), zeroCopy)
+	case formatBin8, formatBin16, formatBin32:
+		return decodeAnyBin(d, format, zeroCopy)
 
-	case formatArray16:
-		n, err := d.readUint16()
-		if err != nil {
-			return nil, err
-		}
-		return decodeArrayAnyWithLen(d, int(n), zeroCopy)
-	case formatArray32:
-		n, err := d.readUint32()
-		if err != nil {
-			return nil, err
-		}
-		return decodeArrayAnyWithLen(d, int(n), zeroCopy)
+	case formatArray16, formatArray32:
+		return decodeAnyArray(d, format, zeroCopy)
 
-	case formatMap16:
-		n, err := d.readUint16()
-		if err != nil {
-			return nil, err
-		}
-		return decodeMapStringAnyWithLen(d, int(n), zeroCopy)
-	case formatMap32:
-		n, err := d.readUint32()
-		if err != nil {
-			return nil, err
-		}
-		return decodeMapStringAnyWithLen(d, int(n), zeroCopy)
+	case formatMap16, formatMap32:
+		return decodeAnyMap(d, format, zeroCopy)
 
 	default:
 		return nil, ErrInvalidFormat
@@ -265,12 +254,7 @@ func decodeMapStringAnyWithLen(d *Decoder, length int, zeroCopy bool) (map[strin
 		if err != nil {
 			return nil, err
 		}
-		var key string
-		if zeroCopy {
-			key = unsafe.String(unsafe.SliceData(keyBytes), len(keyBytes))
-		} else {
-			key = string(keyBytes)
-		}
+		key := bytesToString(keyBytes, zeroCopy)
 		val, err := decodeAnyValue(d, zeroCopy)
 		if err != nil {
 			return nil, err
@@ -280,45 +264,23 @@ func decodeMapStringAnyWithLen(d *Decoder, length int, zeroCopy bool) (map[strin
 	return m, nil
 }
 
-// UnmarshalMapStringString decodes msgpack into map[string]string.
-// Much faster than map[string]any when you know the type.
-func UnmarshalMapStringString(data []byte, zeroCopy bool) (map[string]string, error) {
-	d := decoderPool.Get().(*Decoder)
-	d.Reset(data)
-
+// decodeMapStringStringCore is the core implementation for decoding map[string]string.
+func decodeMapStringStringCore(d *Decoder, zeroCopy bool) (map[string]string, error) {
 	format, err := d.readByte()
 	if err != nil {
-		decoderPool.Put(d)
 		return nil, err
 	}
 
-	var mapLen int
-	if isFixmap(format) {
-		mapLen = fixmapLen(format)
-	} else if format == formatMap16 {
-		n, err := d.readUint16()
-		if err != nil {
-			decoderPool.Put(d)
-			return nil, err
-		}
-		mapLen = int(n)
-	} else if format == formatMap32 {
-		n, err := d.readUint32()
-		if err != nil {
-			decoderPool.Put(d)
-			return nil, err
-		}
-		mapLen = int(n)
-	} else if format == formatNil {
-		decoderPool.Put(d)
+	if format == formatNil {
 		return nil, nil
-	} else {
-		decoderPool.Put(d)
-		return nil, ErrTypeMismatch
+	}
+
+	mapLen, err := d.parseMapLen(format)
+	if err != nil {
+		return nil, err
 	}
 
 	if err := d.validateMapLen(mapLen); err != nil {
-		decoderPool.Put(d)
 		return nil, err
 	}
 
@@ -326,71 +288,45 @@ func UnmarshalMapStringString(data []byte, zeroCopy bool) (map[string]string, er
 	for i := 0; i < mapLen; i++ {
 		keyBytes, err := d.readStringBytes()
 		if err != nil {
-			decoderPool.Put(d)
 			return nil, err
 		}
 
 		valFormat, err := d.readByte()
 		if err != nil {
-			decoderPool.Put(d)
 			return nil, err
 		}
 
-		var valLen int
-		if isFixstr(valFormat) {
-			valLen = fixstrLen(valFormat)
-		} else if valFormat == formatStr8 {
-			n, err := d.readUint8()
-			if err != nil {
-				decoderPool.Put(d)
-				return nil, err
-			}
-			valLen = int(n)
-		} else if valFormat == formatStr16 {
-			n, err := d.readUint16()
-			if err != nil {
-				decoderPool.Put(d)
-				return nil, err
-			}
-			valLen = int(n)
-		} else if valFormat == formatStr32 {
-			n, err := d.readUint32()
-			if err != nil {
-				decoderPool.Put(d)
-				return nil, err
-			}
-			valLen = int(n)
-		} else if valFormat == formatNil {
-			// nil value - skip
+		if valFormat == formatNil {
 			continue
-		} else {
-			decoderPool.Put(d)
-			return nil, ErrTypeMismatch
+		}
+
+		valLen, err := d.parseStringLen(valFormat)
+		if err != nil {
+			return nil, err
 		}
 
 		if err := d.validateStringLen(valLen); err != nil {
-			decoderPool.Put(d)
 			return nil, err
 		}
 		valBytes, err := d.readBytes(valLen)
 		if err != nil {
-			decoderPool.Put(d)
 			return nil, err
 		}
 
-		var key, val string
-		if zeroCopy {
-			key = unsafe.String(unsafe.SliceData(keyBytes), len(keyBytes))
-			val = unsafe.String(unsafe.SliceData(valBytes), len(valBytes))
-		} else {
-			key = string(keyBytes)
-			val = string(valBytes)
-		}
-		m[key] = val
+		m[bytesToString(keyBytes, zeroCopy)] = bytesToString(valBytes, zeroCopy)
 	}
 
-	decoderPool.Put(d)
 	return m, nil
+}
+
+// UnmarshalMapStringString decodes msgpack into map[string]string.
+// Much faster than map[string]any when you know the type.
+func UnmarshalMapStringString(data []byte, zeroCopy bool) (map[string]string, error) {
+	d := decoderPool.Get().(*Decoder)
+	d.Reset(data)
+	m, err := decodeMapStringStringCore(d, zeroCopy)
+	decoderPool.Put(d)
+	return m, err
 }
 
 // Callback-based APIs for safe zero-copy usage.
