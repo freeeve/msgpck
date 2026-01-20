@@ -85,6 +85,52 @@ func parseTag(tag string) (name, opts string) {
 	return tag, ""
 }
 
+// parseMapLen parses the map length from a format byte.
+func (d *Decoder) parseMapLen(format byte) (int, error) {
+	if isFixmap(format) {
+		return fixmapLen(format), nil
+	}
+	switch format {
+	case formatMap16:
+		n, err := d.readUint16()
+		if err != nil {
+			return 0, err
+		}
+		return int(n), nil
+	case formatMap32:
+		n, err := d.readUint32()
+		if err != nil {
+			return 0, err
+		}
+		return int(n), nil
+	default:
+		return 0, ErrTypeMismatch
+	}
+}
+
+// parseArrayLen parses the array length from a format byte.
+func (d *Decoder) parseArrayLen(format byte) (int, error) {
+	if isFixarray(format) {
+		return fixarrayLen(format), nil
+	}
+	switch format {
+	case formatArray16:
+		n, err := d.readUint16()
+		if err != nil {
+			return 0, err
+		}
+		return int(n), nil
+	case formatArray32:
+		n, err := d.readUint32()
+		if err != nil {
+			return 0, err
+		}
+		return int(n), nil
+	default:
+		return 0, ErrTypeMismatch
+	}
+}
+
 // DecodeStruct decodes a msgpack map into a struct.
 // v must be a pointer to a struct.
 func (d *Decoder) DecodeStruct(v any) error {
@@ -103,26 +149,15 @@ func (d *Decoder) DecodeStruct(v any) error {
 		return err
 	}
 
-	// Determine map length
-	var mapLen int
-	if isFixmap(format) {
-		mapLen = fixmapLen(format)
-	} else if format == formatMap16 {
-		n, err := d.readUint16()
-		if err != nil {
-			return err
-		}
-		mapLen = int(n)
-	} else if format == formatMap32 {
-		n, err := d.readUint32()
-		if err != nil {
-			return err
-		}
-		mapLen = int(n)
-	} else if format == formatNil {
+	// Handle nil
+	if format == formatNil {
 		return nil // nil decodes to zero value
-	} else {
-		return ErrTypeMismatch
+	}
+
+	// Determine map length
+	mapLen, err := d.parseMapLen(format)
+	if err != nil {
+		return err
 	}
 
 	if err := d.validateMapLen(mapLen); err != nil {
@@ -568,23 +603,9 @@ func (d *Decoder) decodeValueBytes(format byte) ([]byte, error) {
 
 // decodeIntoSlice decodes an array into a slice
 func (d *Decoder) decodeIntoSlice(rv reflect.Value, format byte) error {
-	var length int
-	if isFixarray(format) {
-		length = fixarrayLen(format)
-	} else if format == formatArray16 {
-		n, err := d.readUint16()
-		if err != nil {
-			return err
-		}
-		length = int(n)
-	} else if format == formatArray32 {
-		n, err := d.readUint32()
-		if err != nil {
-			return err
-		}
-		length = int(n)
-	} else {
-		return ErrTypeMismatch
+	length, err := d.parseArrayLen(format)
+	if err != nil {
+		return err
 	}
 
 	if err := d.validateArrayLen(length); err != nil {
@@ -607,23 +628,9 @@ func (d *Decoder) decodeIntoSlice(rv reflect.Value, format byte) error {
 
 // decodeIntoArray decodes into a fixed-size array
 func (d *Decoder) decodeIntoArray(rv reflect.Value, format byte) error {
-	var length int
-	if isFixarray(format) {
-		length = fixarrayLen(format)
-	} else if format == formatArray16 {
-		n, err := d.readUint16()
-		if err != nil {
-			return err
-		}
-		length = int(n)
-	} else if format == formatArray32 {
-		n, err := d.readUint32()
-		if err != nil {
-			return err
-		}
-		length = int(n)
-	} else {
-		return ErrTypeMismatch
+	length, err := d.parseArrayLen(format)
+	if err != nil {
+		return err
 	}
 
 	if err := d.validateArrayLen(length); err != nil {
@@ -652,23 +659,9 @@ func (d *Decoder) decodeIntoArray(rv reflect.Value, format byte) error {
 
 // decodeIntoMap decodes into a map
 func (d *Decoder) decodeIntoMap(rv reflect.Value, format byte) error {
-	var mapLen int
-	if isFixmap(format) {
-		mapLen = fixmapLen(format)
-	} else if format == formatMap16 {
-		n, err := d.readUint16()
-		if err != nil {
-			return err
-		}
-		mapLen = int(n)
-	} else if format == formatMap32 {
-		n, err := d.readUint32()
-		if err != nil {
-			return err
-		}
-		mapLen = int(n)
-	} else {
-		return ErrTypeMismatch
+	mapLen, err := d.parseMapLen(format)
+	if err != nil {
+		return err
 	}
 
 	if err := d.validateMapLen(mapLen); err != nil {
@@ -704,23 +697,9 @@ func (d *Decoder) decodeIntoMap(rv reflect.Value, format byte) error {
 
 // decodeIntoStruct decodes a map into a struct (nested)
 func (d *Decoder) decodeIntoStruct(rv reflect.Value, format byte) error {
-	var mapLen int
-	if isFixmap(format) {
-		mapLen = fixmapLen(format)
-	} else if format == formatMap16 {
-		n, err := d.readUint16()
-		if err != nil {
-			return err
-		}
-		mapLen = int(n)
-	} else if format == formatMap32 {
-		n, err := d.readUint32()
-		if err != nil {
-			return err
-		}
-		mapLen = int(n)
-	} else {
-		return ErrTypeMismatch
+	mapLen, err := d.parseMapLen(format)
+	if err != nil {
+		return err
 	}
 
 	if err := d.validateMapLen(mapLen); err != nil {
