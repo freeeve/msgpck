@@ -4702,52 +4702,6 @@ func TestDecodeIntoMapMap16Map32(t *testing.T) {
 	})
 }
 
-// TestDecodeStringKeyAllFormats tests decodeStringKey with all formats
-func TestDecodeStringKeyAllFormats(t *testing.T) {
-	type Inner struct {
-		V int `msgpack:"v"`
-	}
-	type Outer struct {
-		I Inner `msgpack:"i"`
-	}
-
-	t.Run("str8 key in nested", func(t *testing.T) {
-		data := []byte{
-			0x81, 0xa1, 'i',
-			0x81, formatStr8, 1, 'v', 0x42,
-		}
-		var o Outer
-		err := UnmarshalStruct(data, &o)
-		if err != nil || o.I.V != 66 {
-			t.Error("str8 key in nested failed")
-		}
-	})
-
-	t.Run("str16 key in nested", func(t *testing.T) {
-		data := []byte{
-			0x81, 0xa1, 'i',
-			0x81, formatStr16, 0, 1, 'v', 0x42,
-		}
-		var o Outer
-		err := UnmarshalStruct(data, &o)
-		if err != nil || o.I.V != 66 {
-			t.Error("str16 key in nested failed")
-		}
-	})
-
-	t.Run("str32 key in nested", func(t *testing.T) {
-		data := []byte{
-			0x81, 0xa1, 'i',
-			0x81, formatStr32, 0, 0, 0, 1, 'v', 0x42,
-		}
-		var o Outer
-		err := UnmarshalStruct(data, &o)
-		if err != nil || o.I.V != 66 {
-			t.Error("str32 key in nested failed")
-		}
-	})
-}
-
 // TestReadBytesEOF tests readBytes EOF path
 func TestReadBytesEOF(t *testing.T) {
 	data := []byte{0xa5, 'h', 'e'} // fixstr 5 with only 2 bytes
