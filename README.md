@@ -6,7 +6,6 @@
 [![Go Reference](https://pkg.go.dev/badge/github.com/freeeve/msgpck.svg)](https://pkg.go.dev/github.com/freeeve/msgpck)
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=freeeve_msgpck&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=freeeve_msgpck)
 [![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=freeeve_msgpck&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=freeeve_msgpck)
-[![Snyk](https://snyk.io/test/github/freeeve/msgpck/badge.svg)](https://snyk.io/test/github/freeeve/msgpck)
 
 A high-performance msgpack library for Go, optimized for database and serialization-heavy workloads. Zero external dependencies.
 
