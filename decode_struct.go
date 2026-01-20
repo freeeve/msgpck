@@ -279,14 +279,7 @@ func (d *Decoder) decodeIntoValue(rv reflect.Value) error {
 		}
 		rv.SetUint(v)
 
-	case reflect.Float32:
-		v, err := d.decodeValueFloat(format)
-		if err != nil {
-			return err
-		}
-		rv.SetFloat(v)
-
-	case reflect.Float64:
+	case reflect.Float32, reflect.Float64:
 		v, err := d.decodeValueFloat(format)
 		if err != nil {
 			return err
