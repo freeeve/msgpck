@@ -45,20 +45,7 @@ func newStructEncoder[T any]() *StructEncoder[T] {
 			continue
 		}
 
-		name := tag
-		omitempty := false
-
-		// Parse tag options
-		for i := 0; i < len(tag); i++ {
-			if tag[i] == ',' {
-				name = tag[:i]
-				omitempty = contains(tag[i+1:], "omitempty")
-				break
-			}
-		}
-		if name == "" {
-			name = f.Name
-		}
+		name, omitempty := parseFieldTag(tag, f.Name)
 
 		ef := encodeField{
 			name:      []byte(name),
@@ -78,6 +65,26 @@ func newStructEncoder[T any]() *StructEncoder[T] {
 
 func contains(s, substr string) bool {
 	return len(s) >= len(substr) && s[:len(substr)] == substr
+}
+
+// parseFieldTag parses a msgpack struct tag and returns the field name and omitempty flag.
+func parseFieldTag(tag, fieldName string) (string, bool) {
+	if tag == "" {
+		return fieldName, false
+	}
+	name := tag
+	omitempty := false
+	for i := 0; i < len(tag); i++ {
+		if tag[i] == ',' {
+			name = tag[:i]
+			omitempty = contains(tag[i+1:], "omitempty")
+			break
+		}
+	}
+	if name == "" {
+		name = fieldName
+	}
+	return name, omitempty
 }
 
 // Encode encodes the struct to msgpack bytes.
