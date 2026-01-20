@@ -16,6 +16,7 @@ type encodeField struct {
 	name      []byte       // msgpack field name (pre-encoded)
 	offset    uintptr      // field offset in struct
 	kind      reflect.Kind // field type
+	typ       reflect.Type // full type (for structs/pointers)
 	elem      reflect.Type // for slices/maps: element type
 	omitempty bool
 }
@@ -63,6 +64,7 @@ func newStructEncoder[T any]() *StructEncoder[T] {
 			name:      []byte(name),
 			offset:    f.Offset,
 			kind:      f.Type.Kind(),
+			typ:       f.Type,
 			omitempty: omitempty,
 		}
 		if f.Type.Kind() == reflect.Slice || f.Type.Kind() == reflect.Map {
@@ -298,6 +300,25 @@ func (se *StructEncoder[T]) encodeField(e *Encoder, ptr unsafe.Pointer, f *encod
 				if err := e.Encode(iter.Value().Interface()); err != nil {
 					return err
 				}
+			}
+		}
+
+	case reflect.Struct:
+		// Nested struct - encode recursively using reflection
+		rv := reflect.NewAt(f.typ, ptr).Elem()
+		if err := e.Encode(rv.Interface()); err != nil {
+			return err
+		}
+
+	case reflect.Ptr:
+		// Pointer to struct or other type
+		ptrVal := *(*unsafe.Pointer)(ptr)
+		if ptrVal == nil {
+			e.EncodeNil()
+		} else {
+			rv := reflect.NewAt(f.typ, ptr).Elem()
+			if err := e.Encode(rv.Interface()); err != nil {
+				return err
 			}
 		}
 

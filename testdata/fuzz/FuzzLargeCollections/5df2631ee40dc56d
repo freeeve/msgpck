@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("\x86\xd900\xd900\xd900\xd900\xd90\x85\xd900\xd9000000")
