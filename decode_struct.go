@@ -160,6 +160,98 @@ func (d *Decoder) parseStringLen(format byte) (int, error) {
 	}
 }
 
+// parseBinaryLen parses the binary length from a format byte.
+func (d *Decoder) parseBinaryLen(format byte) (int, error) {
+	switch format {
+	case formatBin8:
+		n, err := d.readUint8()
+		if err != nil {
+			return 0, err
+		}
+		return int(n), nil
+	case formatBin16:
+		n, err := d.readUint16()
+		if err != nil {
+			return 0, err
+		}
+		return int(n), nil
+	case formatBin32:
+		n, err := d.readUint32()
+		if err != nil {
+			return 0, err
+		}
+		return int(n), nil
+	default:
+		return 0, ErrTypeMismatch
+	}
+}
+
+// parseStringLenSwitch parses string length for str8/str16/str32 formats only.
+func (d *Decoder) parseStringLenSwitch(format byte) (int, error) {
+	switch format {
+	case formatStr8:
+		n, err := d.readUint8()
+		if err != nil {
+			return 0, err
+		}
+		return int(n), nil
+	case formatStr16:
+		n, err := d.readUint16()
+		if err != nil {
+			return 0, err
+		}
+		return int(n), nil
+	case formatStr32:
+		n, err := d.readUint32()
+		if err != nil {
+			return 0, err
+		}
+		return int(n), nil
+	default:
+		return 0, ErrTypeMismatch
+	}
+}
+
+// parseArrayLenSwitch parses array length for array16/array32 formats only.
+func (d *Decoder) parseArrayLenSwitch(format byte) (int, error) {
+	switch format {
+	case formatArray16:
+		n, err := d.readUint16()
+		if err != nil {
+			return 0, err
+		}
+		return int(n), nil
+	case formatArray32:
+		n, err := d.readUint32()
+		if err != nil {
+			return 0, err
+		}
+		return int(n), nil
+	default:
+		return 0, ErrTypeMismatch
+	}
+}
+
+// parseMapLenSwitch parses map length for map16/map32 formats only.
+func (d *Decoder) parseMapLenSwitch(format byte) (int, error) {
+	switch format {
+	case formatMap16:
+		n, err := d.readUint16()
+		if err != nil {
+			return 0, err
+		}
+		return int(n), nil
+	case formatMap32:
+		n, err := d.readUint32()
+		if err != nil {
+			return 0, err
+		}
+		return int(n), nil
+	default:
+		return 0, ErrTypeMismatch
+	}
+}
+
 // DecodeStruct decodes a msgpack map into a struct.
 // v must be a pointer to a struct.
 func (d *Decoder) DecodeStruct(v any) error {
