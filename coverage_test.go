@@ -3547,9 +3547,8 @@ func TestTypedDecodeMapStringString(t *testing.T) {
 func TestEncodeMapWithNonStringKey(t *testing.T) {
 	m := map[int]string{1: "one", 2: "two"}
 	_, err := Marshal(m)
-	// This should error or handle gracefully
-	if err == nil {
-		// If it doesn't error, that's fine too
+	if err != nil {
+		t.Logf("encoding map with non-string key returned error (expected): %v", err)
 	}
 }
 
