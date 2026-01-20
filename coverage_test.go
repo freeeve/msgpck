@@ -4558,11 +4558,11 @@ func TestDecodeBinaryAllFormats(t *testing.T) {
 
 // TestEncodeMapNonStringKey tests encoding map with non-string keys
 func TestEncodeMapNonStringKey(t *testing.T) {
-	// Map with int key
 	m := map[int]string{1: "one"}
 	_, err := Marshal(m)
-	// Should handle gracefully (may error or encode)
-	_ = err // just check it doesn't panic
+	if err != nil {
+		t.Logf("encoding map with int key returned error (expected): %v", err)
+	}
 }
 
 // TestDecodeStructValidationErrors tests validation limit errors in DecodeStruct
