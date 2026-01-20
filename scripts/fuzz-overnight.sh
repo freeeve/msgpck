@@ -51,7 +51,7 @@ copy_corpus_to_testdata() {
     local gocache_fuzz="$(go env GOCACHE)/fuzz/github.com/freeeve/msgpck"
     local testdata_fuzz="$PROJECT_ROOT/testdata/fuzz"
 
-    if [ -d "$gocache_fuzz" ]; then
+    if [[ -d "$gocache_fuzz" ]]; then
         mkdir -p "$testdata_fuzz"
         local before_count=$(find "$testdata_fuzz" -type f 2>/dev/null | wc -l | tr -d ' ')
         cp -r "$gocache_fuzz"/* "$testdata_fuzz"/ 2>/dev/null || true
