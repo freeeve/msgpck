@@ -746,4 +746,3 @@ func GetStructDecoder[T any](zeroCopy bool) *StructDecoder[T] {
 	structDecoderCache.Store(key, dec)
 	return dec
 }
-

@@ -24,14 +24,14 @@ type MediumStruct struct {
 }
 
 var (
-	smallStruct = SmallStruct{Name: "Alice", Age: 30}
+	smallStruct  = SmallStruct{Name: "Alice", Age: 30}
 	mediumStruct = MediumStruct{
 		ID: 12345, Name: "Bob Smith", Email: "bob@example.com",
 		Age: 42, Active: true, Score: 98.6,
 		Tags:     []string{"admin", "user", "premium"},
 		Metadata: map[string]string{"role": "manager", "dept": "engineering"},
 	}
-	smallMap = map[string]any{"name": "Alice", "age": 30}
+	smallMap  = map[string]any{"name": "Alice", "age": 30}
 	mediumMap = map[string]any{
 		"id": int64(12345), "name": "Bob Smith", "email": "bob@example.com",
 		"age": 42, "active": true, "score": 98.6,

@@ -9,31 +9,31 @@ import (
 func FuzzDecoder(f *testing.F) {
 	// Add seed corpus with valid msgpack data
 	seeds := [][]byte{
-		{0xc0},                               // nil
-		{0xc2},                               // false
-		{0xc3},                               // true
-		{0x00},                               // positive fixint 0
-		{0x7f},                               // positive fixint 127
-		{0xe0},                               // negative fixint -32
-		{0xff},                               // negative fixint -1
-		{0xcc, 0xff},                         // uint8
-		{0xcd, 0xff, 0xff},                   // uint16
-		{0xce, 0xff, 0xff, 0xff, 0xff},       // uint32
+		{0xc0},                         // nil
+		{0xc2},                         // false
+		{0xc3},                         // true
+		{0x00},                         // positive fixint 0
+		{0x7f},                         // positive fixint 127
+		{0xe0},                         // negative fixint -32
+		{0xff},                         // negative fixint -1
+		{0xcc, 0xff},                   // uint8
+		{0xcd, 0xff, 0xff},             // uint16
+		{0xce, 0xff, 0xff, 0xff, 0xff}, // uint32
 		{0xcf, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}, // uint64
-		{0xd0, 0x80},                         // int8 -128
-		{0xd1, 0x80, 0x00},                   // int16
-		{0xd2, 0x80, 0x00, 0x00, 0x00},       // int32
+		{0xd0, 0x80},                   // int8 -128
+		{0xd1, 0x80, 0x00},             // int16
+		{0xd2, 0x80, 0x00, 0x00, 0x00}, // int32
 		{0xd3, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, // int64
-		{0xca, 0x40, 0x48, 0xf5, 0xc3},       // float32 3.14
+		{0xca, 0x40, 0x48, 0xf5, 0xc3},                         // float32 3.14
 		{0xcb, 0x40, 0x09, 0x21, 0xfb, 0x54, 0x44, 0x2d, 0x18}, // float64
-		{0xa5, 'h', 'e', 'l', 'l', 'o'},      // fixstr
-		{0xd9, 0x05, 'h', 'e', 'l', 'l', 'o'}, // str8
-		{0xc4, 0x03, 0x01, 0x02, 0x03},       // bin8
-		{0x93, 0x01, 0x02, 0x03},             // fixarray [1,2,3]
-		{0x82, 0xa1, 'a', 0x01, 0xa1, 'b', 0x02}, // fixmap {"a":1,"b":2}
-		{0xd4, 0x01, 0xff},                   // fixext1
-		{0xd5, 0x01, 0xff, 0xff},             // fixext2
-		{0xd6, 0x01, 0xff, 0xff, 0xff, 0xff}, // fixext4
+		{0xa5, 'h', 'e', 'l', 'l', 'o'},                        // fixstr
+		{0xd9, 0x05, 'h', 'e', 'l', 'l', 'o'},                  // str8
+		{0xc4, 0x03, 0x01, 0x02, 0x03},                         // bin8
+		{0x93, 0x01, 0x02, 0x03},                               // fixarray [1,2,3]
+		{0x82, 0xa1, 'a', 0x01, 0xa1, 'b', 0x02},               // fixmap {"a":1,"b":2}
+		{0xd4, 0x01, 0xff},                                     // fixext1
+		{0xd5, 0x01, 0xff, 0xff},                               // fixext2
+		{0xd6, 0x01, 0xff, 0xff, 0xff, 0xff},                   // fixext4
 	}
 
 	for _, seed := range seeds {
@@ -159,8 +159,8 @@ func FuzzRoundTripFloat(f *testing.F) {
 // FuzzMapDecode tests map decoding with random input
 func FuzzMapDecode(f *testing.F) {
 	// Seed with valid map data
-	f.Add([]byte{0x80})                                         // empty fixmap
-	f.Add([]byte{0x82, 0xa1, 'a', 0x01, 0xa1, 'b', 0x02})       // fixmap {"a":1,"b":2}
+	f.Add([]byte{0x80})                                                          // empty fixmap
+	f.Add([]byte{0x82, 0xa1, 'a', 0x01, 0xa1, 'b', 0x02})                        // fixmap {"a":1,"b":2}
 	f.Add([]byte{0x81, 0xa4, 'n', 'a', 'm', 'e', 0xa5, 'A', 'l', 'i', 'c', 'e'}) // {"name":"Alice"}
 
 	f.Fuzz(func(t *testing.T, data []byte) {
@@ -191,8 +191,8 @@ func FuzzMapDecode(f *testing.F) {
 // FuzzMapStringString tests typed map decoding
 func FuzzMapStringString(f *testing.F) {
 	// Seed with valid string->string map data
-	f.Add([]byte{0x80}) // empty map
-	f.Add([]byte{0x81, 0xa1, 'k', 0xa1, 'v'}) // {"k":"v"}
+	f.Add([]byte{0x80})                                             // empty map
+	f.Add([]byte{0x81, 0xa1, 'k', 0xa1, 'v'})                       // {"k":"v"}
 	f.Add([]byte{0x82, 0xa1, 'a', 0xa1, 'x', 0xa1, 'b', 0xa1, 'y'}) // {"a":"x","b":"y"}
 
 	f.Fuzz(func(t *testing.T, data []byte) {

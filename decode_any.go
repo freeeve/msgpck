@@ -10,7 +10,6 @@ var decoderPool = sync.Pool{
 	New: func() any { return &Decoder{cfg: DefaultConfig()} },
 }
 
-
 // DecodeAny decodes a MessagePack value directly into a Go native type.
 // Returns: nil, bool, int64, uint64, float64, string, []byte, []any, map[string]any
 // This is optimized to avoid intermediate Value structs.
@@ -176,7 +175,6 @@ func (d *Decoder) decodeStringAny(length int) (string, error) {
 	// Zero-copy bytes to string using unsafe
 	return unsafe.String(unsafe.SliceData(bytes), len(bytes)), nil
 }
-
 
 // decodeBinaryAny decodes binary data (returns copy for safety)
 func (d *Decoder) decodeBinaryAny(length int) ([]byte, error) {

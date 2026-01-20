@@ -909,8 +909,8 @@ func TestUnmarshalMapStringStringFormats(t *testing.T) {
 	t.Run("str32 value", func(t *testing.T) {
 		// Create str32 format manually for small value (format byte test)
 		data := []byte{
-			0x81,                   // fixmap 1
-			0xa3, 'k', 'e', 'y',    // fixstr "key"
+			0x81,                // fixmap 1
+			0xa3, 'k', 'e', 'y', // fixstr "key"
 			formatStr32, 0, 0, 0, 3, 'v', 'a', 'l', // str32 "val"
 		}
 
@@ -940,9 +940,9 @@ func TestUnmarshalMapStringStringFormats(t *testing.T) {
 	t.Run("map16 format", func(t *testing.T) {
 		// map16 with 1 entry
 		data := []byte{
-			formatMap16, 0, 1,   // map16 length 1
-			0xa1, 'k',           // fixstr "k"
-			0xa1, 'v',           // fixstr "v"
+			formatMap16, 0, 1, // map16 length 1
+			0xa1, 'k', // fixstr "k"
+			0xa1, 'v', // fixstr "v"
 		}
 
 		m, err := UnmarshalMapStringString(data, false)
@@ -955,8 +955,8 @@ func TestUnmarshalMapStringStringFormats(t *testing.T) {
 		// map32 with 1 entry
 		data := []byte{
 			formatMap32, 0, 0, 0, 1, // map32 length 1
-			0xa1, 'k',                // fixstr "k"
-			0xa1, 'v',                // fixstr "v"
+			0xa1, 'k', // fixstr "k"
+			0xa1, 'v', // fixstr "v"
 		}
 
 		m, err := UnmarshalMapStringString(data, false)
@@ -981,9 +981,9 @@ func TestUnmarshalMapStringStringFormats(t *testing.T) {
 
 	t.Run("non-string value", func(t *testing.T) {
 		data := []byte{
-			0x81,         // fixmap 1
-			0xa1, 'k',    // fixstr "k"
-			0x42,         // positive fixint (not string)
+			0x81,      // fixmap 1
+			0xa1, 'k', // fixstr "k"
+			0x42, // positive fixint (not string)
 		}
 		_, err := UnmarshalMapStringString(data, false)
 		if err != ErrTypeMismatch {
@@ -1223,8 +1223,8 @@ func TestStructDecoderStringFormats(t *testing.T) {
 	t.Run("str32 format", func(t *testing.T) {
 		// str32 with small string for format test
 		data := []byte{
-			0x81,                             // fixmap 1
-			0xa1, 's',                        // fixstr "s"
+			0x81,      // fixmap 1
+			0xa1, 's', // fixstr "s"
 			formatStr32, 0, 0, 0, 5, 'h', 'e', 'l', 'l', 'o', // str32 "hello"
 		}
 
@@ -1263,8 +1263,8 @@ func TestStructDecoderBytesFormats(t *testing.T) {
 	t.Run("bin32 format", func(t *testing.T) {
 		// bin32 with small data for format test
 		data := []byte{
-			0x81,                             // fixmap 1
-			0xa1, 'b',                        // fixstr "b"
+			0x81,      // fixmap 1
+			0xa1, 'b', // fixstr "b"
 			formatBin32, 0, 0, 0, 3, 1, 2, 3, // bin32 [1,2,3]
 		}
 
@@ -1296,8 +1296,8 @@ func TestStructDecoderBytesFormats(t *testing.T) {
 	t.Run("str32 as bytes", func(t *testing.T) {
 		// str32 format
 		data := []byte{
-			0x81,                             // fixmap 1
-			0xa1, 'b',                        // fixstr "b"
+			0x81,      // fixmap 1
+			0xa1, 'b', // fixstr "b"
 			formatStr32, 0, 0, 0, 3, 'a', 'b', 'c',
 		}
 
@@ -1337,11 +1337,11 @@ func TestStructDecoderArrayFormats(t *testing.T) {
 
 	t.Run("array32 format", func(t *testing.T) {
 		data := []byte{
-			0x81,                   // fixmap 1
-			0xa1, 'a',              // fixstr "a"
+			0x81,      // fixmap 1
+			0xa1, 'a', // fixstr "a"
 			formatArray32, 0, 0, 0, 2, // array32 length 2
-			0xa1, 'x',              // fixstr "x"
-			0xa1, 'y',              // fixstr "y"
+			0xa1, 'x', // fixstr "x"
+			0xa1, 'y', // fixstr "y"
 		}
 
 		dec := GetStructDecoder[Data](false)
@@ -1381,11 +1381,11 @@ func TestStructDecoderMapFormats(t *testing.T) {
 
 	t.Run("map32 format", func(t *testing.T) {
 		data := []byte{
-			0x81,                   // fixmap 1
-			0xa1, 'm',              // fixstr "m"
+			0x81,      // fixmap 1
+			0xa1, 'm', // fixstr "m"
 			formatMap32, 0, 0, 0, 1, // map32 length 1
-			0xa1, 'k',              // fixstr "k"
-			0xa1, 'v',              // fixstr "v"
+			0xa1, 'k', // fixstr "k"
+			0xa1, 'v', // fixstr "v"
 		}
 
 		dec := GetStructDecoder[Data](false)
@@ -1452,8 +1452,8 @@ func TestTypedDecodeMapFormats(t *testing.T) {
 	t.Run("map32 in typed decode", func(t *testing.T) {
 		data := []byte{
 			formatMap32, 0, 0, 0, 1, // map32 length 1
-			0xa1, 'k',               // fixstr "k"
-			0x01,                    // positive fixint 1
+			0xa1, 'k', // fixstr "k"
+			0x01, // positive fixint 1
 		}
 
 		m, err := UnmarshalMapStringAny(data, false)
@@ -1464,11 +1464,11 @@ func TestTypedDecodeMapFormats(t *testing.T) {
 
 	t.Run("nested map32", func(t *testing.T) {
 		data := []byte{
-			0x81,                         // fixmap 1
-			0xa1, 'k',                    // fixstr "k"
-			formatMap32, 0, 0, 0, 1,      // map32 length 1
-			0xa1, 'n',                    // fixstr "n"
-			0x01,                         // positive fixint 1
+			0x81,      // fixmap 1
+			0xa1, 'k', // fixstr "k"
+			formatMap32, 0, 0, 0, 1, // map32 length 1
+			0xa1, 'n', // fixstr "n"
+			0x01, // positive fixint 1
 		}
 
 		m, err := UnmarshalMapStringAny(data, true)
@@ -1529,9 +1529,9 @@ func TestStructDecoderNilField(t *testing.T) {
 	}
 
 	data := []byte{
-		0x81,                 // fixmap 1
-		0xa1, 's',            // fixstr "s"
-		formatNil,            // nil
+		0x81,      // fixmap 1
+		0xa1, 's', // fixstr "s"
+		formatNil, // nil
 	}
 
 	dec := GetStructDecoder[Data](false)
@@ -1855,9 +1855,9 @@ func TestReflectionDecodeWithStringKeyFormats(t *testing.T) {
 
 	t.Run("str8 key", func(t *testing.T) {
 		// Test str8 format key parsing
-		data := []byte{0x81}                                      // fixmap 1
-		data = append(data, formatStr8, 1, 'v')                   // str8 "v"
-		data = append(data, 0x42)                                 // value 66
+		data := []byte{0x81}                    // fixmap 1
+		data = append(data, formatStr8, 1, 'v') // str8 "v"
+		data = append(data, 0x42)               // value 66
 
 		var d Data
 		err := UnmarshalStruct(data, &d)
@@ -1867,9 +1867,9 @@ func TestReflectionDecodeWithStringKeyFormats(t *testing.T) {
 	})
 
 	t.Run("str16 key", func(t *testing.T) {
-		data := []byte{0x81}                                      // fixmap 1
-		data = append(data, formatStr16, 0, 1, 'v')               // str16 "v"
-		data = append(data, 0x42)                                 // value 66
+		data := []byte{0x81}                        // fixmap 1
+		data = append(data, formatStr16, 0, 1, 'v') // str16 "v"
+		data = append(data, 0x42)                   // value 66
 
 		var d Data
 		err := UnmarshalStruct(data, &d)
@@ -1879,9 +1879,9 @@ func TestReflectionDecodeWithStringKeyFormats(t *testing.T) {
 	})
 
 	t.Run("str32 key", func(t *testing.T) {
-		data := []byte{0x81}                                      // fixmap 1
-		data = append(data, formatStr32, 0, 0, 0, 1, 'v')         // str32 "v"
-		data = append(data, 0x42)                                 // value 66
+		data := []byte{0x81}                              // fixmap 1
+		data = append(data, formatStr32, 0, 0, 0, 1, 'v') // str32 "v"
+		data = append(data, 0x42)                         // value 66
 
 		var d Data
 		err := UnmarshalStruct(data, &d)
@@ -1929,11 +1929,11 @@ func TestReflectionDecodeNonStringKey(t *testing.T) {
 
 	// Map with non-string key (integer key) followed by string key
 	data := []byte{
-		0x82,       // fixmap 2
-		0x01,       // key: positive fixint 1 (non-string)
-		0x42,       // value: 66
-		0xa1, 'v',  // key: fixstr "v"
-		0x43,       // value: 67
+		0x82,      // fixmap 2
+		0x01,      // key: positive fixint 1 (non-string)
+		0x42,      // value: 66
+		0xa1, 'v', // key: fixstr "v"
+		0x43, // value: 67
 	}
 
 	var d Data
@@ -1994,9 +1994,9 @@ func TestReflectionUnmarshalStructWithConfig(t *testing.T) {
 func TestDecodeMapAnyStr32Key(t *testing.T) {
 	// Map with str32 key
 	data := []byte{
-		0x81,                                    // fixmap 1
-		formatStr32, 0, 0, 0, 3, 'k', 'e', 'y',  // str32 "key"
-		0x42,                                    // value 66
+		0x81,                                   // fixmap 1
+		formatStr32, 0, 0, 0, 3, 'k', 'e', 'y', // str32 "key"
+		0x42, // value 66
 	}
 
 	d := NewDecoder(data)
@@ -2132,9 +2132,9 @@ func TestDecodeIntoSliceTypes(t *testing.T) {
 // TestSkipTaggedField tests fields with "-" tag
 func TestSkipTaggedField(t *testing.T) {
 	type Data struct {
-		Name   string `msgpack:"name"`
-		Skip   int    `msgpack:"-"`
-		Value  int    `msgpack:"value"`
+		Name  string `msgpack:"name"`
+		Skip  int    `msgpack:"-"`
+		Value int    `msgpack:"value"`
 	}
 
 	e := NewEncoder(64)
@@ -2274,9 +2274,9 @@ func TestDecodeIntoStructFormats(t *testing.T) {
 
 	t.Run("map16 nested", func(t *testing.T) {
 		data := []byte{
-			0x81, 0xa1, 'i',  // outer map with "i" key
-			formatMap16, 0, 1,  // map16 for inner
-			0xa1, 'v', 0x42,    // "v": 66
+			0x81, 0xa1, 'i', // outer map with "i" key
+			formatMap16, 0, 1, // map16 for inner
+			0xa1, 'v', 0x42, // "v": 66
 		}
 		var o Outer
 		err := UnmarshalStruct(data, &o)
@@ -2287,9 +2287,9 @@ func TestDecodeIntoStructFormats(t *testing.T) {
 
 	t.Run("map32 nested", func(t *testing.T) {
 		data := []byte{
-			0x81, 0xa1, 'i',  // outer map with "i" key
-			formatMap32, 0, 0, 0, 1,  // map32 for inner
-			0xa1, 'v', 0x42,          // "v": 66
+			0x81, 0xa1, 'i', // outer map with "i" key
+			formatMap32, 0, 0, 0, 1, // map32 for inner
+			0xa1, 'v', 0x42, // "v": 66
 		}
 		var o Outer
 		err := UnmarshalStruct(data, &o)
@@ -2310,10 +2310,10 @@ func TestDecodeStringKeyFormats(t *testing.T) {
 
 	t.Run("str8 key in nested", func(t *testing.T) {
 		data := []byte{
-			0x81, 0xa1, 'i',      // outer: "i"
-			0x81,                  // inner fixmap 1
-			formatStr8, 1, 'v',   // str8 "v"
-			0x42,                  // 66
+			0x81, 0xa1, 'i', // outer: "i"
+			0x81,               // inner fixmap 1
+			formatStr8, 1, 'v', // str8 "v"
+			0x42, // 66
 		}
 		var o Outer
 		err := UnmarshalStruct(data, &o)
@@ -2324,10 +2324,10 @@ func TestDecodeStringKeyFormats(t *testing.T) {
 
 	t.Run("str16 key in nested", func(t *testing.T) {
 		data := []byte{
-			0x81, 0xa1, 'i',       // outer: "i"
+			0x81, 0xa1, 'i', // outer: "i"
 			0x81,                   // inner fixmap 1
 			formatStr16, 0, 1, 'v', // str16 "v"
-			0x42,                   // 66
+			0x42, // 66
 		}
 		var o Outer
 		err := UnmarshalStruct(data, &o)
@@ -2338,10 +2338,10 @@ func TestDecodeStringKeyFormats(t *testing.T) {
 
 	t.Run("str32 key in nested", func(t *testing.T) {
 		data := []byte{
-			0x81, 0xa1, 'i',           // outer: "i"
-			0x81,                       // inner fixmap 1
+			0x81, 0xa1, 'i', // outer: "i"
+			0x81,                         // inner fixmap 1
 			formatStr32, 0, 0, 0, 1, 'v', // str32 "v"
-			0x42,                       // 66
+			0x42, // 66
 		}
 		var o Outer
 		err := UnmarshalStruct(data, &o)
@@ -2719,7 +2719,7 @@ func TestDecodeUnexpectedEOF(t *testing.T) {
 		{"truncated uint64", []byte{formatUint64, 0x00, 0x00, 0x00, 0x00}},
 		{"truncated string", []byte{0xa5, 'h', 'e'}}, // fixstr 5, only 2 bytes
 		{"truncated binary", []byte{formatBin8, 5, 1, 2}},
-		{"truncated array", []byte{0x92, 0x01}}, // fixarray 2, only 1 element
+		{"truncated array", []byte{0x92, 0x01}},    // fixarray 2, only 1 element
 		{"truncated map", []byte{0x81, 0xa1, 'k'}}, // fixmap 1, missing value
 	}
 
@@ -3903,12 +3903,12 @@ func TestReflectionDecodeIntoStructNonStringKey(t *testing.T) {
 
 	// Map with non-string key (int) in inner struct
 	data := []byte{
-		0x81, 0xa1, 'i',  // outer: "i"
-		0x82,              // inner fixmap 2
-		0x42,              // int key (non-string)
-		0x01,              // value
-		0xa1, 'v',         // string key "v"
-		0x42,              // value 66
+		0x81, 0xa1, 'i', // outer: "i"
+		0x82,      // inner fixmap 2
+		0x42,      // int key (non-string)
+		0x01,      // value
+		0xa1, 'v', // string key "v"
+		0x42, // value 66
 	}
 	var o Outer
 	err := UnmarshalStruct(data, &o)
@@ -4050,11 +4050,11 @@ func TestEncodeStructFields(t *testing.T) {
 // TestIsEmptyValue tests isEmptyValue for various types
 func TestIsEmptyValue(t *testing.T) {
 	type Data struct {
-		Slice  []int  `msgpack:"slice,omitempty"`
-		Map    map[string]int `msgpack:"map,omitempty"`
-		Ptr    *int   `msgpack:"ptr,omitempty"`
-		Array  [2]int `msgpack:"array,omitempty"`
-		Iface  any    `msgpack:"iface,omitempty"`
+		Slice []int          `msgpack:"slice,omitempty"`
+		Map   map[string]int `msgpack:"map,omitempty"`
+		Ptr   *int           `msgpack:"ptr,omitempty"`
+		Array [2]int         `msgpack:"array,omitempty"`
+		Iface any            `msgpack:"iface,omitempty"`
 	}
 
 	enc := GetStructEncoder[Data]()
@@ -4449,11 +4449,11 @@ func TestDecodeStructNonStringKeyComplex(t *testing.T) {
 
 	// Map with array key (non-string)
 	data := []byte{
-		0x82,          // fixmap 2
-		0x91, 0x01,    // array key [1]
-		0x42,          // value
-		0xa1, 'v',     // string key "v"
-		0x43,          // value 67
+		0x82,       // fixmap 2
+		0x91, 0x01, // array key [1]
+		0x42,      // value
+		0xa1, 'v', // string key "v"
+		0x43, // value 67
 	}
 	var d Data
 	err := UnmarshalStruct(data, &d)
@@ -5230,25 +5230,25 @@ func TestMarshalAppendSuccess(t *testing.T) {
 // TestIsEmptyValueAllKinds tests isEmptyValue for all kinds
 func TestIsEmptyValueAllKinds(t *testing.T) {
 	type TestStruct struct {
-		B   bool                   `msgpack:"b,omitempty"`
-		I   int                    `msgpack:"i,omitempty"`
-		I8  int8                   `msgpack:"i8,omitempty"`
-		I16 int16                  `msgpack:"i16,omitempty"`
-		I32 int32                  `msgpack:"i32,omitempty"`
-		I64 int64                  `msgpack:"i64,omitempty"`
-		U   uint                   `msgpack:"u,omitempty"`
-		U8  uint8                  `msgpack:"u8,omitempty"`
-		U16 uint16                 `msgpack:"u16,omitempty"`
-		U32 uint32                 `msgpack:"u32,omitempty"`
-		U64 uint64                 `msgpack:"u64,omitempty"`
-		F32 float32                `msgpack:"f32,omitempty"`
-		F64 float64                `msgpack:"f64,omitempty"`
-		S   string                 `msgpack:"s,omitempty"`
-		Sl  []string               `msgpack:"sl,omitempty"`
-		M   map[string]string      `msgpack:"m,omitempty"`
-		P   *int                   `msgpack:"p,omitempty"`
-		Ifc any                    `msgpack:"ifc,omitempty"`
-		Arr [2]int                 `msgpack:"arr,omitempty"`
+		B   bool              `msgpack:"b,omitempty"`
+		I   int               `msgpack:"i,omitempty"`
+		I8  int8              `msgpack:"i8,omitempty"`
+		I16 int16             `msgpack:"i16,omitempty"`
+		I32 int32             `msgpack:"i32,omitempty"`
+		I64 int64             `msgpack:"i64,omitempty"`
+		U   uint              `msgpack:"u,omitempty"`
+		U8  uint8             `msgpack:"u8,omitempty"`
+		U16 uint16            `msgpack:"u16,omitempty"`
+		U32 uint32            `msgpack:"u32,omitempty"`
+		U64 uint64            `msgpack:"u64,omitempty"`
+		F32 float32           `msgpack:"f32,omitempty"`
+		F64 float64           `msgpack:"f64,omitempty"`
+		S   string            `msgpack:"s,omitempty"`
+		Sl  []string          `msgpack:"sl,omitempty"`
+		M   map[string]string `msgpack:"m,omitempty"`
+		P   *int              `msgpack:"p,omitempty"`
+		Ifc any               `msgpack:"ifc,omitempty"`
+		Arr [2]int            `msgpack:"arr,omitempty"`
 	}
 
 	// Empty struct should have all fields omitted
@@ -6816,8 +6816,8 @@ func TestDecodeExtReadBytesError(t *testing.T) {
 	// ext8 with length but not enough data for ext data
 	enc := NewEncoder(64)
 	enc.writeByte(formatExt8)
-	enc.writeByte(10)  // length 10
-	enc.writeByte(1)   // type
+	enc.writeByte(10) // length 10
+	enc.writeByte(1)  // type
 	// Only provide 3 bytes instead of 10
 	enc.writeByte(1)
 	enc.writeByte(2)

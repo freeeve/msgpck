@@ -411,9 +411,9 @@ func TestMapInStruct(t *testing.T) {
 // BenchmarkDecodeMap benchmarks map decoding (the hot path)
 func BenchmarkDecodeMap(b *testing.B) {
 	data := map[string]any{
-		"name":  "Alice",
-		"age":   30,
-		"email": "alice@example.com",
+		"name":   "Alice",
+		"age":    30,
+		"email":  "alice@example.com",
 		"active": true,
 	}
 	encoded, _ := Marshal(data)
@@ -430,9 +430,9 @@ func BenchmarkDecodeMap(b *testing.B) {
 // BenchmarkDecodeMapAny benchmarks decoding to map[string]any
 func BenchmarkDecodeMapAny(b *testing.B) {
 	data := map[string]any{
-		"name":  "Alice",
-		"age":   30,
-		"email": "alice@example.com",
+		"name":   "Alice",
+		"age":    30,
+		"email":  "alice@example.com",
 		"active": true,
 	}
 	encoded, _ := Marshal(data)
@@ -449,9 +449,9 @@ func BenchmarkDecodeMapAny(b *testing.B) {
 // BenchmarkEncodeMap benchmarks map encoding
 func BenchmarkEncodeMap(b *testing.B) {
 	data := map[string]any{
-		"name":  "Alice",
-		"age":   30,
-		"email": "alice@example.com",
+		"name":   "Alice",
+		"age":    30,
+		"email":  "alice@example.com",
 		"active": true,
 	}
 
