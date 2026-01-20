@@ -10,6 +10,106 @@ func (d *Decoder) Decode() (Value, error) {
 	return d.decodeValue(format)
 }
 
+// decodeUintToValue decodes an unsigned integer value for uint8/16/32/64 formats.
+func (d *Decoder) decodeUintToValue(format byte) (Value, error) {
+	switch format {
+	case formatUint8:
+		v, err := d.readUint8()
+		if err != nil {
+			return Value{}, err
+		}
+		return Value{Type: TypeUint, Uint: uint64(v)}, nil
+	case formatUint16:
+		v, err := d.readUint16()
+		if err != nil {
+			return Value{}, err
+		}
+		return Value{Type: TypeUint, Uint: uint64(v)}, nil
+	case formatUint32:
+		v, err := d.readUint32()
+		if err != nil {
+			return Value{}, err
+		}
+		return Value{Type: TypeUint, Uint: uint64(v)}, nil
+	default: // formatUint64
+		v, err := d.readUint64()
+		if err != nil {
+			return Value{}, err
+		}
+		return Value{Type: TypeUint, Uint: v}, nil
+	}
+}
+
+// decodeIntToValue decodes a signed integer value for int8/16/32/64 formats.
+func (d *Decoder) decodeIntToValue(format byte) (Value, error) {
+	switch format {
+	case formatInt8:
+		v, err := d.readInt8()
+		if err != nil {
+			return Value{}, err
+		}
+		return Value{Type: TypeInt, Int: int64(v)}, nil
+	case formatInt16:
+		v, err := d.readInt16()
+		if err != nil {
+			return Value{}, err
+		}
+		return Value{Type: TypeInt, Int: int64(v)}, nil
+	case formatInt32:
+		v, err := d.readInt32()
+		if err != nil {
+			return Value{}, err
+		}
+		return Value{Type: TypeInt, Int: int64(v)}, nil
+	default: // formatInt64
+		v, err := d.readInt64()
+		if err != nil {
+			return Value{}, err
+		}
+		return Value{Type: TypeInt, Int: v}, nil
+	}
+}
+
+// decodeFloatToValue decodes a float value for float32/64 formats.
+func (d *Decoder) decodeFloatToValue(format byte) (Value, error) {
+	if format == formatFloat32 {
+		v, err := d.readFloat32()
+		if err != nil {
+			return Value{}, err
+		}
+		return Value{Type: TypeFloat32, Float32: v}, nil
+	}
+	v, err := d.readFloat64()
+	if err != nil {
+		return Value{}, err
+	}
+	return Value{Type: TypeFloat64, Float64: v}, nil
+}
+
+// decodeValueExtVar decodes a variable-length extension for ext8/16/32 formats.
+func (d *Decoder) decodeValueExtVar(format byte) (Value, error) {
+	switch format {
+	case formatExt8:
+		length, err := d.readUint8()
+		if err != nil {
+			return Value{}, err
+		}
+		return d.decodeExt(int(length))
+	case formatExt16:
+		length, err := d.readUint16()
+		if err != nil {
+			return Value{}, err
+		}
+		return d.decodeExt(int(length))
+	default: // formatExt32
+		length, err := d.readUint32()
+		if err != nil {
+			return Value{}, err
+		}
+		return d.decodeExt(int(length))
+	}
+}
+
 // decodeValue decodes a value given its format byte
 func (d *Decoder) decodeValue(format byte) (Value, error) {
 	// Positive fixint: 0xxxxxxx
@@ -38,90 +138,23 @@ func (d *Decoder) decodeValue(format byte) (Value, error) {
 	}
 
 	switch format {
-	// Nil
 	case formatNil:
 		return Value{Type: TypeNil}, nil
 
-	// Bool
 	case formatFalse:
 		return Value{Type: TypeBool, Bool: false}, nil
 	case formatTrue:
 		return Value{Type: TypeBool, Bool: true}, nil
 
-	// Unsigned integers
-	case formatUint8:
-		v, err := d.readUint8()
-		if err != nil {
-			return Value{}, err
-		}
-		return Value{Type: TypeUint, Uint: uint64(v)}, nil
+	case formatUint8, formatUint16, formatUint32, formatUint64:
+		return d.decodeUintToValue(format)
 
-	case formatUint16:
-		v, err := d.readUint16()
-		if err != nil {
-			return Value{}, err
-		}
-		return Value{Type: TypeUint, Uint: uint64(v)}, nil
+	case formatInt8, formatInt16, formatInt32, formatInt64:
+		return d.decodeIntToValue(format)
 
-	case formatUint32:
-		v, err := d.readUint32()
-		if err != nil {
-			return Value{}, err
-		}
-		return Value{Type: TypeUint, Uint: uint64(v)}, nil
+	case formatFloat32, formatFloat64:
+		return d.decodeFloatToValue(format)
 
-	case formatUint64:
-		v, err := d.readUint64()
-		if err != nil {
-			return Value{}, err
-		}
-		return Value{Type: TypeUint, Uint: v}, nil
-
-	// Signed integers
-	case formatInt8:
-		v, err := d.readInt8()
-		if err != nil {
-			return Value{}, err
-		}
-		return Value{Type: TypeInt, Int: int64(v)}, nil
-
-	case formatInt16:
-		v, err := d.readInt16()
-		if err != nil {
-			return Value{}, err
-		}
-		return Value{Type: TypeInt, Int: int64(v)}, nil
-
-	case formatInt32:
-		v, err := d.readInt32()
-		if err != nil {
-			return Value{}, err
-		}
-		return Value{Type: TypeInt, Int: int64(v)}, nil
-
-	case formatInt64:
-		v, err := d.readInt64()
-		if err != nil {
-			return Value{}, err
-		}
-		return Value{Type: TypeInt, Int: v}, nil
-
-	// Floats
-	case formatFloat32:
-		v, err := d.readFloat32()
-		if err != nil {
-			return Value{}, err
-		}
-		return Value{Type: TypeFloat32, Float32: v}, nil
-
-	case formatFloat64:
-		v, err := d.readFloat64()
-		if err != nil {
-			return Value{}, err
-		}
-		return Value{Type: TypeFloat64, Float64: v}, nil
-
-	// Strings
 	case formatStr8, formatStr16, formatStr32:
 		length, err := d.parseStringLenSwitch(format)
 		if err != nil {
@@ -129,7 +162,6 @@ func (d *Decoder) decodeValue(format byte) (Value, error) {
 		}
 		return d.decodeString(length)
 
-	// Binary
 	case formatBin8, formatBin16, formatBin32:
 		length, err := d.parseBinaryLen(format)
 		if err != nil {
@@ -137,7 +169,6 @@ func (d *Decoder) decodeValue(format byte) (Value, error) {
 		}
 		return d.decodeBinary(length)
 
-	// Arrays
 	case formatArray16, formatArray32:
 		length, err := d.parseArrayLenSwitch(format)
 		if err != nil {
@@ -145,7 +176,6 @@ func (d *Decoder) decodeValue(format byte) (Value, error) {
 		}
 		return d.decodeArray(length)
 
-	// Maps
 	case formatMap16, formatMap32:
 		length, err := d.parseMapLenSwitch(format)
 		if err != nil {
@@ -153,7 +183,6 @@ func (d *Decoder) decodeValue(format byte) (Value, error) {
 		}
 		return d.decodeMap(length)
 
-	// Fixed ext
 	case formatFixExt1:
 		return d.decodeExt(1)
 	case formatFixExt2:
@@ -165,27 +194,8 @@ func (d *Decoder) decodeValue(format byte) (Value, error) {
 	case formatFixExt16:
 		return d.decodeExt(16)
 
-	// Variable ext
-	case formatExt8:
-		length, err := d.readUint8()
-		if err != nil {
-			return Value{}, err
-		}
-		return d.decodeExt(int(length))
-
-	case formatExt16:
-		length, err := d.readUint16()
-		if err != nil {
-			return Value{}, err
-		}
-		return d.decodeExt(int(length))
-
-	case formatExt32:
-		length, err := d.readUint32()
-		if err != nil {
-			return Value{}, err
-		}
-		return d.decodeExt(int(length))
+	case formatExt8, formatExt16, formatExt32:
+		return d.decodeValueExtVar(format)
 
 	default:
 		return Value{}, ErrInvalidFormat
