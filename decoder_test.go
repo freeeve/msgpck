@@ -283,7 +283,7 @@ func TestDecodeUnexpectedEOF(t *testing.T) {
 			d := NewDecoder(tc.data)
 			_, err := d.DecodeAny()
 			if err != ErrUnexpectedEOF {
-				t.Errorf("%s: expected ErrUnexpectedEOF, got %v", tc.name, err)
+				t.Errorf(errMsgUnexpectedEOF, err)
 			}
 		})
 	}
@@ -368,7 +368,7 @@ func TestDecoderReadStringBytes(t *testing.T) {
 		d := NewDecoder(data)
 		_, err := d.readStringBytes()
 		if err != ErrUnexpectedEOF {
-			t.Error("expected ErrUnexpectedEOF")
+			t.Error(errMsgExpectedEOF)
 		}
 	})
 }
@@ -378,7 +378,7 @@ func TestDecoderPeekByteEOF(t *testing.T) {
 	d := NewDecoder(data)
 	_, err := d.peekByte()
 	if err != ErrUnexpectedEOF {
-		t.Error("expected ErrUnexpectedEOF")
+		t.Error(errMsgExpectedEOF)
 	}
 }
 
@@ -388,7 +388,7 @@ func TestDecoderReadFloatEOF(t *testing.T) {
 		d := NewDecoder(data)
 		_, err := d.readFloat32()
 		if err != ErrUnexpectedEOF {
-			t.Error("expected ErrUnexpectedEOF")
+			t.Error(errMsgExpectedEOF)
 		}
 	})
 
@@ -397,7 +397,7 @@ func TestDecoderReadFloatEOF(t *testing.T) {
 		d := NewDecoder(data)
 		_, err := d.readFloat64()
 		if err != ErrUnexpectedEOF {
-			t.Error("expected ErrUnexpectedEOF")
+			t.Error(errMsgExpectedEOF)
 		}
 	})
 }
@@ -1451,7 +1451,7 @@ func TestUnexpectedEOF(t *testing.T) {
 			d := NewDecoder(tt.data)
 			_, err := d.Decode()
 			if err != ErrUnexpectedEOF {
-				t.Errorf("expected ErrUnexpectedEOF, got %v", err)
+				t.Errorf(errMsgUnexpectedEOF, err)
 			}
 		})
 	}

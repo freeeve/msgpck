@@ -3,6 +3,7 @@ package msgpck
 // Test error message constants to avoid duplication
 const (
 	errMsgUnexpectedEOF = "expected ErrUnexpectedEOF, got %v"
+	errMsgExpectedEOF   = "expected ErrUnexpectedEOF"
 	errMsgEOFError      = "expected EOF error"
 	errMsgStringTooLong = "expected ErrStringTooLong, got %v"
 	errMsgTypeMismatch  = "expected ErrTypeMismatch, got %v"

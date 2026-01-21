@@ -213,7 +213,7 @@ func TestDecodeValueUnexpectedEOF(t *testing.T) {
 			d := NewDecoder(tc.data)
 			_, err := d.Decode()
 			if err != ErrUnexpectedEOF {
-				t.Errorf("%s: expected ErrUnexpectedEOF, got %v", tc.name, err)
+				t.Errorf(errMsgUnexpectedEOF, err)
 			}
 		})
 	}
