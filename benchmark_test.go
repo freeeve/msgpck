@@ -37,7 +37,7 @@ var (
 		"metadata": map[string]any{"role": "manager", "dept": "engineering"},
 	}
 	stringMap = map[string]string{
-		"name": "Alice", "email": "alice@example.com",
+		"name": "Alice", "email": testEmail,
 		"role": "admin", "dept": "engineering",
 	}
 )
@@ -292,7 +292,7 @@ func BenchmarkDecodeMap(b *testing.B) {
 	data := map[string]any{
 		"name":   "Alice",
 		"age":    30,
-		"email":  "alice@example.com",
+		"email":  testEmail,
 		"active": true,
 	}
 	encoded, _ := Marshal(data)
@@ -311,7 +311,7 @@ func BenchmarkDecodeMapAny(b *testing.B) {
 	data := map[string]any{
 		"name":   "Alice",
 		"age":    30,
-		"email":  "alice@example.com",
+		"email":  testEmail,
 		"active": true,
 	}
 	encoded, _ := Marshal(data)
@@ -330,7 +330,7 @@ func BenchmarkEncodeMap(b *testing.B) {
 	data := map[string]any{
 		"name":   "Alice",
 		"age":    30,
-		"email":  "alice@example.com",
+		"email":  testEmail,
 		"active": true,
 	}
 
@@ -354,7 +354,7 @@ func BenchmarkDecodeStruct(b *testing.B) {
 	data := Person{
 		Name:   "Alice",
 		Age:    30,
-		Email:  "alice@example.com",
+		Email:  testEmail,
 		Active: true,
 	}
 	encoded, _ := Marshal(data)
