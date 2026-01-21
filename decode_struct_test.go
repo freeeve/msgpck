@@ -3036,195 +3036,162 @@ func TestDecodeMapAnyStr32KeyFormat(t *testing.T) {
 	}
 }
 
-func TestStructRoundtripAllMsgpackTypes(t *testing.T) {
-	type Nested struct {
-		Value int    `msgpack:"value"`
-		Label string `msgpack:"label"`
-	}
-
-	type AllTypes struct {
-		// Integers - signed
+// TestStructRoundtripSignedInts tests roundtrip of signed integer types
+func TestStructRoundtripSignedInts(t *testing.T) {
+	type SignedInts struct {
 		I   int   `msgpack:"i"`
 		I64 int64 `msgpack:"i64"`
 		I32 int32 `msgpack:"i32"`
 		I16 int16 `msgpack:"i16"`
 		I8  int8  `msgpack:"i8"`
-		// Integers - unsigned
+	}
+
+	original := SignedInts{I: -1000000, I64: -9223372036854775807, I32: -2147483647, I16: -32767, I8: -127}
+	enc := GetStructEncoder[SignedInts]()
+	data, _ := enc.EncodeCopy(&original)
+
+	dec := GetStructDecoder[SignedInts](false)
+	var result SignedInts
+	err := dec.Decode(data, &result)
+	if err != nil {
+		t.Fatalf(errMsgDecodeFailed, err)
+	}
+	if result != original {
+		t.Errorf(errMsgGotWantStruct, result, original)
+	}
+}
+
+// TestStructRoundtripUnsignedInts tests roundtrip of unsigned integer types
+func TestStructRoundtripUnsignedInts(t *testing.T) {
+	type UnsignedInts struct {
 		U   uint   `msgpack:"u"`
 		U64 uint64 `msgpack:"u64"`
 		U32 uint32 `msgpack:"u32"`
 		U16 uint16 `msgpack:"u16"`
 		U8  uint8  `msgpack:"u8"`
-		// Floats
-		F64 float64 `msgpack:"f64"`
-		F32 float32 `msgpack:"f32"`
-		// Bool
-		BoolTrue  bool `msgpack:"bool_true"`
-		BoolFalse bool `msgpack:"bool_false"`
-		// String
-		Str      string `msgpack:"str"`
-		StrEmpty string `msgpack:"str_empty"`
-		// Binary
-		Bin      []byte `msgpack:"bin"`
-		BinEmpty []byte `msgpack:"bin_empty"`
-		// String slice
-		StrSlice      []string `msgpack:"str_slice"`
-		StrSliceEmpty []string `msgpack:"str_slice_empty"`
-		// String map
-		StrMap      map[string]string `msgpack:"str_map"`
-		StrMapEmpty map[string]string `msgpack:"str_map_empty"`
-		// Nested struct
-		Nested Nested `msgpack:"nested"`
 	}
 
-	original := AllTypes{
-		// Integers - signed (test various ranges)
-		I:   -1000000,
-		I64: -9223372036854775807,
-		I32: -2147483647,
-		I16: -32767,
-		I8:  -127,
-		// Integers - unsigned (test max values)
-		U:   1000000,
-		U64: 18446744073709551615,
-		U32: 4294967295,
-		U16: 65535,
-		U8:  255,
-		// Floats
-		F64: 3.141592653589793,
-		F32: 2.7182817,
-		// Bool
-		BoolTrue:  true,
-		BoolFalse: false,
-		// String
-		Str:      "hello, 世界! 🎉",
-		StrEmpty: "",
-		// Binary
-		Bin:      []byte{0x00, 0x01, 0x02, 0xff, 0xfe},
-		BinEmpty: []byte{},
-		// String slice
-		StrSlice:      []string{"one", "two", "three"},
-		StrSliceEmpty: []string{},
-		// String map
-		StrMap:      map[string]string{"key1": "value1", "key2": "value2"},
-		StrMapEmpty: map[string]string{},
-		// Nested struct
-		Nested: Nested{Value: 42, Label: "nested"},
-	}
+	original := UnsignedInts{U: 1000000, U64: 18446744073709551615, U32: 4294967295, U16: 65535, U8: 255}
+	enc := GetStructEncoder[UnsignedInts]()
+	data, _ := enc.EncodeCopy(&original)
 
-	enc := GetStructEncoder[AllTypes]()
-	data, err := enc.EncodeCopy(&original)
-	if err != nil {
-		t.Fatalf("encode failed: %v", err)
-	}
-
-	dec := GetStructDecoder[AllTypes](false)
-	var result AllTypes
-	err = dec.Decode(data, &result)
+	dec := GetStructDecoder[UnsignedInts](false)
+	var result UnsignedInts
+	err := dec.Decode(data, &result)
 	if err != nil {
 		t.Fatalf(errMsgDecodeFailed, err)
 	}
+	if result != original {
+		t.Errorf(errMsgGotWantStruct, result, original)
+	}
+}
 
-	// Verify integers - signed
-	if result.I != original.I {
-		t.Errorf("I: got %d, want %d", result.I, original.I)
-	}
-	if result.I64 != original.I64 {
-		t.Errorf("I64: got %d, want %d", result.I64, original.I64)
-	}
-	if result.I32 != original.I32 {
-		t.Errorf("I32: got %d, want %d", result.I32, original.I32)
-	}
-	if result.I16 != original.I16 {
-		t.Errorf("I16: got %d, want %d", result.I16, original.I16)
-	}
-	if result.I8 != original.I8 {
-		t.Errorf("I8: got %d, want %d", result.I8, original.I8)
+// TestStructRoundtripFloatsAndBools tests roundtrip of float and bool types
+func TestStructRoundtripFloatsAndBools(t *testing.T) {
+	type FloatsAndBools struct {
+		F64       float64 `msgpack:"f64"`
+		F32       float32 `msgpack:"f32"`
+		BoolTrue  bool    `msgpack:"bool_true"`
+		BoolFalse bool    `msgpack:"bool_false"`
 	}
 
-	// Verify integers - unsigned
-	if result.U != original.U {
-		t.Errorf("U: got %d, want %d", result.U, original.U)
+	original := FloatsAndBools{F64: 3.141592653589793, F32: 2.7182817, BoolTrue: true, BoolFalse: false}
+	enc := GetStructEncoder[FloatsAndBools]()
+	data, _ := enc.EncodeCopy(&original)
+
+	dec := GetStructDecoder[FloatsAndBools](false)
+	var result FloatsAndBools
+	err := dec.Decode(data, &result)
+	if err != nil {
+		t.Fatalf(errMsgDecodeFailed, err)
 	}
-	if result.U64 != original.U64 {
-		t.Errorf("U64: got %d, want %d", result.U64, original.U64)
+	if result != original {
+		t.Errorf(errMsgGotWantStruct, result, original)
 	}
-	if result.U32 != original.U32 {
-		t.Errorf("U32: got %d, want %d", result.U32, original.U32)
-	}
-	if result.U16 != original.U16 {
-		t.Errorf("U16: got %d, want %d", result.U16, original.U16)
-	}
-	if result.U8 != original.U8 {
-		t.Errorf("U8: got %d, want %d", result.U8, original.U8)
+}
+
+// TestStructRoundtripStringsAndBinary tests roundtrip of string and binary types
+func TestStructRoundtripStringsAndBinary(t *testing.T) {
+	type StringsAndBinary struct {
+		Str      string `msgpack:"str"`
+		StrEmpty string `msgpack:"str_empty"`
+		Bin      []byte `msgpack:"bin"`
+		BinEmpty []byte `msgpack:"bin_empty"`
 	}
 
-	// Verify floats
-	if result.F64 != original.F64 {
-		t.Errorf("F64: got %v, want %v", result.F64, original.F64)
+	original := StringsAndBinary{
+		Str: "hello, 世界! 🎉", StrEmpty: "",
+		Bin: []byte{0x00, 0x01, 0x02, 0xff, 0xfe}, BinEmpty: []byte{},
 	}
-	if result.F32 != original.F32 {
-		t.Errorf("F32: got %v, want %v", result.F32, original.F32)
+	enc := GetStructEncoder[StringsAndBinary]()
+	data, _ := enc.EncodeCopy(&original)
+
+	dec := GetStructDecoder[StringsAndBinary](false)
+	var result StringsAndBinary
+	err := dec.Decode(data, &result)
+	if err != nil {
+		t.Fatalf(errMsgDecodeFailed, err)
+	}
+	if result.Str != original.Str || result.StrEmpty != original.StrEmpty {
+		t.Errorf("string mismatch")
+	}
+	if !bytes.Equal(result.Bin, original.Bin) || !bytes.Equal(result.BinEmpty, original.BinEmpty) {
+		t.Errorf("binary mismatch")
+	}
+}
+
+// TestStructRoundtripCollections tests roundtrip of slice and map types
+func TestStructRoundtripCollections(t *testing.T) {
+	type Collections struct {
+		StrSlice      []string          `msgpack:"str_slice"`
+		StrSliceEmpty []string          `msgpack:"str_slice_empty"`
+		StrMap        map[string]string `msgpack:"str_map"`
+		StrMapEmpty   map[string]string `msgpack:"str_map_empty"`
 	}
 
-	// Verify bools
-	if result.BoolTrue != original.BoolTrue {
-		t.Errorf("BoolTrue: got %v, want %v", result.BoolTrue, original.BoolTrue)
+	original := Collections{
+		StrSlice: []string{"one", "two", "three"}, StrSliceEmpty: []string{},
+		StrMap: map[string]string{"key1": "value1", "key2": "value2"}, StrMapEmpty: map[string]string{},
 	}
-	if result.BoolFalse != original.BoolFalse {
-		t.Errorf("BoolFalse: got %v, want %v", result.BoolFalse, original.BoolFalse)
+	enc := GetStructEncoder[Collections]()
+	data, _ := enc.EncodeCopy(&original)
+
+	dec := GetStructDecoder[Collections](false)
+	var result Collections
+	err := dec.Decode(data, &result)
+	if err != nil {
+		t.Fatalf(errMsgDecodeFailed, err)
+	}
+	if !reflect.DeepEqual(result.StrSlice, original.StrSlice) {
+		t.Errorf("StrSlice mismatch")
+	}
+	if !reflect.DeepEqual(result.StrMap, original.StrMap) {
+		t.Errorf("StrMap mismatch")
+	}
+}
+
+// TestStructRoundtripNested tests roundtrip of nested struct types
+func TestStructRoundtripNested(t *testing.T) {
+	type Nested struct {
+		Value int    `msgpack:"value"`
+		Label string `msgpack:"label"`
+	}
+	type WithNested struct {
+		Nested Nested `msgpack:"nested"`
 	}
 
-	// Verify strings
-	if result.Str != original.Str {
-		t.Errorf("Str: got %q, want %q", result.Str, original.Str)
-	}
-	if result.StrEmpty != original.StrEmpty {
-		t.Errorf("StrEmpty: got %q, want %q", result.StrEmpty, original.StrEmpty)
-	}
+	original := WithNested{Nested: Nested{Value: 42, Label: "nested"}}
+	enc := GetStructEncoder[WithNested]()
+	data, _ := enc.EncodeCopy(&original)
 
-	// Verify binary
-	if !bytes.Equal(result.Bin, original.Bin) {
-		t.Errorf("Bin: got %v, want %v", result.Bin, original.Bin)
+	dec := GetStructDecoder[WithNested](false)
+	var result WithNested
+	err := dec.Decode(data, &result)
+	if err != nil {
+		t.Fatalf(errMsgDecodeFailed, err)
 	}
-	if !bytes.Equal(result.BinEmpty, original.BinEmpty) {
-		t.Errorf("BinEmpty: got %v, want %v", result.BinEmpty, original.BinEmpty)
-	}
-
-	// Verify string slice
-	if len(result.StrSlice) != len(original.StrSlice) {
-		t.Errorf("StrSlice length: got %d, want %d", len(result.StrSlice), len(original.StrSlice))
-	} else {
-		for i, v := range original.StrSlice {
-			if result.StrSlice[i] != v {
-				t.Errorf("StrSlice[%d]: got %q, want %q", i, result.StrSlice[i], v)
-			}
-		}
-	}
-	if len(result.StrSliceEmpty) != 0 {
-		t.Errorf("StrSliceEmpty: got %v, want empty", result.StrSliceEmpty)
-	}
-
-	// Verify string map
-	if len(result.StrMap) != len(original.StrMap) {
-		t.Errorf("StrMap length: got %d, want %d", len(result.StrMap), len(original.StrMap))
-	} else {
-		for k, v := range original.StrMap {
-			if result.StrMap[k] != v {
-				t.Errorf("StrMap[%q]: got %q, want %q", k, result.StrMap[k], v)
-			}
-		}
-	}
-	if len(result.StrMapEmpty) != 0 {
-		t.Errorf("StrMapEmpty: got %v, want empty", result.StrMapEmpty)
-	}
-
-	// Verify nested struct
-	if result.Nested.Value != original.Nested.Value {
-		t.Errorf("Nested.Value: got %d, want %d", result.Nested.Value, original.Nested.Value)
-	}
-	if result.Nested.Label != original.Nested.Label {
-		t.Errorf("Nested.Label: got %q, want %q", result.Nested.Label, original.Nested.Label)
+	if result != original {
+		t.Errorf(errMsgGotWantStruct, result, original)
 	}
 }
 
