@@ -138,8 +138,8 @@ func TestTypeString(t *testing.T) {
 	}
 }
 
-// TestAllFormats tests encoding and decoding of all msgpack formats
-func TestAllFormats(t *testing.T) {
+// TestFormatNilAndBool tests nil and boolean formats
+func TestFormatNilAndBool(t *testing.T) {
 	t.Run("nil", func(t *testing.T) {
 		data := []byte{formatNil}
 		d := NewDecoder(data)
@@ -149,21 +149,25 @@ func TestAllFormats(t *testing.T) {
 		}
 	})
 
-	t.Run("bool", func(t *testing.T) {
-		// false
+	t.Run("false", func(t *testing.T) {
 		d := NewDecoder([]byte{formatFalse})
 		v, _ := d.Decode()
 		if v.Type != TypeBool || v.Bool != false {
 			t.Error("false decode failed")
 		}
-		// true
-		d.Reset([]byte{formatTrue})
-		v, _ = d.Decode()
+	})
+
+	t.Run("true", func(t *testing.T) {
+		d := NewDecoder([]byte{formatTrue})
+		v, _ := d.Decode()
 		if v.Type != TypeBool || v.Bool != true {
 			t.Error("true decode failed")
 		}
 	})
+}
 
+// TestFormatFixints tests positive and negative fixint formats
+func TestFormatFixints(t *testing.T) {
 	t.Run("positive fixint", func(t *testing.T) {
 		for i := 0; i <= 127; i++ {
 			d := NewDecoder([]byte{byte(i)})
@@ -183,7 +187,10 @@ func TestAllFormats(t *testing.T) {
 			}
 		}
 	})
+}
 
+// TestFormatUnsignedInts tests uint8-64 formats
+func TestFormatUnsignedInts(t *testing.T) {
 	t.Run("uint8", func(t *testing.T) {
 		d := NewDecoder([]byte{formatUint8, 200})
 		v, _ := d.Decode()
@@ -215,7 +222,10 @@ func TestAllFormats(t *testing.T) {
 			t.Error("uint64 failed")
 		}
 	})
+}
 
+// TestFormatSignedInts tests int8-64 formats
+func TestFormatSignedInts(t *testing.T) {
 	t.Run("int8", func(t *testing.T) {
 		d := NewDecoder([]byte{formatInt8, 0x80}) // -128
 		v, _ := d.Decode()
@@ -247,7 +257,10 @@ func TestAllFormats(t *testing.T) {
 			t.Error("int64 failed")
 		}
 	})
+}
 
+// TestFormatFloats tests float32 and float64 formats
+func TestFormatFloats(t *testing.T) {
 	t.Run("float32", func(t *testing.T) {
 		d := NewDecoder([]byte{formatFloat32, 0x40, 0x48, 0xf5, 0xc3})
 		v, _ := d.Decode()
@@ -263,7 +276,10 @@ func TestAllFormats(t *testing.T) {
 			t.Errorf("float64 failed: %v", v.Float64)
 		}
 	})
+}
 
+// TestFormatStrings tests string formats
+func TestFormatStrings(t *testing.T) {
 	t.Run("fixstr", func(t *testing.T) {
 		data := append([]byte{0xa5}, []byte("hello")...)
 		d := NewDecoder(data)
@@ -292,7 +308,10 @@ func TestAllFormats(t *testing.T) {
 			t.Error("str16 failed")
 		}
 	})
+}
 
+// TestFormatBinary tests binary formats
+func TestFormatBinary(t *testing.T) {
 	t.Run("bin8", func(t *testing.T) {
 		bin := []byte{1, 2, 3, 4, 5}
 		data := append([]byte{formatBin8, 5}, bin...)
@@ -322,7 +341,10 @@ func TestAllFormats(t *testing.T) {
 			t.Error("bin32 failed")
 		}
 	})
+}
 
+// TestFormatArrays tests array formats
+func TestFormatArrays(t *testing.T) {
 	t.Run("fixarray", func(t *testing.T) {
 		data := []byte{0x93, 0x01, 0x02, 0x03}
 		d := NewDecoder(data)
@@ -344,7 +366,10 @@ func TestAllFormats(t *testing.T) {
 			t.Error("array16 failed")
 		}
 	})
+}
 
+// TestFormatMaps tests map formats
+func TestFormatMaps(t *testing.T) {
 	t.Run("fixmap", func(t *testing.T) {
 		data := []byte{0x82, 0xa1, 'a', 0x01, 0xa1, 'b', 0x02}
 		d := NewDecoder(data)
@@ -367,25 +392,52 @@ func TestAllFormats(t *testing.T) {
 			t.Error("map16 failed")
 		}
 	})
+}
 
-	t.Run("fixext", func(t *testing.T) {
-		cases := []struct {
-			format byte
-			size   int
-		}{
-			{formatFixExt1, 1},
-			{formatFixExt2, 2},
-			{formatFixExt4, 4},
-			{formatFixExt8, 8},
-			{formatFixExt16, 16},
+// TestFormatExtensions tests extension formats
+func TestFormatExtensions(t *testing.T) {
+	t.Run("fixext1", func(t *testing.T) {
+		data := append([]byte{formatFixExt1, 0x42}, make([]byte, 1)...)
+		d := NewDecoder(data)
+		v, err := d.Decode()
+		if err != nil || v.Type != TypeExt || v.Ext.Type != 0x42 || len(v.Ext.Data) != 1 {
+			t.Error("fixext1 failed")
 		}
-		for _, c := range cases {
-			data := append([]byte{c.format, 0x42}, make([]byte, c.size)...)
-			d := NewDecoder(data)
-			v, err := d.Decode()
-			if err != nil || v.Type != TypeExt || v.Ext.Type != 0x42 || len(v.Ext.Data) != c.size {
-				t.Errorf("fixext%d failed", c.size)
-			}
+	})
+
+	t.Run("fixext2", func(t *testing.T) {
+		data := append([]byte{formatFixExt2, 0x42}, make([]byte, 2)...)
+		d := NewDecoder(data)
+		v, err := d.Decode()
+		if err != nil || v.Type != TypeExt || v.Ext.Type != 0x42 || len(v.Ext.Data) != 2 {
+			t.Error("fixext2 failed")
+		}
+	})
+
+	t.Run("fixext4", func(t *testing.T) {
+		data := append([]byte{formatFixExt4, 0x42}, make([]byte, 4)...)
+		d := NewDecoder(data)
+		v, err := d.Decode()
+		if err != nil || v.Type != TypeExt || v.Ext.Type != 0x42 || len(v.Ext.Data) != 4 {
+			t.Error("fixext4 failed")
+		}
+	})
+
+	t.Run("fixext8", func(t *testing.T) {
+		data := append([]byte{formatFixExt8, 0x42}, make([]byte, 8)...)
+		d := NewDecoder(data)
+		v, err := d.Decode()
+		if err != nil || v.Type != TypeExt || v.Ext.Type != 0x42 || len(v.Ext.Data) != 8 {
+			t.Error("fixext8 failed")
+		}
+	})
+
+	t.Run("fixext16", func(t *testing.T) {
+		data := append([]byte{formatFixExt16, 0x42}, make([]byte, 16)...)
+		d := NewDecoder(data)
+		v, err := d.Decode()
+		if err != nil || v.Type != TypeExt || v.Ext.Type != 0x42 || len(v.Ext.Data) != 16 {
+			t.Error("fixext16 failed")
 		}
 	})
 

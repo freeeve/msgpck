@@ -96,132 +96,138 @@ func TestEncoderArrayHeader(t *testing.T) {
 	}
 }
 
-// TestEncoderAllFormats tests encoding produces correct formats
-func TestEncoderAllFormats(t *testing.T) {
-	t.Run("integers", func(t *testing.T) {
-		tests := []struct {
-			val    int64
-			expect byte
-		}{
-			{0, 0x00},
-			{127, 0x7f},
-			{-1, 0xff},
-			{-32, 0xe0},
-			{-33, formatInt8},
-			{128, formatUint8},
-			{256, formatUint16},
-			{65536, formatUint32},
-			{-129, formatInt16},
-			{-32769, formatInt32},
+// TestEncoderIntFormats tests integer encoding formats
+func TestEncoderIntFormats(t *testing.T) {
+	tests := []struct {
+		val    int64
+		expect byte
+	}{
+		{0, 0x00},
+		{127, 0x7f},
+		{-1, 0xff},
+		{-32, 0xe0},
+		{-33, formatInt8},
+		{128, formatUint8},
+		{256, formatUint16},
+		{65536, formatUint32},
+		{-129, formatInt16},
+		{-32769, formatInt32},
+	}
+	for _, tc := range tests {
+		e := NewEncoder(16)
+		e.EncodeInt(tc.val)
+		if e.Bytes()[0] != tc.expect {
+			t.Errorf("EncodeInt(%d): got format 0x%x, want 0x%x", tc.val, e.Bytes()[0], tc.expect)
 		}
-		for _, tc := range tests {
-			e := NewEncoder(16)
-			e.EncodeInt(tc.val)
-			if e.Bytes()[0] != tc.expect {
-				t.Errorf("EncodeInt(%d): got format 0x%x, want 0x%x", tc.val, e.Bytes()[0], tc.expect)
-			}
-		}
-	})
+	}
+}
 
-	t.Run("unsigned integers", func(t *testing.T) {
-		tests := []struct {
-			val    uint64
-			expect byte
-		}{
-			{0, 0x00},
-			{127, 0x7f},
-			{128, formatUint8},
-			{256, formatUint16},
-			{65536, formatUint32},
-			{1 << 32, formatUint64},
+// TestEncoderUintFormats tests unsigned integer encoding formats
+func TestEncoderUintFormats(t *testing.T) {
+	tests := []struct {
+		val    uint64
+		expect byte
+	}{
+		{0, 0x00},
+		{127, 0x7f},
+		{128, formatUint8},
+		{256, formatUint16},
+		{65536, formatUint32},
+		{1 << 32, formatUint64},
+	}
+	for _, tc := range tests {
+		e := NewEncoder(16)
+		e.EncodeUint(tc.val)
+		if e.Bytes()[0] != tc.expect {
+			t.Errorf("EncodeUint(%d): got format 0x%x, want 0x%x", tc.val, e.Bytes()[0], tc.expect)
 		}
-		for _, tc := range tests {
-			e := NewEncoder(16)
-			e.EncodeUint(tc.val)
-			if e.Bytes()[0] != tc.expect {
-				t.Errorf("EncodeUint(%d): got format 0x%x, want 0x%x", tc.val, e.Bytes()[0], tc.expect)
-			}
-		}
-	})
+	}
+}
 
-	t.Run("strings", func(t *testing.T) {
-		tests := []struct {
-			len    int
-			expect byte
-		}{
-			{0, 0xa0},
-			{31, 0xbf},
-			{32, formatStr8},
-			{255, formatStr8},
-			{256, formatStr16},
-			{65535, formatStr16},
+// TestEncoderStringFormatsTable tests string encoding formats with table-driven tests
+func TestEncoderStringFormatsTable(t *testing.T) {
+	tests := []struct {
+		len    int
+		expect byte
+	}{
+		{0, 0xa0},
+		{31, 0xbf},
+		{32, formatStr8},
+		{255, formatStr8},
+		{256, formatStr16},
+		{65535, formatStr16},
+	}
+	for _, tc := range tests {
+		e := NewEncoder(tc.len + 10)
+		e.EncodeString(string(make([]byte, tc.len)))
+		if e.Bytes()[0] != tc.expect {
+			t.Errorf("EncodeString(len=%d): got format 0x%x, want 0x%x", tc.len, e.Bytes()[0], tc.expect)
 		}
-		for _, tc := range tests {
-			e := NewEncoder(tc.len + 10)
-			e.EncodeString(string(make([]byte, tc.len)))
-			if e.Bytes()[0] != tc.expect {
-				t.Errorf("EncodeString(len=%d): got format 0x%x, want 0x%x", tc.len, e.Bytes()[0], tc.expect)
-			}
-		}
-	})
+	}
+}
 
-	t.Run("binary", func(t *testing.T) {
-		tests := []struct {
-			len    int
-			expect byte
-		}{
-			{0, formatBin8},
-			{255, formatBin8},
-			{256, formatBin16},
-			{65535, formatBin16},
+// TestEncoderBinaryFormatsTable tests binary encoding formats with table-driven tests
+func TestEncoderBinaryFormatsTable(t *testing.T) {
+	tests := []struct {
+		len    int
+		expect byte
+	}{
+		{0, formatBin8},
+		{255, formatBin8},
+		{256, formatBin16},
+		{65535, formatBin16},
+	}
+	for _, tc := range tests {
+		e := NewEncoder(tc.len + 10)
+		e.EncodeBinary(make([]byte, tc.len))
+		if e.Bytes()[0] != tc.expect {
+			t.Errorf("EncodeBinary(len=%d): got format 0x%x, want 0x%x", tc.len, e.Bytes()[0], tc.expect)
 		}
-		for _, tc := range tests {
-			e := NewEncoder(tc.len + 10)
-			e.EncodeBinary(make([]byte, tc.len))
-			if e.Bytes()[0] != tc.expect {
-				t.Errorf("EncodeBinary(len=%d): got format 0x%x, want 0x%x", tc.len, e.Bytes()[0], tc.expect)
-			}
-		}
-	})
+	}
+}
 
-	t.Run("arrays", func(t *testing.T) {
-		tests := []struct {
-			len    int
-			expect byte
-		}{
-			{0, 0x90},
-			{15, 0x9f},
-			{16, formatArray16},
-			{65535, formatArray16},
+// TestEncoderArrayFormatsTable tests array header encoding formats
+func TestEncoderArrayFormatsTable(t *testing.T) {
+	tests := []struct {
+		len    int
+		expect byte
+	}{
+		{0, 0x90},
+		{15, 0x9f},
+		{16, formatArray16},
+		{65535, formatArray16},
+	}
+	for _, tc := range tests {
+		e := NewEncoder(16)
+		e.EncodeArrayHeader(tc.len)
+		if e.Bytes()[0] != tc.expect {
+			t.Errorf("EncodeArrayHeader(%d): got format 0x%x, want 0x%x", tc.len, e.Bytes()[0], tc.expect)
 		}
-		for _, tc := range tests {
-			e := NewEncoder(16)
-			e.EncodeArrayHeader(tc.len)
-			if e.Bytes()[0] != tc.expect {
-				t.Errorf("EncodeArrayHeader(%d): got format 0x%x, want 0x%x", tc.len, e.Bytes()[0], tc.expect)
-			}
-		}
-	})
+	}
+}
 
-	t.Run("maps", func(t *testing.T) {
-		tests := []struct {
-			len    int
-			expect byte
-		}{
-			{0, 0x80},
-			{15, 0x8f},
-			{16, formatMap16},
-			{65535, formatMap16},
+// TestEncoderMapFormatsTable tests map header encoding formats
+func TestEncoderMapFormatsTable(t *testing.T) {
+	tests := []struct {
+		len    int
+		expect byte
+	}{
+		{0, 0x80},
+		{15, 0x8f},
+		{16, formatMap16},
+		{65535, formatMap16},
+	}
+	for _, tc := range tests {
+		e := NewEncoder(16)
+		e.EncodeMapHeader(tc.len)
+		if e.Bytes()[0] != tc.expect {
+			t.Errorf("EncodeMapHeader(%d): got format 0x%x, want 0x%x", tc.len, e.Bytes()[0], tc.expect)
 		}
-		for _, tc := range tests {
-			e := NewEncoder(16)
-			e.EncodeMapHeader(tc.len)
-			if e.Bytes()[0] != tc.expect {
-				t.Errorf("EncodeMapHeader(%d): got format 0x%x, want 0x%x", tc.len, e.Bytes()[0], tc.expect)
-			}
-		}
-	})
+	}
+}
 
+// TestEncoderFloatFormats tests float encoding formats
+func TestEncoderFloatFormats(t *testing.T) {
 	t.Run("float32", func(t *testing.T) {
 		e := NewEncoder(16)
 		e.EncodeFloat32(3.14)

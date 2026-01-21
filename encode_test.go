@@ -458,8 +458,8 @@ func TestMarshalVariants(t *testing.T) {
 	})
 }
 
-// TestEncodeVariousTypes tests encoding of various Go types
-func TestEncodeVariousTypes(t *testing.T) {
+// TestEncodeCollectionTypes tests encoding of arrays, slices, and maps
+func TestEncodeCollectionTypes(t *testing.T) {
 	t.Run("array", func(t *testing.T) {
 		arr := [3]int{1, 2, 3}
 		b, err := Marshal(arr)
@@ -498,7 +498,10 @@ func TestEncodeVariousTypes(t *testing.T) {
 			t.Error("map encode failed")
 		}
 	})
+}
 
+// TestEncodePointerTypes tests encoding of pointer types
+func TestEncodePointerTypes(t *testing.T) {
 	t.Run("pointer", func(t *testing.T) {
 		val := 42
 		ptr := &val
@@ -523,7 +526,10 @@ func TestEncodeVariousTypes(t *testing.T) {
 			t.Error("nil pointer encode failed")
 		}
 	})
+}
 
+// TestEncodeNilTypes tests encoding of nil slices and maps
+func TestEncodeNilTypes(t *testing.T) {
 	t.Run("nil slice", func(t *testing.T) {
 		var s []int
 		b, err := Marshal(s)
