@@ -28,7 +28,7 @@ func TestDecodeValuePaths(t *testing.T) {
 			var d Data
 			err := UnmarshalStruct(f.data, &d)
 			if err != nil {
-				t.Errorf("%s: %v", f.name, err)
+				t.Errorf(errMsgFmtSV, f.name, err)
 			}
 		}
 	})
@@ -49,7 +49,7 @@ func TestDecodeValuePaths(t *testing.T) {
 			var d Data
 			err := UnmarshalStruct(f.data, &d)
 			if err != nil {
-				t.Errorf("%s: %v", f.name, err)
+				t.Errorf(errMsgFmtSV, f.name, err)
 			}
 		}
 	})
@@ -270,7 +270,7 @@ func TestDecodeValueAllFormats(t *testing.T) {
 			d := NewDecoder(tc.data)
 			v, err := d.Decode()
 			if err != nil {
-				t.Errorf("%s: %v", tc.name, err)
+				t.Errorf(errMsgFmtSV, tc.name, err)
 			}
 			if v.Type == TypeNil {
 				t.Errorf("%s: unexpected nil", tc.name)

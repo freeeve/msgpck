@@ -386,7 +386,7 @@ func TestEncodeValueNilMap(t *testing.T) {
 		t.Fatal(err)
 	}
 	if b[0] != formatNil {
-		t.Errorf("expected nil format, got 0x%02x", b[0])
+		t.Errorf(errMsgNilFmt, b[0])
 	}
 }
 
@@ -397,7 +397,7 @@ func TestEncodeValueNilSlice(t *testing.T) {
 		t.Fatal(err)
 	}
 	if b[0] != formatNil {
-		t.Errorf("expected nil format, got 0x%02x", b[0])
+		t.Errorf(errMsgNilFmt, b[0])
 	}
 }
 
@@ -408,7 +408,7 @@ func TestEncodeValueNilPointer(t *testing.T) {
 		t.Fatal(err)
 	}
 	if b[0] != formatNil {
-		t.Errorf("expected nil format, got 0x%02x", b[0])
+		t.Errorf(errMsgNilFmt, b[0])
 	}
 }
 
@@ -586,12 +586,12 @@ func TestRoundTripPrimitives(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			encoded, err := Marshal(tt.value)
 			if err != nil {
-				t.Fatalf("Marshal failed: %v", err)
+				t.Fatalf(errMsgMarshalFailed, err)
 			}
 
 			decoded, err := Unmarshal(encoded)
 			if err != nil {
-				t.Fatalf("Unmarshal failed: %v", err)
+				t.Fatalf(errMsgUnmarshalFailed, err)
 			}
 
 			if !reflect.DeepEqual(decoded, tt.value) {
@@ -623,16 +623,16 @@ func TestRoundTripContainers(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			encoded, err := Marshal(tt.value)
 			if err != nil {
-				t.Fatalf("Marshal failed: %v", err)
+				t.Fatalf(errMsgMarshalFailed, err)
 			}
 
 			decoded, err := Unmarshal(encoded)
 			if err != nil {
-				t.Fatalf("Unmarshal failed: %v", err)
+				t.Fatalf(errMsgUnmarshalFailed, err)
 			}
 
 			if !reflect.DeepEqual(decoded, tt.value) {
-				t.Errorf("got %v, want %v", decoded, tt.value)
+				t.Errorf(errMsgGotWant, decoded, tt.value)
 			}
 		})
 	}
@@ -643,16 +643,16 @@ func TestBinaryData(t *testing.T) {
 	original := []byte{0x00, 0x01, 0x02, 0xff, 0xfe}
 	encoded, err := Marshal(original)
 	if err != nil {
-		t.Fatalf("Marshal failed: %v", err)
+		t.Fatalf(errMsgMarshalFailed, err)
 	}
 
 	decoded, err := Unmarshal(encoded)
 	if err != nil {
-		t.Fatalf("Unmarshal failed: %v", err)
+		t.Fatalf(errMsgUnmarshalFailed, err)
 	}
 
 	if !bytes.Equal(decoded.([]byte), original) {
-		t.Errorf("got %v, want %v", decoded, original)
+		t.Errorf(errMsgGotWant, decoded, original)
 	}
 }
 
@@ -673,12 +673,12 @@ func TestFloatSpecialValues(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			encoded, err := Marshal(tt.value)
 			if err != nil {
-				t.Fatalf("Marshal failed: %v", err)
+				t.Fatalf(errMsgMarshalFailed, err)
 			}
 
 			decoded, err := Unmarshal(encoded)
 			if err != nil {
-				t.Fatalf("Unmarshal failed: %v", err)
+				t.Fatalf(errMsgUnmarshalFailed, err)
 			}
 
 			got := decoded.(float64)

@@ -400,7 +400,7 @@ func TestReflectionDecodeValueUint(t *testing.T) {
 			var d Data
 			err := UnmarshalStruct(f.data, &d)
 			if err != nil {
-				t.Errorf("%s: %v", f.name, err)
+				t.Errorf(errMsgFmtSV, f.name, err)
 			}
 		})
 	}
@@ -432,7 +432,7 @@ func TestReflectionDecodeValueFloat(t *testing.T) {
 			var d Data
 			err := UnmarshalStruct(f.data, &d)
 			if err != nil {
-				t.Errorf("%s: %v", f.name, err)
+				t.Errorf(errMsgFmtSV, f.name, err)
 			}
 		})
 	}
@@ -1354,7 +1354,7 @@ func TestDecodeMapNonStringKeyValue(t *testing.T) {
 	v, err := d.Decode()
 	// Should still decode but key type might vary
 	if err != nil {
-		t.Errorf("decode failed: %v", err)
+		t.Errorf(errMsgDecodeFailed, err)
 	}
 	if v.Type != TypeMap {
 		t.Error("expected map type")
@@ -3122,7 +3122,7 @@ func TestStructRoundtripAllMsgpackTypes(t *testing.T) {
 	var result AllTypes
 	err = dec.Decode(data, &result)
 	if err != nil {
-		t.Fatalf("decode failed: %v", err)
+		t.Fatalf(errMsgDecodeFailed, err)
 	}
 
 	// Verify integers - signed
@@ -3308,18 +3308,18 @@ func TestDecodeStruct(t *testing.T) {
 	original := Person{Name: "Alice", Age: 30}
 	encoded, err := Marshal(original)
 	if err != nil {
-		t.Fatalf("Marshal failed: %v", err)
+		t.Fatalf(errMsgMarshalFailed, err)
 	}
 
 	// Decode
 	var decoded Person
 	err = UnmarshalStruct(encoded, &decoded)
 	if err != nil {
-		t.Fatalf("UnmarshalStruct failed: %v", err)
+		t.Fatalf(errMsgStructFailed, err)
 	}
 
 	if decoded != original {
-		t.Errorf("got %+v, want %+v", decoded, original)
+		t.Errorf(errMsgGotWantStruct, decoded, original)
 	}
 }
 
@@ -3334,13 +3334,13 @@ func TestOmitEmpty(t *testing.T) {
 	original := Data{Name: "test", Value: 0}
 	encoded, err := Marshal(original)
 	if err != nil {
-		t.Fatalf("Marshal failed: %v", err)
+		t.Fatalf(errMsgMarshalFailed, err)
 	}
 
 	// Decode as map to check fields
 	decoded, err := Unmarshal(encoded)
 	if err != nil {
-		t.Fatalf("Unmarshal failed: %v", err)
+		t.Fatalf(errMsgUnmarshalFailed, err)
 	}
 
 	m := decoded.(map[string]any)
@@ -3369,17 +3369,17 @@ func TestNestedStruct(t *testing.T) {
 
 	encoded, err := Marshal(original)
 	if err != nil {
-		t.Fatalf("Marshal failed: %v", err)
+		t.Fatalf(errMsgMarshalFailed, err)
 	}
 
 	var decoded Person
 	err = UnmarshalStruct(encoded, &decoded)
 	if err != nil {
-		t.Fatalf("UnmarshalStruct failed: %v", err)
+		t.Fatalf(errMsgStructFailed, err)
 	}
 
 	if decoded != original {
-		t.Errorf("got %+v, want %+v", decoded, original)
+		t.Errorf(errMsgGotWantStruct, decoded, original)
 	}
 }
 
@@ -3393,17 +3393,17 @@ func TestSliceInStruct(t *testing.T) {
 
 	encoded, err := Marshal(original)
 	if err != nil {
-		t.Fatalf("Marshal failed: %v", err)
+		t.Fatalf(errMsgMarshalFailed, err)
 	}
 
 	var decoded Data
 	err = UnmarshalStruct(encoded, &decoded)
 	if err != nil {
-		t.Fatalf("UnmarshalStruct failed: %v", err)
+		t.Fatalf(errMsgStructFailed, err)
 	}
 
 	if !reflect.DeepEqual(decoded, original) {
-		t.Errorf("got %+v, want %+v", decoded, original)
+		t.Errorf(errMsgGotWantStruct, decoded, original)
 	}
 }
 
@@ -3417,16 +3417,16 @@ func TestMapInStruct(t *testing.T) {
 
 	encoded, err := Marshal(original)
 	if err != nil {
-		t.Fatalf("Marshal failed: %v", err)
+		t.Fatalf(errMsgMarshalFailed, err)
 	}
 
 	var decoded Data
 	err = UnmarshalStruct(encoded, &decoded)
 	if err != nil {
-		t.Fatalf("UnmarshalStruct failed: %v", err)
+		t.Fatalf(errMsgStructFailed, err)
 	}
 
 	if !reflect.DeepEqual(decoded, original) {
-		t.Errorf("got %+v, want %+v", decoded, original)
+		t.Errorf(errMsgGotWantStruct, decoded, original)
 	}
 }

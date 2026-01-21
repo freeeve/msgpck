@@ -70,7 +70,7 @@ func TestStructDecoderUintFormats(t *testing.T) {
 			var d Data
 			err := dec.Decode(f.data, &d)
 			if err != nil {
-				t.Errorf("%s: %v", f.name, err)
+				t.Errorf(errMsgFmtSV, f.name, err)
 			}
 		})
 	}
@@ -435,7 +435,7 @@ func TestStructDecoderIntFormats(t *testing.T) {
 			var d Data
 			err := dec.Decode(tc.data, &d)
 			if err != nil {
-				t.Errorf("%s: %v", tc.name, err)
+				t.Errorf(errMsgFmtSV, tc.name, err)
 			}
 			if d.I != tc.want {
 				t.Errorf("%s: got %d, want %d", tc.name, d.I, tc.want)
@@ -480,7 +480,7 @@ func TestStructDecoderUintField(t *testing.T) {
 			var d Data
 			err := dec.Decode(tc.data, &d)
 			if err != nil {
-				t.Errorf("%s: %v", tc.name, err)
+				t.Errorf(errMsgFmtSV, tc.name, err)
 			}
 		})
 	}
@@ -792,7 +792,7 @@ func TestStructDecoderAllIntegerTypes(t *testing.T) {
 	var result AllInts
 	err = dec.Decode(data, &result)
 	if err != nil {
-		t.Fatalf("decode failed: %v", err)
+		t.Fatalf(errMsgDecodeFailed, err)
 	}
 
 	if result.I != original.I {

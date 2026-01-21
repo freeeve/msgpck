@@ -26,10 +26,10 @@ func TestTimestampRoundTrip(t *testing.T) {
 			data := MarshalTimestamp(tc.ts)
 			decoded, err := UnmarshalTimestamp(data)
 			if err != nil {
-				t.Fatalf("decode failed: %v", err)
+				t.Fatalf(errMsgDecodeFailed, err)
 			}
 			if !decoded.Equal(tc.ts) {
-				t.Errorf("got %v, want %v", decoded, tc.ts)
+				t.Errorf(errMsgGotWant, decoded, tc.ts)
 			}
 			if decoded.Location() != time.UTC {
 				t.Errorf("expected UTC, got %v", decoded.Location())
@@ -48,10 +48,10 @@ func TestTimestampEncoderDecoder(t *testing.T) {
 	dec := NewDecoder(data)
 	decoded, err := dec.DecodeTimestamp()
 	if err != nil {
-		t.Fatalf("decode failed: %v", err)
+		t.Fatalf(errMsgDecodeFailed, err)
 	}
 	if !decoded.Equal(ts) {
-		t.Errorf("got %v, want %v", decoded, ts)
+		t.Errorf(errMsgGotWant, decoded, ts)
 	}
 }
 
@@ -97,7 +97,7 @@ func TestTimestampWithTimezone(t *testing.T) {
 	data := MarshalTimestamp(ts)
 	decoded, err := UnmarshalTimestamp(data)
 	if err != nil {
-		t.Fatalf("decode failed: %v", err)
+		t.Fatalf(errMsgDecodeFailed, err)
 	}
 
 	if !decoded.Equal(ts) {
@@ -124,7 +124,7 @@ func TestExtToTimestamp(t *testing.T) {
 	dec := NewDecoder(data)
 	v, err := dec.Decode()
 	if err != nil {
-		t.Fatalf("decode failed: %v", err)
+		t.Fatalf(errMsgDecodeFailed, err)
 	}
 	if v.Type != TypeExt {
 		t.Fatalf("expected ext type, got %v", v.Type)
@@ -135,7 +135,7 @@ func TestExtToTimestamp(t *testing.T) {
 		t.Fatalf("ExtToTimestamp failed: %v", err)
 	}
 	if !decoded.Equal(ts) {
-		t.Errorf("got %v, want %v", decoded, ts)
+		t.Errorf(errMsgGotWant, decoded, ts)
 	}
 }
 
