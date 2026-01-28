@@ -54,7 +54,8 @@ func TestEncodeOmitemptyVariants(t *testing.T) {
 	}
 
 	// Should be a map with 0 entries (all omitted)
-	decoded, _ := Unmarshal(b)
+	var decoded any
+	_ = Unmarshal(b, &decoded)
 	m := decoded.(map[string]any)
 	if len(m) != 0 {
 		t.Errorf("expected empty map, got %d entries", len(m))
@@ -90,7 +91,8 @@ func TestStructEncoderIsEmptyField(t *testing.T) {
 	}
 
 	// Should be an empty map
-	m, _ := Unmarshal(b)
+	var m any
+	_ = Unmarshal(b, &m)
 	mp := m.(map[string]any)
 	// Map is never empty-checked properly so it may still be included
 	// Just verify no error and reasonable output
@@ -122,7 +124,8 @@ func TestStructEncoderIsEmptyField(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	m2, _ := Unmarshal(b2)
+	var m2 any
+	_ = Unmarshal(b2, &m2)
 	mp2 := m2.(map[string]any)
 	if len(mp2) < 10 {
 		t.Errorf("expected many fields, got %d", len(mp2))

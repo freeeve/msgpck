@@ -216,7 +216,8 @@ func TestDecodeAnyValueAllFormats(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := Unmarshal(tt.data)
+			var result any
+			err := Unmarshal(tt.data, &result)
 			if err != nil {
 				t.Errorf("failed to decode %s: %v", tt.name, err)
 			}

@@ -63,7 +63,7 @@ func TestDecodeReflectionPaths(t *testing.T) {
 		copy(b, e.Bytes())
 
 		var d Data
-		err := UnmarshalStruct(b, &d)
+		err := Unmarshal(b, &d)
 		if err != nil || d.U != 100 || d.U64 != 200 {
 			t.Error("uint decode failed")
 		}
@@ -85,7 +85,7 @@ func TestDecodeReflectionPaths(t *testing.T) {
 		copy(b, e.Bytes())
 
 		var d Data
-		err := UnmarshalStruct(b, &d)
+		err := Unmarshal(b, &d)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -104,7 +104,7 @@ func TestDecodeReflectionPaths(t *testing.T) {
 		copy(b, e.Bytes())
 
 		var d Data
-		err := UnmarshalStruct(b, &d)
+		err := Unmarshal(b, &d)
 		if err != nil || len(d.Bin) != 3 {
 			t.Error("[]byte decode failed")
 		}
@@ -127,7 +127,7 @@ func TestDecodeReflectionPaths(t *testing.T) {
 		copy(b, e.Bytes())
 
 		var d Data
-		err := UnmarshalStruct(b, &d)
+		err := Unmarshal(b, &d)
 		if err != nil || len(d.Items) != 20 {
 			t.Error("array16 decode failed")
 		}
@@ -151,7 +151,7 @@ func TestDecodeReflectionPaths(t *testing.T) {
 		copy(b, e.Bytes())
 
 		var d Data
-		err := UnmarshalStruct(b, &d)
+		err := Unmarshal(b, &d)
 		if err != nil || len(d.Meta) != 1 { // Keys are same so only 1
 			// Actually all keys are "k" so we get 1 entry
 		}
@@ -168,7 +168,8 @@ func TestDecodeMapAnyFormats(t *testing.T) {
 		b := make([]byte, len(e.Bytes()))
 		copy(b, e.Bytes())
 
-		m, err := UnmarshalMapStringAny(b, true)
+		var m map[string]any
+		err := Unmarshal(b, &m)
 		if err != nil || m[key] != int64(42) {
 			t.Error("str8 key decode failed")
 		}
@@ -183,7 +184,8 @@ func TestDecodeMapAnyFormats(t *testing.T) {
 		b := make([]byte, len(e.Bytes()))
 		copy(b, e.Bytes())
 
-		m, err := UnmarshalMapStringAny(b, true)
+		var m map[string]any
+		err := Unmarshal(b, &m)
 		if err != nil || m[key] != int64(42) {
 			t.Error("str16 key decode failed")
 		}
@@ -228,7 +230,8 @@ func TestUnmarshalWithConfig(t *testing.T) {
 		MaxExtLen:    1000,
 		MaxDepth:     10,
 	}
-	result, err := UnmarshalWithConfig(b, cfg)
+	var result any
+	err := UnmarshalWithConfig(b, &result, cfg)
 	if err != nil || result != "test" {
 		t.Error("UnmarshalWithConfig failed")
 	}
@@ -244,7 +247,8 @@ func TestUnmarshalMapStringStringFormats(t *testing.T) {
 		b := make([]byte, len(e.Bytes()))
 		copy(b, e.Bytes())
 
-		m, err := UnmarshalMapStringString(b, false)
+		var m map[string]string
+		err := Unmarshal(b, &m)
 		if err != nil || m["key"] != val {
 			t.Error("str8 value failed")
 		}
@@ -259,7 +263,8 @@ func TestUnmarshalMapStringStringFormats(t *testing.T) {
 		b := make([]byte, len(e.Bytes()))
 		copy(b, e.Bytes())
 
-		m, err := UnmarshalMapStringString(b, false)
+		var m map[string]string
+		err := Unmarshal(b, &m)
 		if err != nil || len(m["key"]) != 300 {
 			t.Error("str16 value failed")
 		}
@@ -273,26 +278,10 @@ func TestUnmarshalMapStringStringFormats(t *testing.T) {
 			formatStr32, 0, 0, 0, 3, 'v', 'a', 'l', // str32 "val"
 		}
 
-		m, err := UnmarshalMapStringString(data, true)
+		var m map[string]string
+		err := Unmarshal(data, &m)
 		if err != nil || m["key"] != "val" {
 			t.Error("str32 value failed")
-		}
-	})
-
-	t.Run("nil value", func(t *testing.T) {
-		data := []byte{
-			0x81,                // fixmap 1
-			0xa3, 'k', 'e', 'y', // fixstr "key"
-			formatNil, // nil value
-		}
-
-		m, err := UnmarshalMapStringString(data, false)
-		if err != nil {
-			t.Error("nil value should not error")
-		}
-		// nil values are skipped
-		if _, ok := m["key"]; ok {
-			t.Error("nil value should be skipped")
 		}
 	})
 
@@ -304,7 +293,8 @@ func TestUnmarshalMapStringStringFormats(t *testing.T) {
 			0xa1, 'v', // fixstr "v"
 		}
 
-		m, err := UnmarshalMapStringString(data, false)
+		var m map[string]string
+		err := Unmarshal(data, &m)
 		if err != nil || m["k"] != "v" {
 			t.Error("map16 failed")
 		}
@@ -318,21 +308,24 @@ func TestUnmarshalMapStringStringFormats(t *testing.T) {
 			0xa1, 'v', // fixstr "v"
 		}
 
-		m, err := UnmarshalMapStringString(data, false)
+		var m map[string]string
+		err := Unmarshal(data, &m)
 		if err != nil || m["k"] != "v" {
 			t.Error("map32 failed")
 		}
 	})
 
 	t.Run("nil map", func(t *testing.T) {
-		m, err := UnmarshalMapStringString([]byte{formatNil}, false)
+		var m map[string]string
+		err := Unmarshal([]byte{formatNil}, &m)
 		if err != nil || m != nil {
 			t.Error("nil should return nil map")
 		}
 	})
 
 	t.Run("type mismatch", func(t *testing.T) {
-		_, err := UnmarshalMapStringString([]byte{0x01}, false) // positive fixint
+		var m map[string]string
+		err := Unmarshal([]byte{0x01}, &m) // positive fixint
 		if err != ErrTypeMismatch {
 			t.Error("should return type mismatch")
 		}
@@ -344,36 +337,12 @@ func TestUnmarshalMapStringStringFormats(t *testing.T) {
 			0xa1, 'k', // fixstr "k"
 			0x42, // positive fixint (not string)
 		}
-		_, err := UnmarshalMapStringString(data, false)
+		var m map[string]string
+		err := Unmarshal(data, &m)
 		if err != ErrTypeMismatch {
 			t.Error("non-string value should error")
 		}
 	})
-}
-
-func TestDecodeStructFunc(t *testing.T) {
-	type Person struct {
-		Name string `msgpack:"name"`
-		Age  int    `msgpack:"age"`
-	}
-
-	e := NewEncoder(64)
-	e.EncodeMapHeader(2)
-	e.EncodeString("name")
-	e.EncodeString("Alice")
-	e.EncodeString("age")
-	e.EncodeInt(30)
-	b := make([]byte, len(e.Bytes()))
-	copy(b, e.Bytes())
-
-	var gotName string
-	err := DecodeStructFunc[Person](b, func(p *Person) error {
-		gotName = p.Name
-		return nil
-	})
-	if err != nil || gotName != "Alice" {
-		t.Error("DecodeStructFunc failed")
-	}
 }
 
 func TestReflectionDecodeValueUint(t *testing.T) {
@@ -398,7 +367,7 @@ func TestReflectionDecodeValueUint(t *testing.T) {
 	for _, f := range formats {
 		t.Run(f.name, func(t *testing.T) {
 			var d Data
-			err := UnmarshalStruct(f.data, &d)
+			err := Unmarshal(f.data, &d)
 			if err != nil {
 				t.Errorf(errMsgFmtSV, f.name, err)
 			}
@@ -430,7 +399,7 @@ func TestReflectionDecodeValueFloat(t *testing.T) {
 	for _, f := range formats {
 		t.Run(f.name, func(t *testing.T) {
 			var d Data
-			err := UnmarshalStruct(f.data, &d)
+			err := Unmarshal(f.data, &d)
 			if err != nil {
 				t.Errorf(errMsgFmtSV, f.name, err)
 			}
@@ -453,7 +422,7 @@ func TestReflectionDecodeValueBytes(t *testing.T) {
 		copy(b, e.Bytes())
 
 		var d Data
-		err := UnmarshalStruct(b, &d)
+		err := Unmarshal(b, &d)
 		if err != nil || len(d.B) != 50 {
 			t.Error("str8 bytes decode failed")
 		}
@@ -469,7 +438,7 @@ func TestReflectionDecodeValueBytes(t *testing.T) {
 		copy(b, e.Bytes())
 
 		var d Data
-		err := UnmarshalStruct(b, &d)
+		err := Unmarshal(b, &d)
 		if err != nil || len(d.B) != 300 {
 			t.Error("str16 bytes decode failed")
 		}
@@ -481,7 +450,7 @@ func TestReflectionDecodeValueBytes(t *testing.T) {
 			formatStr32, 0, 0, 0, 5, 'h', 'e', 'l', 'l', 'o',
 		}
 		var d Data
-		err := UnmarshalStruct(data, &d)
+		err := Unmarshal(data, &d)
 		if err != nil || len(d.B) != 5 {
 			t.Error("str32 bytes decode failed")
 		}
@@ -496,7 +465,7 @@ func TestReflectionDecodeValueBytes(t *testing.T) {
 		copy(b, e.Bytes())
 
 		var d Data
-		err := UnmarshalStruct(b, &d)
+		err := Unmarshal(b, &d)
 		if err != nil || len(d.B) != 50 {
 			t.Error("bin8 bytes decode failed")
 		}
@@ -511,7 +480,7 @@ func TestReflectionDecodeValueBytes(t *testing.T) {
 		copy(b, e.Bytes())
 
 		var d Data
-		err := UnmarshalStruct(b, &d)
+		err := Unmarshal(b, &d)
 		if err != nil || len(d.B) != 300 {
 			t.Error("bin16 bytes decode failed")
 		}
@@ -523,7 +492,7 @@ func TestReflectionDecodeValueBytes(t *testing.T) {
 			formatBin32, 0, 0, 0, 3, 1, 2, 3,
 		}
 		var d Data
-		err := UnmarshalStruct(data, &d)
+		err := Unmarshal(data, &d)
 		if err != nil || len(d.B) != 3 {
 			t.Error("bin32 bytes decode failed")
 		}
@@ -551,7 +520,7 @@ func TestReflectionDecodeIntoStruct(t *testing.T) {
 	copy(b, e.Bytes())
 
 	var o Outer
-	err := UnmarshalStruct(b, &o)
+	err := Unmarshal(b, &o)
 	if err != nil || o.Name != "test" || o.Inner.Value != 42 {
 		t.Error("nested struct decode failed")
 	}
@@ -574,7 +543,7 @@ func TestReflectionDecodeIntoArray(t *testing.T) {
 	copy(b, e.Bytes())
 
 	var d Data
-	err := UnmarshalStruct(b, &d)
+	err := Unmarshal(b, &d)
 	if err != nil {
 		t.Error("array with extra elements decode failed")
 	}
@@ -596,7 +565,7 @@ func TestReflectionDecodeInterfaceField(t *testing.T) {
 	copy(b, e.Bytes())
 
 	var d Data
-	err := UnmarshalStruct(b, &d)
+	err := Unmarshal(b, &d)
 	if err != nil {
 		t.Error("interface field decode failed")
 	}
@@ -621,7 +590,7 @@ func TestReflectionDecodeEmbeddedStruct(t *testing.T) {
 	copy(b, e.Bytes())
 
 	var ext Extended
-	err := UnmarshalStruct(b, &ext)
+	err := Unmarshal(b, &ext)
 	if err != nil || ext.ID != 123 || ext.Name != "test" {
 		t.Error("embedded struct decode failed")
 	}
@@ -639,7 +608,7 @@ func TestReflectionDecodeWithStringKeyFormats(t *testing.T) {
 		data = append(data, 0x42)               // value 66
 
 		var d Data
-		err := UnmarshalStruct(data, &d)
+		err := Unmarshal(data, &d)
 		if err != nil || d.V != 66 {
 			t.Error("str8 key decode failed")
 		}
@@ -651,7 +620,7 @@ func TestReflectionDecodeWithStringKeyFormats(t *testing.T) {
 		data = append(data, 0x42)                   // value 66
 
 		var d Data
-		err := UnmarshalStruct(data, &d)
+		err := Unmarshal(data, &d)
 		if err != nil || d.V != 66 {
 			t.Error("str16 key decode failed")
 		}
@@ -663,7 +632,7 @@ func TestReflectionDecodeWithStringKeyFormats(t *testing.T) {
 		data = append(data, 0x42)                         // value 66
 
 		var d Data
-		err := UnmarshalStruct(data, &d)
+		err := Unmarshal(data, &d)
 		if err != nil || d.V != 66 {
 			t.Error("str32 key decode failed")
 		}
@@ -678,7 +647,7 @@ func TestReflectionDecodeStructMap16(t *testing.T) {
 	// map16 with 1 entry
 	data := []byte{formatMap16, 0, 1, 0xa1, 'v', 0x42}
 	var d Data
-	err := UnmarshalStruct(data, &d)
+	err := Unmarshal(data, &d)
 	if err != nil || d.V != 66 {
 		t.Error("map16 struct decode failed")
 	}
@@ -692,7 +661,7 @@ func TestReflectionDecodeStructMap32(t *testing.T) {
 	// map32 with 1 entry
 	data := []byte{formatMap32, 0, 0, 0, 1, 0xa1, 'v', 0x42}
 	var d Data
-	err := UnmarshalStruct(data, &d)
+	err := Unmarshal(data, &d)
 	if err != nil || d.V != 66 {
 		t.Error("map32 struct decode failed")
 	}
@@ -713,7 +682,7 @@ func TestReflectionDecodeNonStringKey(t *testing.T) {
 	}
 
 	var d Data
-	err := UnmarshalStruct(data, &d)
+	err := Unmarshal(data, &d)
 	if err != nil || d.V != 67 {
 		t.Errorf("non-string key handling failed: err=%v, v=%d", err, d.V)
 	}
@@ -726,30 +695,30 @@ func TestReflectionDecodeErrors(t *testing.T) {
 
 	t.Run("not pointer", func(t *testing.T) {
 		var d Data
-		err := UnmarshalStruct([]byte{0x80}, d) // non-pointer
+		err := Unmarshal([]byte{0x80}, d) // non-pointer
 		if err != ErrNotPointer {
 			t.Error("expected ErrNotPointer")
 		}
 	})
 
-	t.Run("not struct", func(t *testing.T) {
+	t.Run("int type mismatch with map", func(t *testing.T) {
 		var i int
-		err := UnmarshalStruct([]byte{0x80}, &i)
-		if err != ErrNotStruct {
-			t.Error("expected ErrNotStruct")
+		err := Unmarshal([]byte{0x80}, &i) // empty map, not int
+		if err != ErrTypeMismatch {
+			t.Error("expected ErrTypeMismatch")
 		}
 	})
 
 	t.Run("type mismatch", func(t *testing.T) {
 		var d Data
-		err := UnmarshalStruct([]byte{0x01}, &d) // positive fixint, not map
+		err := Unmarshal([]byte{0x01}, &d) // positive fixint, not map
 		if err != ErrTypeMismatch {
 			t.Error("expected ErrTypeMismatch")
 		}
 	})
 }
 
-func TestReflectionUnmarshalStructWithConfig(t *testing.T) {
+func TestReflectionUnmarshalWithConfig(t *testing.T) {
 	type Data struct {
 		V int `msgpack:"v"`
 	}
@@ -758,7 +727,7 @@ func TestReflectionUnmarshalStructWithConfig(t *testing.T) {
 	cfg := DefaultConfig().WithMaxMapLen(100).WithMaxDepth(10)
 
 	var d Data
-	err := UnmarshalStructWithConfig(data, &d, cfg)
+	err := UnmarshalWithConfig(data, &d, cfg)
 	if err != nil || d.V != 66 {
 		t.Error("UnmarshalStructWithConfig failed")
 	}
@@ -828,7 +797,7 @@ func TestDecodeIntoMapTypes(t *testing.T) {
 	copy(b, e.Bytes())
 
 	var d Data
-	err := UnmarshalStruct(b, &d)
+	err := Unmarshal(b, &d)
 	if err != nil || len(d.M) != 2 || d.M["a"] != 1 || d.M["b"] != 2 {
 		t.Error("map decode failed")
 	}
@@ -850,7 +819,7 @@ func TestDecodeIntoSliceTypes(t *testing.T) {
 	copy(b, e.Bytes())
 
 	var d Data
-	err := UnmarshalStruct(b, &d)
+	err := Unmarshal(b, &d)
 	if err != nil || len(d.S) != 3 {
 		t.Error("slice decode failed")
 	}
@@ -864,7 +833,7 @@ func TestDecodeIntoArrayFormats(t *testing.T) {
 	t.Run("array16", func(t *testing.T) {
 		data := []byte{0x81, 0xa1, 'a', formatArray16, 0, 3, 0x01, 0x02, 0x03}
 		var d Data
-		err := UnmarshalStruct(data, &d)
+		err := Unmarshal(data, &d)
 		if err != nil || d.A[0] != 1 || d.A[1] != 2 || d.A[2] != 3 {
 			t.Error("array16 decode failed")
 		}
@@ -873,7 +842,7 @@ func TestDecodeIntoArrayFormats(t *testing.T) {
 	t.Run("array32", func(t *testing.T) {
 		data := []byte{0x81, 0xa1, 'a', formatArray32, 0, 0, 0, 3, 0x01, 0x02, 0x03}
 		var d Data
-		err := UnmarshalStruct(data, &d)
+		err := Unmarshal(data, &d)
 		if err != nil || d.A[0] != 1 || d.A[1] != 2 || d.A[2] != 3 {
 			t.Error("array32 decode failed")
 		}
@@ -888,7 +857,7 @@ func TestDecodeIntoSliceFormats(t *testing.T) {
 	t.Run("array16", func(t *testing.T) {
 		data := []byte{0x81, 0xa1, 's', formatArray16, 0, 3, 0x01, 0x02, 0x03}
 		var d Data
-		err := UnmarshalStruct(data, &d)
+		err := Unmarshal(data, &d)
 		if err != nil || len(d.S) != 3 {
 			t.Error("array16 slice decode failed")
 		}
@@ -897,7 +866,7 @@ func TestDecodeIntoSliceFormats(t *testing.T) {
 	t.Run("array32", func(t *testing.T) {
 		data := []byte{0x81, 0xa1, 's', formatArray32, 0, 0, 0, 3, 0x01, 0x02, 0x03}
 		var d Data
-		err := UnmarshalStruct(data, &d)
+		err := Unmarshal(data, &d)
 		if err != nil || len(d.S) != 3 {
 			t.Error("array32 slice decode failed")
 		}
@@ -912,7 +881,7 @@ func TestDecodeIntoMapFormats(t *testing.T) {
 	t.Run("map16", func(t *testing.T) {
 		data := []byte{0x81, 0xa1, 'm', formatMap16, 0, 1, 0xa1, 'k', 0x42}
 		var d Data
-		err := UnmarshalStruct(data, &d)
+		err := Unmarshal(data, &d)
 		if err != nil || d.M["k"] != 66 {
 			t.Error("map16 decode failed")
 		}
@@ -921,7 +890,7 @@ func TestDecodeIntoMapFormats(t *testing.T) {
 	t.Run("map32", func(t *testing.T) {
 		data := []byte{0x81, 0xa1, 'm', formatMap32, 0, 0, 0, 1, 0xa1, 'k', 0x42}
 		var d Data
-		err := UnmarshalStruct(data, &d)
+		err := Unmarshal(data, &d)
 		if err != nil || d.M["k"] != 66 {
 			t.Error("map32 decode failed")
 		}
@@ -943,7 +912,7 @@ func TestDecodeIntoStructFormats(t *testing.T) {
 			0xa1, 'v', 0x42, // "v": 66
 		}
 		var o Outer
-		err := UnmarshalStruct(data, &o)
+		err := Unmarshal(data, &o)
 		if err != nil || o.I.V != 66 {
 			t.Error("map16 nested decode failed")
 		}
@@ -956,7 +925,7 @@ func TestDecodeIntoStructFormats(t *testing.T) {
 			0xa1, 'v', 0x42, // "v": 66
 		}
 		var o Outer
-		err := UnmarshalStruct(data, &o)
+		err := Unmarshal(data, &o)
 		if err != nil || o.I.V != 66 {
 			t.Error("map32 nested decode failed")
 		}
@@ -1026,7 +995,7 @@ func TestDecodeIntoValueUnsupportedType(t *testing.T) {
 	copy(b, e.Bytes())
 
 	var d Data
-	err := UnmarshalStruct(b, &d)
+	err := Unmarshal(b, &d)
 	if err != ErrUnsupportedType {
 		t.Errorf("expected ErrUnsupportedType, got %v", err)
 	}
@@ -1039,7 +1008,7 @@ func TestDecodeMapTypeMismatch(t *testing.T) {
 
 	data := []byte{0x81, 0xa1, 'm', 0x42} // int instead of map
 	var d Data
-	err := UnmarshalStruct(data, &d)
+	err := Unmarshal(data, &d)
 	if err != ErrTypeMismatch {
 		t.Errorf("expected ErrTypeMismatch for map, got %v", err)
 	}
@@ -1055,7 +1024,7 @@ func TestDecodeNestedStructTypeMismatch(t *testing.T) {
 
 	data := []byte{0x81, 0xa1, 'i', 0x42} // int instead of map for struct
 	var o Outer
-	err := UnmarshalStruct(data, &o)
+	err := Unmarshal(data, &o)
 	if err != ErrTypeMismatch {
 		t.Errorf("expected ErrTypeMismatch for nested struct, got %v", err)
 	}
@@ -1070,7 +1039,7 @@ func TestValidationLimitsDecodeStruct(t *testing.T) {
 		cfg := DefaultConfig().WithMaxStringLen(2)
 		data := []byte{0x81, 0xa1, 's', 0xa5, 'h', 'e', 'l', 'l', 'o'}
 		var d Data
-		err := UnmarshalStructWithConfig(data, &d, cfg)
+		err := UnmarshalWithConfig(data, &d, cfg)
 		if err != ErrStringTooLong {
 			t.Errorf(errMsgStringTooLong, err)
 		}
@@ -1105,7 +1074,7 @@ func TestReflectionDecodeIntoStructNonStringKey(t *testing.T) {
 		0x42, // value 66
 	}
 	var o Outer
-	err := UnmarshalStruct(data, &o)
+	err := Unmarshal(data, &o)
 	if err != nil || o.I.V != 66 {
 		t.Errorf("non-string key in nested struct failed: err=%v, v=%d", err, o.I.V)
 	}
@@ -1118,7 +1087,7 @@ func TestReflectionDecodeUnexportedField(t *testing.T) {
 
 	data := []byte{0x81, 0xa1, 'n', 'a', 'm', 'e', 0xa4, 't', 'e', 's', 't'}
 	var d Data
-	err := UnmarshalStruct(data, &d)
+	err := Unmarshal(data, &d)
 	// Should succeed, unexported fields get skipped
 	if err != nil {
 		t.Error("unexported field handling failed")
@@ -1174,7 +1143,7 @@ func TestReflectionDecodeIntoMapKeyFormats(t *testing.T) {
 	t.Run("str8 key", func(t *testing.T) {
 		data := []byte{0x81, 0xa1, 'm', 0x81, formatStr8, 1, 'k', 0x42}
 		var d Data
-		err := UnmarshalStruct(data, &d)
+		err := Unmarshal(data, &d)
 		if err != nil || d.M["k"] != 66 {
 			t.Error("str8 key in map failed")
 		}
@@ -1183,7 +1152,7 @@ func TestReflectionDecodeIntoMapKeyFormats(t *testing.T) {
 	t.Run("str16 key", func(t *testing.T) {
 		data := []byte{0x81, 0xa1, 'm', 0x81, formatStr16, 0, 1, 'k', 0x42}
 		var d Data
-		err := UnmarshalStruct(data, &d)
+		err := Unmarshal(data, &d)
 		if err != nil || d.M["k"] != 66 {
 			t.Error("str16 key in map failed")
 		}
@@ -1192,7 +1161,7 @@ func TestReflectionDecodeIntoMapKeyFormats(t *testing.T) {
 	t.Run("str32 key", func(t *testing.T) {
 		data := []byte{0x81, 0xa1, 'm', 0x81, formatStr32, 0, 0, 0, 1, 'k', 0x42}
 		var d Data
-		err := UnmarshalStruct(data, &d)
+		err := Unmarshal(data, &d)
 		if err != nil || d.M["k"] != 66 {
 			t.Error("str32 key in map failed")
 		}
@@ -1206,7 +1175,7 @@ func TestDecodeIntoValueEOF(t *testing.T) {
 
 	data := []byte{0x81, 0xa1, 'v'} // missing value
 	var d Data
-	err := UnmarshalStruct(data, &d)
+	err := Unmarshal(data, &d)
 	if err != ErrUnexpectedEOF {
 		t.Errorf(errMsgUnexpectedEOF, err)
 	}
@@ -1220,7 +1189,7 @@ func TestReflectionDecodeValueBytesEOF(t *testing.T) {
 	// str8 with declared length but missing data
 	data := []byte{0x81, 0xa1, 'b', formatStr8, 100}
 	var d Data
-	err := UnmarshalStruct(data, &d)
+	err := Unmarshal(data, &d)
 	if err != ErrUnexpectedEOF {
 		t.Errorf(errMsgUnexpectedEOF, err)
 	}
@@ -1234,7 +1203,7 @@ func TestReflectionDecodeSliceEOF(t *testing.T) {
 	// array with declared length but missing elements
 	data := []byte{0x81, 0xa1, 's', 0x95} // fixarray 5 with no elements
 	var d Data
-	err := UnmarshalStruct(data, &d)
+	err := Unmarshal(data, &d)
 	if err != ErrUnexpectedEOF {
 		t.Errorf(errMsgUnexpectedEOF, err)
 	}
@@ -1248,7 +1217,7 @@ func TestReflectionDecodeArrayEOF(t *testing.T) {
 	// array with declared length but missing elements
 	data := []byte{0x81, 0xa1, 'a', 0x93} // fixarray 3 with no elements
 	var d Data
-	err := UnmarshalStruct(data, &d)
+	err := Unmarshal(data, &d)
 	if err != ErrUnexpectedEOF {
 		t.Errorf(errMsgUnexpectedEOF, err)
 	}
@@ -1262,7 +1231,7 @@ func TestReflectionDecodeMapEOF(t *testing.T) {
 	// map with declared length but missing entries
 	data := []byte{0x81, 0xa1, 'm', 0x81} // fixmap 1 with no entries
 	var d Data
-	err := UnmarshalStruct(data, &d)
+	err := Unmarshal(data, &d)
 	if err != ErrUnexpectedEOF {
 		t.Errorf(errMsgUnexpectedEOF, err)
 	}
@@ -1279,7 +1248,7 @@ func TestReflectionDecodeStructEOF(t *testing.T) {
 	// nested struct with missing entries
 	data := []byte{0x81, 0xa1, 'i', 0x81} // inner fixmap 1 with no entries
 	var o Outer
-	err := UnmarshalStruct(data, &o)
+	err := Unmarshal(data, &o)
 	if err != ErrUnexpectedEOF {
 		t.Errorf(errMsgUnexpectedEOF, err)
 	}
@@ -1293,7 +1262,7 @@ func TestDecodeStructKeyReadError(t *testing.T) {
 	// str8 key with missing length byte
 	data := []byte{0x81, formatStr8} // missing length
 	var d Data
-	err := UnmarshalStruct(data, &d)
+	err := Unmarshal(data, &d)
 	if err != ErrUnexpectedEOF {
 		t.Errorf(errMsgUnexpectedEOF, err)
 	}
@@ -1307,7 +1276,7 @@ func TestDecodeStructStr16KeyReadError(t *testing.T) {
 	// str16 key with missing length bytes
 	data := []byte{0x81, formatStr16, 0} // missing second length byte
 	var d Data
-	err := UnmarshalStruct(data, &d)
+	err := Unmarshal(data, &d)
 	if err != ErrUnexpectedEOF {
 		t.Errorf(errMsgUnexpectedEOF, err)
 	}
@@ -1321,7 +1290,7 @@ func TestDecodeStructStr32KeyReadError(t *testing.T) {
 	// str32 key with missing length bytes
 	data := []byte{0x81, formatStr32, 0, 0, 0} // missing last length byte
 	var d Data
-	err := UnmarshalStruct(data, &d)
+	err := Unmarshal(data, &d)
 	if err != ErrUnexpectedEOF {
 		t.Errorf(errMsgUnexpectedEOF, err)
 	}
@@ -1341,7 +1310,7 @@ func TestDecodeStructNonStringKeyComplex(t *testing.T) {
 		0x43, // value 67
 	}
 	var d Data
-	err := UnmarshalStruct(data, &d)
+	err := Unmarshal(data, &d)
 	if err != nil || d.V != 67 {
 		t.Errorf("complex non-string key handling failed: err=%v, v=%d", err, d.V)
 	}
@@ -1370,7 +1339,7 @@ func TestDecodeStructValidationErrors(t *testing.T) {
 		cfg := DefaultConfig().WithMaxDepth(0)
 		data := []byte{0x81, 0xa1, 's', 0xa4, 't', 'e', 's', 't'}
 		var d Data
-		err := UnmarshalStructWithConfig(data, &d, cfg)
+		err := UnmarshalWithConfig(data, &d, cfg)
 		if err != ErrMaxDepthExceeded {
 			t.Errorf("expected ErrMaxDepthExceeded, got %v", err)
 		}
@@ -1380,7 +1349,7 @@ func TestDecodeStructValidationErrors(t *testing.T) {
 		cfg := DefaultConfig().WithMaxMapLen(0)
 		data := []byte{0x81, 0xa1, 's', 0xa4, 't', 'e', 's', 't'}
 		var d Data
-		err := UnmarshalStructWithConfig(data, &d, cfg)
+		err := UnmarshalWithConfig(data, &d, cfg)
 		if err != ErrMapTooLong {
 			t.Errorf(errMsgMapTooLong, err)
 		}
@@ -1395,7 +1364,7 @@ func TestDecodeIntoSliceArray16Array32(t *testing.T) {
 	t.Run("array16", func(t *testing.T) {
 		data := []byte{0x81, 0xa1, 's', formatArray16, 0, 2, 0x01, 0x02}
 		var d Data
-		err := UnmarshalStruct(data, &d)
+		err := Unmarshal(data, &d)
 		if err != nil || len(d.S) != 2 {
 			t.Error("array16 slice decode failed")
 		}
@@ -1404,7 +1373,7 @@ func TestDecodeIntoSliceArray16Array32(t *testing.T) {
 	t.Run("array32", func(t *testing.T) {
 		data := []byte{0x81, 0xa1, 's', formatArray32, 0, 0, 0, 2, 0x01, 0x02}
 		var d Data
-		err := UnmarshalStruct(data, &d)
+		err := Unmarshal(data, &d)
 		if err != nil || len(d.S) != 2 {
 			t.Error("array32 slice decode failed")
 		}
@@ -1419,7 +1388,7 @@ func TestDecodeIntoArrayArray16Array32(t *testing.T) {
 	t.Run("array16", func(t *testing.T) {
 		data := []byte{0x81, 0xa1, 'a', formatArray16, 0, 2, 0x01, 0x02}
 		var d Data
-		err := UnmarshalStruct(data, &d)
+		err := Unmarshal(data, &d)
 		if err != nil || d.A[0] != 1 {
 			t.Error("array16 array decode failed")
 		}
@@ -1428,7 +1397,7 @@ func TestDecodeIntoArrayArray16Array32(t *testing.T) {
 	t.Run("array32", func(t *testing.T) {
 		data := []byte{0x81, 0xa1, 'a', formatArray32, 0, 0, 0, 2, 0x01, 0x02}
 		var d Data
-		err := UnmarshalStruct(data, &d)
+		err := Unmarshal(data, &d)
 		if err != nil || d.A[0] != 1 {
 			t.Error("array32 array decode failed")
 		}
@@ -1443,7 +1412,7 @@ func TestDecodeIntoMapMap16Map32(t *testing.T) {
 	t.Run("map16", func(t *testing.T) {
 		data := []byte{0x81, 0xa1, 'm', formatMap16, 0, 1, 0xa1, 'k', 0x42}
 		var d Data
-		err := UnmarshalStruct(data, &d)
+		err := Unmarshal(data, &d)
 		if err != nil || d.M["k"] != 66 {
 			t.Error("map16 map decode failed")
 		}
@@ -1452,7 +1421,7 @@ func TestDecodeIntoMapMap16Map32(t *testing.T) {
 	t.Run("map32", func(t *testing.T) {
 		data := []byte{0x81, 0xa1, 'm', formatMap32, 0, 0, 0, 1, 0xa1, 'k', 0x42}
 		var d Data
-		err := UnmarshalStruct(data, &d)
+		err := Unmarshal(data, &d)
 		if err != nil || d.M["k"] != 66 {
 			t.Error("map32 map decode failed")
 		}
@@ -1468,7 +1437,7 @@ func TestDecodeIntoSliceValidation(t *testing.T) {
 		cfg := DefaultConfig().WithMaxArrayLen(1)
 		data := []byte{0x81, 0xa1, 's', 0x93, 0x01, 0x02, 0x03} // fixarray 3
 		var d Data
-		err := UnmarshalStructWithConfig(data, &d, cfg)
+		err := UnmarshalWithConfig(data, &d, cfg)
 		if err != ErrArrayTooLong {
 			t.Errorf(errMsgArrayTooLong, err)
 		}
@@ -1478,7 +1447,7 @@ func TestDecodeIntoSliceValidation(t *testing.T) {
 		cfg := DefaultConfig().WithMaxArrayLen(1)
 		data := []byte{0x81, 0xa1, 's', formatArray16, 0, 3, 0x01, 0x02, 0x03}
 		var d Data
-		err := UnmarshalStructWithConfig(data, &d, cfg)
+		err := UnmarshalWithConfig(data, &d, cfg)
 		if err != ErrArrayTooLong {
 			t.Errorf(errMsgArrayTooLong, err)
 		}
@@ -1494,7 +1463,7 @@ func TestDecodeIntoArrayValidation(t *testing.T) {
 		cfg := DefaultConfig().WithMaxArrayLen(1)
 		data := []byte{0x81, 0xa1, 'a', 0x93, 0x01, 0x02, 0x03}
 		var d Data
-		err := UnmarshalStructWithConfig(data, &d, cfg)
+		err := UnmarshalWithConfig(data, &d, cfg)
 		if err != ErrArrayTooLong {
 			t.Errorf(errMsgArrayTooLong, err)
 		}
@@ -1510,7 +1479,7 @@ func TestDecodeIntoMapValidation(t *testing.T) {
 		cfg := DefaultConfig().WithMaxMapLen(0)
 		data := []byte{0x81, 0xa1, 'm', 0x81, 0xa1, 'k', 0x42}
 		var d Data
-		err := UnmarshalStructWithConfig(data, &d, cfg)
+		err := UnmarshalWithConfig(data, &d, cfg)
 		if err != ErrMapTooLong {
 			t.Errorf(errMsgMapTooLong, err)
 		}
@@ -1520,7 +1489,7 @@ func TestDecodeIntoMapValidation(t *testing.T) {
 		cfg := DefaultConfig().WithMaxMapLen(0)
 		data := []byte{0x81, 0xa1, 'm', formatMap16, 0, 1, 0xa1, 'k', 0x42}
 		var d Data
-		err := UnmarshalStructWithConfig(data, &d, cfg)
+		err := UnmarshalWithConfig(data, &d, cfg)
 		if err != ErrMapTooLong {
 			t.Errorf(errMsgMapTooLong, err)
 		}
@@ -1539,7 +1508,7 @@ func TestDecodeIntoStructValidation(t *testing.T) {
 		cfg := DefaultConfig().WithMaxMapLen(0)
 		data := []byte{0x81, 0xa1, 'i', 0x81, 0xa1, 'v', 0x42}
 		var o Outer
-		err := UnmarshalStructWithConfig(data, &o, cfg)
+		err := UnmarshalWithConfig(data, &o, cfg)
 		if err != ErrMapTooLong {
 			t.Errorf(errMsgMapTooLong, err)
 		}
@@ -1612,7 +1581,7 @@ func TestBuildStructFieldsEdgeCases(t *testing.T) {
 
 	data := []byte{0x82, 0xa2, 'i', 'd', 0x42, 0xa4, 'n', 'a', 'm', 'e', 0xa4, 't', 'e', 's', 't'}
 	var e Embedded
-	err := UnmarshalStruct(data, &e)
+	err := Unmarshal(data, &e)
 	if err != nil || e.ID != 66 || e.Name != "test" {
 		t.Errorf("embedded struct failed: err=%v, e=%+v", err, e)
 	}
@@ -1631,7 +1600,7 @@ func TestDecodeIntoStructMap16(t *testing.T) {
 	enc.EncodeInt(42)
 
 	var s S
-	err := UnmarshalStruct(enc.Bytes(), &s)
+	err := Unmarshal(enc.Bytes(), &s)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1653,7 +1622,7 @@ func TestDecodeIntoStructMap32(t *testing.T) {
 	enc.EncodeInt(42)
 
 	var s S
-	err := UnmarshalStruct(enc.Bytes(), &s)
+	err := Unmarshal(enc.Bytes(), &s)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1676,7 +1645,7 @@ func TestDecodeIntoStructNonStringKey(t *testing.T) {
 	enc.EncodeInt(42)
 
 	var s S
-	err := UnmarshalStruct(enc.Bytes(), &s)
+	err := Unmarshal(enc.Bytes(), &s)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1728,7 +1697,7 @@ func TestDecodeIntoStructMap16EOF(t *testing.T) {
 	// Map16 format but no length bytes
 	data := []byte{formatMap16}
 	var s S
-	err := UnmarshalStruct(data, &s)
+	err := Unmarshal(data, &s)
 	if err == nil {
 		t.Error(errMsgEOFError)
 	}
@@ -1742,7 +1711,7 @@ func TestDecodeIntoStructMap32EOF(t *testing.T) {
 	// Map32 format but no length bytes
 	data := []byte{formatMap32}
 	var s S
-	err := UnmarshalStruct(data, &s)
+	err := Unmarshal(data, &s)
 	if err == nil {
 		t.Error(errMsgEOFError)
 	}
@@ -1750,7 +1719,7 @@ func TestDecodeIntoStructMap32EOF(t *testing.T) {
 
 func TestDecodeStructNilValueError(t *testing.T) {
 	data := []byte{0x80} // empty map
-	err := UnmarshalStruct(data, nil)
+	err := Unmarshal(data, nil)
 	if err == nil {
 		t.Error("expected error for nil value")
 	}
@@ -1760,7 +1729,7 @@ func TestDecodeStructNonPointerError(t *testing.T) {
 	type S struct{}
 	data := []byte{0x80} // empty map
 	var s S
-	err := UnmarshalStruct(data, s) // passing value, not pointer
+	err := Unmarshal(data, s) // passing value, not pointer
 	if err == nil {
 		t.Error("expected error for non-pointer")
 	}
@@ -1770,7 +1739,7 @@ func TestDecodeStructNilPointerError(t *testing.T) {
 	type S struct{}
 	data := []byte{0x80}
 	var s *S // nil pointer
-	err := UnmarshalStruct(data, s)
+	err := Unmarshal(data, s)
 	if err == nil {
 		t.Error("expected error for nil pointer")
 	}
@@ -1779,7 +1748,7 @@ func TestDecodeStructNilPointerError(t *testing.T) {
 func TestDecodeStructNonStructError(t *testing.T) {
 	data := []byte{0x80}
 	var i int
-	err := UnmarshalStruct(data, &i) // pointer to int, not struct
+	err := Unmarshal(data, &i) // pointer to int, not struct
 	if err == nil {
 		t.Error("expected error for non-struct")
 	}
@@ -1789,7 +1758,7 @@ func TestDecodeStructformatNil(t *testing.T) {
 	type S struct{}
 	data := []byte{formatNil}
 	var s S
-	err := UnmarshalStruct(data, &s)
+	err := Unmarshal(data, &s)
 	if err != nil {
 		t.Errorf("expected nil to work, got %v", err)
 	}
@@ -1799,7 +1768,7 @@ func TestDecodeStructEOF(t *testing.T) {
 	type S struct{}
 	data := []byte{} // empty
 	var s S
-	err := UnmarshalStruct(data, &s)
+	err := Unmarshal(data, &s)
 	if err != ErrUnexpectedEOF {
 		t.Errorf(errMsgUnexpectedEOF, err)
 	}
@@ -1809,7 +1778,7 @@ func TestDecodeStructTypeMismatch(t *testing.T) {
 	type S struct{}
 	data := []byte{0xa5, 'h', 'e', 'l', 'l', 'o'} // string, not map
 	var s S
-	err := UnmarshalStruct(data, &s)
+	err := Unmarshal(data, &s)
 	if err != ErrTypeMismatch {
 		t.Errorf(errMsgTypeMismatch, err)
 	}
@@ -1831,7 +1800,7 @@ func TestDecodeIntoValueNestedStruct(t *testing.T) {
 	enc.EncodeInt(42)
 
 	var o Outer
-	err := UnmarshalStruct(enc.Bytes(), &o)
+	err := Unmarshal(enc.Bytes(), &o)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1854,7 +1823,7 @@ func TestDecodeIntoValuePointerFieldAllocated(t *testing.T) {
 	enc.EncodeNil()
 
 	var s S
-	err := UnmarshalStruct(enc.Bytes(), &s)
+	err := Unmarshal(enc.Bytes(), &s)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1890,7 +1859,8 @@ func TestDecodeMapAnyKeyStr16(t *testing.T) {
 	enc.writeByte('a')
 	enc.EncodeInt(42)
 
-	_, err := Unmarshal(enc.Bytes())
+	var result any
+	err := Unmarshal(enc.Bytes(), &result)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1905,7 +1875,8 @@ func TestDecodeMapAnyKeyStr32(t *testing.T) {
 	enc.writeByte('a')
 	enc.EncodeInt(42)
 
-	_, err := Unmarshal(enc.Bytes())
+	var result any
+	err := Unmarshal(enc.Bytes(), &result)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1917,7 +1888,8 @@ func TestDecodeMapAnyNonStringKey(t *testing.T) {
 	enc.EncodeInt(123) // integer key instead of string
 	enc.EncodeInt(456)
 
-	_, err := Unmarshal(enc.Bytes())
+	var result any
+	err := Unmarshal(enc.Bytes(), &result)
 	if err != ErrInvalidFormat {
 		t.Errorf("expected ErrInvalidFormat, got %v", err)
 	}
@@ -1934,7 +1906,7 @@ func TestDecodeIntoValueInterface(t *testing.T) {
 	enc.EncodeString("hello")
 
 	var s S
-	err := UnmarshalStruct(enc.Bytes(), &s)
+	err := Unmarshal(enc.Bytes(), &s)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1954,7 +1926,7 @@ func TestDecodeIntoValueComplex64Unsupported(t *testing.T) {
 	enc.EncodeInt(42)
 
 	var s S
-	err := UnmarshalStruct(enc.Bytes(), &s)
+	err := Unmarshal(enc.Bytes(), &s)
 	if err != ErrUnsupportedType {
 		t.Errorf("expected ErrUnsupportedType, got %v", err)
 	}
@@ -1983,7 +1955,7 @@ func TestDecodeIntoSliceValidationError(t *testing.T) {
 	}
 
 	var s S
-	err := UnmarshalStructWithConfig(enc.Bytes(), &s, cfg)
+	err := UnmarshalWithConfig(enc.Bytes(), &s, cfg)
 	if err != ErrArrayTooLong {
 		t.Errorf(errMsgArrayTooLong, err)
 	}
@@ -2012,7 +1984,7 @@ func TestDecodeIntoArrayValidationError(t *testing.T) {
 	}
 
 	var s S
-	err := UnmarshalStructWithConfig(enc.Bytes(), &s, cfg)
+	err := UnmarshalWithConfig(enc.Bytes(), &s, cfg)
 	if err != ErrArrayTooLong {
 		t.Errorf(errMsgArrayTooLong, err)
 	}
@@ -2042,7 +2014,7 @@ func TestDecodeIntoMapValidationError(t *testing.T) {
 	}
 
 	var s S
-	err := UnmarshalStructWithConfig(enc.Bytes(), &s, cfg)
+	err := UnmarshalWithConfig(enc.Bytes(), &s, cfg)
 	if err != ErrMapTooLong {
 		t.Errorf(errMsgMapTooLong, err)
 	}
@@ -2073,7 +2045,7 @@ func TestDecodeIntoStructDepthError(t *testing.T) {
 	enc.EncodeInt(42)
 
 	var o Outer
-	err := UnmarshalStructWithConfig(enc.Bytes(), &o, cfg)
+	err := UnmarshalWithConfig(enc.Bytes(), &o, cfg)
 	if err != ErrMaxDepthExceeded {
 		t.Errorf("expected ErrMaxDepthExceeded, got %v", err)
 	}
@@ -2091,7 +2063,7 @@ func TestDecodeStructValueError(t *testing.T) {
 	// No value - will cause EOF
 
 	var s S
-	err := UnmarshalStruct(enc.Bytes(), &s)
+	err := Unmarshal(enc.Bytes(), &s)
 	if err == nil {
 		t.Error("expected error for truncated value")
 	}
@@ -2111,7 +2083,7 @@ func TestDecodeIntoStructUnknownField(t *testing.T) {
 	enc.EncodeInt(42)
 
 	var s S
-	err := UnmarshalStruct(enc.Bytes(), &s)
+	err := Unmarshal(enc.Bytes(), &s)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2132,7 +2104,7 @@ func TestDecodeIntoStructUnknownFieldSkipError(t *testing.T) {
 	// Missing value - will cause EOF when trying to skip
 
 	var s S
-	err := UnmarshalStruct(enc.Bytes(), &s)
+	err := Unmarshal(enc.Bytes(), &s)
 	if err == nil {
 		t.Error("expected error for truncated unknown field value")
 	}
@@ -2156,7 +2128,7 @@ func TestDecodeIntoSliceElementError(t *testing.T) {
 	enc.writeByte(0x00)
 
 	var s S
-	err := UnmarshalStruct(enc.Bytes(), &s)
+	err := Unmarshal(enc.Bytes(), &s)
 	if err != ErrUnexpectedEOF {
 		t.Errorf(errMsgUnexpectedEOF, err)
 	}
@@ -2178,7 +2150,7 @@ func TestDecodeIntoArrayElementError(t *testing.T) {
 	enc.writeByte(formatInt32)
 
 	var s S
-	err := UnmarshalStruct(enc.Bytes(), &s)
+	err := Unmarshal(enc.Bytes(), &s)
 	if err == nil {
 		t.Error("expected EOF error for incomplete array element")
 	}
@@ -2199,7 +2171,7 @@ func TestDecodeIntoMapKeyError(t *testing.T) {
 	enc.writeByte(10) // says 10 bytes but EOF
 
 	var s S
-	err := UnmarshalStruct(enc.Bytes(), &s)
+	err := Unmarshal(enc.Bytes(), &s)
 	if err == nil {
 		t.Error("expected error for incomplete map key")
 	}
@@ -2220,7 +2192,7 @@ func TestDecodeIntoMapValueError(t *testing.T) {
 	enc.writeByte(formatInt32)
 
 	var s S
-	err := UnmarshalStruct(enc.Bytes(), &s)
+	err := Unmarshal(enc.Bytes(), &s)
 	if err == nil {
 		t.Error("expected error for incomplete map value")
 	}
@@ -2251,7 +2223,7 @@ func TestDecodeIntoStructDecodeValueError(t *testing.T) {
 	enc.writeByte(formatInt32) // int32 format but no data
 
 	var s S
-	err := UnmarshalStruct(enc.Bytes(), &s)
+	err := Unmarshal(enc.Bytes(), &s)
 	if err == nil {
 		t.Error("expected error for incomplete field value")
 	}
@@ -2275,7 +2247,7 @@ func TestDecodeIntoStructSkipNonStringKeyValue(t *testing.T) {
 	enc.EncodeInt(42)
 
 	var s S
-	err := UnmarshalStruct(enc.Bytes(), &s)
+	err := Unmarshal(enc.Bytes(), &s)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2297,7 +2269,7 @@ func TestDecodeIntoStructSkipNonStringKeyError(t *testing.T) {
 	enc.writeByte(100)        // says 100 bytes but nothing follows
 
 	var s S
-	err := UnmarshalStruct(enc.Bytes(), &s)
+	err := Unmarshal(enc.Bytes(), &s)
 	if err == nil {
 		t.Error("expected error when skipping non-string key value fails")
 	}
@@ -2318,7 +2290,7 @@ func TestDecodeIntoSliceArray16(t *testing.T) {
 	enc.EncodeInt(3)
 
 	var s S
-	err := UnmarshalStruct(enc.Bytes(), &s)
+	err := Unmarshal(enc.Bytes(), &s)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2341,7 +2313,7 @@ func TestDecodeIntoSliceArray32(t *testing.T) {
 	enc.EncodeInt(2)
 
 	var s S
-	err := UnmarshalStruct(enc.Bytes(), &s)
+	err := Unmarshal(enc.Bytes(), &s)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2365,7 +2337,7 @@ func TestDecodeIntoArrayArray16(t *testing.T) {
 	enc.EncodeInt(3)
 
 	var s S
-	err := UnmarshalStruct(enc.Bytes(), &s)
+	err := Unmarshal(enc.Bytes(), &s)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2388,7 +2360,7 @@ func TestDecodeIntoArrayArray32(t *testing.T) {
 	enc.EncodeInt(20)
 
 	var s S
-	err := UnmarshalStruct(enc.Bytes(), &s)
+	err := Unmarshal(enc.Bytes(), &s)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2413,7 +2385,7 @@ func TestDecodeIntoMapMap16(t *testing.T) {
 	enc.EncodeInt(2)
 
 	var s S
-	err := UnmarshalStruct(enc.Bytes(), &s)
+	err := Unmarshal(enc.Bytes(), &s)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2436,7 +2408,7 @@ func TestDecodeIntoMapMap32(t *testing.T) {
 	enc.EncodeInt(42)
 
 	var s S
-	err := UnmarshalStruct(enc.Bytes(), &s)
+	err := Unmarshal(enc.Bytes(), &s)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2457,7 +2429,7 @@ func TestDecodeIntoSliceArray16EOF(t *testing.T) {
 	// Missing length bytes
 
 	var s S
-	err := UnmarshalStruct(enc.Bytes(), &s)
+	err := Unmarshal(enc.Bytes(), &s)
 	if err == nil {
 		t.Error("expected error for array16 EOF")
 	}
@@ -2475,7 +2447,7 @@ func TestDecodeIntoSliceArray32EOF(t *testing.T) {
 	// Missing length bytes
 
 	var s S
-	err := UnmarshalStruct(enc.Bytes(), &s)
+	err := Unmarshal(enc.Bytes(), &s)
 	if err == nil {
 		t.Error("expected error for array32 EOF")
 	}
@@ -2493,7 +2465,7 @@ func TestDecodeIntoArrayArray16EOF(t *testing.T) {
 	// Missing length bytes
 
 	var s S
-	err := UnmarshalStruct(enc.Bytes(), &s)
+	err := Unmarshal(enc.Bytes(), &s)
 	if err == nil {
 		t.Error("expected error for array16 EOF")
 	}
@@ -2511,7 +2483,7 @@ func TestDecodeIntoArrayArray32EOF(t *testing.T) {
 	// Missing length bytes
 
 	var s S
-	err := UnmarshalStruct(enc.Bytes(), &s)
+	err := Unmarshal(enc.Bytes(), &s)
 	if err == nil {
 		t.Error("expected error for array32 EOF")
 	}
@@ -2529,7 +2501,7 @@ func TestDecodeIntoMapMap16EOF(t *testing.T) {
 	// Missing length bytes
 
 	var s S
-	err := UnmarshalStruct(enc.Bytes(), &s)
+	err := Unmarshal(enc.Bytes(), &s)
 	if err == nil {
 		t.Error("expected error for map16 EOF")
 	}
@@ -2547,7 +2519,7 @@ func TestDecodeIntoMapMap32EOF(t *testing.T) {
 	// Missing length bytes
 
 	var s S
-	err := UnmarshalStruct(enc.Bytes(), &s)
+	err := Unmarshal(enc.Bytes(), &s)
 	if err == nil {
 		t.Error("expected error for map32 EOF")
 	}
@@ -2620,7 +2592,7 @@ func TestDecodeIntoValuePointerNil(t *testing.T) {
 	enc.EncodeNil()
 
 	var s TestStruct
-	err := UnmarshalStruct(enc.Bytes(), &s)
+	err := Unmarshal(enc.Bytes(), &s)
 	if err != nil {
 		t.Errorf(errMsgUnexpectedErr, err)
 	}
@@ -2640,7 +2612,7 @@ func TestDecodeIntoValueInterfaceField(t *testing.T) {
 	enc.EncodeString("test")
 
 	var s TestStruct
-	err := UnmarshalStruct(enc.Bytes(), &s)
+	err := Unmarshal(enc.Bytes(), &s)
 	if err != nil {
 		t.Errorf(errMsgUnexpectedErr, err)
 	}
@@ -2659,7 +2631,7 @@ func TestDecodeIntoValueInterfaceFieldMap(t *testing.T) {
 	enc.EncodeString("val")
 
 	var s TestStruct
-	err := UnmarshalStruct(enc.Bytes(), &s)
+	err := Unmarshal(enc.Bytes(), &s)
 	if err != nil {
 		t.Errorf(errMsgUnexpectedErr, err)
 	}
@@ -2678,7 +2650,7 @@ func TestDecodeIntoValueInterfaceFieldArray(t *testing.T) {
 	enc.EncodeInt(2)
 
 	var s TestStruct
-	err := UnmarshalStruct(enc.Bytes(), &s)
+	err := Unmarshal(enc.Bytes(), &s)
 	if err != nil {
 		t.Errorf(errMsgUnexpectedErr, err)
 	}
@@ -2700,7 +2672,7 @@ func TestDecodeIntoStructNonStringKeySkip(t *testing.T) {
 	enc.EncodeString("Alice")
 
 	var s TestStruct
-	err := UnmarshalStruct(enc.Bytes(), &s)
+	err := Unmarshal(enc.Bytes(), &s)
 	// Should skip non-string key and process valid key
 	if err != nil {
 		t.Errorf(errMsgUnexpectedErr, err)
@@ -2721,7 +2693,7 @@ func TestDecodeIntoMapTypeMismatchFormat(t *testing.T) {
 	enc.EncodeString("not a map")
 
 	var s TestStruct
-	err := UnmarshalStruct(enc.Bytes(), &s)
+	err := Unmarshal(enc.Bytes(), &s)
 	if err != ErrTypeMismatch {
 		t.Errorf(errMsgTypeMismatch, err)
 	}
@@ -2738,7 +2710,7 @@ func TestDecodeIntoSliceTypeMismatchFormat(t *testing.T) {
 	enc.EncodeString("not an array")
 
 	var s TestStruct
-	err := UnmarshalStruct(enc.Bytes(), &s)
+	err := Unmarshal(enc.Bytes(), &s)
 	if err != ErrTypeMismatch {
 		t.Errorf(errMsgTypeMismatch, err)
 	}
@@ -2755,7 +2727,7 @@ func TestDecodeIntoArrayTypeMismatchFormat(t *testing.T) {
 	enc.EncodeString("not an array")
 
 	var s TestStruct
-	err := UnmarshalStruct(enc.Bytes(), &s)
+	err := Unmarshal(enc.Bytes(), &s)
 	if err != ErrTypeMismatch {
 		t.Errorf(errMsgTypeMismatch, err)
 	}
@@ -2775,7 +2747,7 @@ func TestBuildStructFieldsPrivateField(t *testing.T) {
 	enc.EncodeString("ignored")
 
 	var s TestStruct
-	err := UnmarshalStruct(enc.Bytes(), &s)
+	err := Unmarshal(enc.Bytes(), &s)
 	if err != nil {
 		t.Errorf(errMsgUnexpectedErr, err)
 	}
@@ -2801,7 +2773,7 @@ func TestBuildStructFieldsSkipTag(t *testing.T) {
 	enc.EncodeString("ignored2")
 
 	var s TestStruct
-	err := UnmarshalStruct(enc.Bytes(), &s)
+	err := Unmarshal(enc.Bytes(), &s)
 	if err != nil {
 		t.Errorf(errMsgUnexpectedErr, err)
 	}
@@ -2827,7 +2799,7 @@ func TestDecodeIntoStructNonStringKeyValueError(t *testing.T) {
 	// Missing length bytes for str32
 
 	var s TestStruct
-	err := UnmarshalStruct(enc.Bytes(), &s)
+	err := Unmarshal(enc.Bytes(), &s)
 	// Should fail when trying to skip the value
 	if err == nil {
 		t.Error(errMsgExpectedErr)
@@ -2846,7 +2818,7 @@ func TestDecodeIntoValueInterfaceError(t *testing.T) {
 	// Missing length bytes
 
 	var s TestStruct
-	err := UnmarshalStruct(enc.Bytes(), &s)
+	err := Unmarshal(enc.Bytes(), &s)
 	if err == nil {
 		t.Error(errMsgExpectedErr)
 	}
@@ -2865,7 +2837,7 @@ func TestDecodeIntoStructUnknownFieldSkip(t *testing.T) {
 	enc.EncodeString("Alice")
 
 	var s TestStruct
-	err := UnmarshalStruct(enc.Bytes(), &s)
+	err := Unmarshal(enc.Bytes(), &s)
 	if err != nil {
 		t.Errorf(errMsgUnexpectedErr, err)
 	}
@@ -2886,7 +2858,7 @@ func TestDecodeIntoStructUnknownFieldSkipDecodeError(t *testing.T) {
 	// Missing length bytes
 
 	var s TestStruct
-	err := UnmarshalStruct(enc.Bytes(), &s)
+	err := Unmarshal(enc.Bytes(), &s)
 	if err == nil {
 		t.Error(errMsgExpectedErr)
 	}
@@ -2904,7 +2876,7 @@ func TestDecodeIntoStructUnexportedFieldSkip(t *testing.T) {
 	enc.EncodeString("Alice")
 
 	var s TestStruct
-	err := UnmarshalStruct(enc.Bytes(), &s)
+	err := Unmarshal(enc.Bytes(), &s)
 	if err != nil {
 		t.Errorf(errMsgUnexpectedErr, err)
 	}
@@ -2927,7 +2899,7 @@ func TestDecodeIntoArrayElementDecodeError(t *testing.T) {
 	// Missing length bytes for second element
 
 	var s TestStruct
-	err := UnmarshalStruct(enc.Bytes(), &s)
+	err := Unmarshal(enc.Bytes(), &s)
 	if err == nil {
 		t.Error(errMsgExpectedErr)
 	}
@@ -2947,7 +2919,7 @@ func TestDecodeIntoSliceElementDecodeError(t *testing.T) {
 	// Missing length bytes for second element
 
 	var s TestStruct
-	err := UnmarshalStruct(enc.Bytes(), &s)
+	err := Unmarshal(enc.Bytes(), &s)
 	if err == nil {
 		t.Error(errMsgExpectedErr)
 	}
@@ -2966,7 +2938,7 @@ func TestDecodeIntoMapKeyDecodeError(t *testing.T) {
 	// Missing length bytes for key
 
 	var s TestStruct
-	err := UnmarshalStruct(enc.Bytes(), &s)
+	err := Unmarshal(enc.Bytes(), &s)
 	if err == nil {
 		t.Error(errMsgExpectedErr)
 	}
@@ -2986,7 +2958,7 @@ func TestDecodeIntoMapValueDecodeError(t *testing.T) {
 	// Missing length bytes for value
 
 	var s TestStruct
-	err := UnmarshalStruct(enc.Bytes(), &s)
+	err := Unmarshal(enc.Bytes(), &s)
 	if err == nil {
 		t.Error(errMsgExpectedErr)
 	}
@@ -3209,7 +3181,7 @@ func TestDecodeStructComplex(t *testing.T) {
 		b, _ := Marshal(o)
 
 		var result Outer
-		err := UnmarshalStruct(b, &result)
+		err := Unmarshal(b, &result)
 		if err != nil || result.Inner.X != 42 {
 			t.Error("nested struct failed")
 		}
@@ -3224,7 +3196,7 @@ func TestDecodeStructComplex(t *testing.T) {
 		b, _ := Marshal(d)
 
 		var result Data
-		err := UnmarshalStruct(b, &result)
+		err := Unmarshal(b, &result)
 		if err != nil || !reflect.DeepEqual(result.Items, d.Items) {
 			t.Error("slice field failed")
 		}
@@ -3239,7 +3211,7 @@ func TestDecodeStructComplex(t *testing.T) {
 		b, _ := Marshal(d)
 
 		var result Data
-		err := UnmarshalStruct(b, &result)
+		err := Unmarshal(b, &result)
 		if err != nil || result.Meta["k"] != "v" {
 			t.Error("map field failed")
 		}
@@ -3254,7 +3226,8 @@ func TestDecodeStructComplex(t *testing.T) {
 		d := Data{Name: "test", Value: 0}
 		b, _ := Marshal(d)
 
-		m, _ := Unmarshal(b)
+		var m any
+		_ = Unmarshal(b, &m)
 		if _, ok := m.(map[string]any)["value"]; ok {
 			t.Error("omitempty field should be omitted")
 		}
@@ -3280,7 +3253,7 @@ func TestDecodeStruct(t *testing.T) {
 
 	// Decode
 	var decoded Person
-	err = UnmarshalStruct(encoded, &decoded)
+	err = Unmarshal(encoded, &decoded)
 	if err != nil {
 		t.Fatalf(errMsgStructFailed, err)
 	}
@@ -3305,7 +3278,8 @@ func TestOmitEmpty(t *testing.T) {
 	}
 
 	// Decode as map to check fields
-	decoded, err := Unmarshal(encoded)
+	var decoded any
+	err = Unmarshal(encoded, &decoded)
 	if err != nil {
 		t.Fatalf(errMsgUnmarshalFailed, err)
 	}
@@ -3340,7 +3314,7 @@ func TestNestedStruct(t *testing.T) {
 	}
 
 	var decoded Person
-	err = UnmarshalStruct(encoded, &decoded)
+	err = Unmarshal(encoded, &decoded)
 	if err != nil {
 		t.Fatalf(errMsgStructFailed, err)
 	}
@@ -3364,7 +3338,7 @@ func TestSliceInStruct(t *testing.T) {
 	}
 
 	var decoded Data
-	err = UnmarshalStruct(encoded, &decoded)
+	err = Unmarshal(encoded, &decoded)
 	if err != nil {
 		t.Fatalf(errMsgStructFailed, err)
 	}
@@ -3388,7 +3362,7 @@ func TestMapInStruct(t *testing.T) {
 	}
 
 	var decoded Data
-	err = UnmarshalStruct(encoded, &decoded)
+	err = Unmarshal(encoded, &decoded)
 	if err != nil {
 		t.Fatalf(errMsgStructFailed, err)
 	}

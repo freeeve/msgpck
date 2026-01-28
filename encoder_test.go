@@ -307,3 +307,86 @@ func TestExtension(t *testing.T) {
 		t.Errorf("ext data = %v, want [1 2 3 4]", v.Ext.Data)
 	}
 }
+
+// TestEncoderBatchArrays tests batch array encoding functions
+func TestEncoderBatchArrays(t *testing.T) {
+	t.Run("EncodeInt64Array", func(t *testing.T) {
+		e := NewEncoder(64)
+		arr := []int64{1, -2, 127, -128, 32767}
+		e.EncodeInt64Array(arr)
+
+		d := NewDecoder(e.Bytes())
+		result, err := d.DecodeInt64Array()
+		if err != nil {
+			t.Fatalf("DecodeInt64Array failed: %v", err)
+		}
+		if len(result) != len(arr) {
+			t.Errorf("length mismatch: got %d, want %d", len(result), len(arr))
+		}
+		for i := range arr {
+			if result[i] != arr[i] {
+				t.Errorf("index %d: got %d, want %d", i, result[i], arr[i])
+			}
+		}
+	})
+
+	t.Run("EncodeUint64Array", func(t *testing.T) {
+		e := NewEncoder(64)
+		arr := []uint64{0, 127, 255, 65535, 1 << 32}
+		e.EncodeUint64Array(arr)
+
+		d := NewDecoder(e.Bytes())
+		result, err := d.DecodeUint64Array()
+		if err != nil {
+			t.Fatalf("DecodeUint64Array failed: %v", err)
+		}
+		if len(result) != len(arr) {
+			t.Errorf("length mismatch: got %d, want %d", len(result), len(arr))
+		}
+		for i := range arr {
+			if result[i] != arr[i] {
+				t.Errorf("index %d: got %d, want %d", i, result[i], arr[i])
+			}
+		}
+	})
+
+	t.Run("EncodeFloat64Array", func(t *testing.T) {
+		e := NewEncoder(64)
+		arr := []float64{0.0, 1.5, -3.14159, 1e10}
+		e.EncodeFloat64Array(arr)
+
+		d := NewDecoder(e.Bytes())
+		result, err := d.DecodeFloat64Array()
+		if err != nil {
+			t.Fatalf("DecodeFloat64Array failed: %v", err)
+		}
+		if len(result) != len(arr) {
+			t.Errorf("length mismatch: got %d, want %d", len(result), len(arr))
+		}
+		for i := range arr {
+			if result[i] != arr[i] {
+				t.Errorf("index %d: got %f, want %f", i, result[i], arr[i])
+			}
+		}
+	})
+
+	t.Run("EncodeStringArray", func(t *testing.T) {
+		e := NewEncoder(128)
+		arr := []string{"hello", "world", "", "test123"}
+		e.EncodeStringArray(arr)
+
+		d := NewDecoder(e.Bytes())
+		result, err := d.DecodeStringArray()
+		if err != nil {
+			t.Fatalf("DecodeStringArray failed: %v", err)
+		}
+		if len(result) != len(arr) {
+			t.Errorf("length mismatch: got %d, want %d", len(result), len(arr))
+		}
+		for i := range arr {
+			if result[i] != arr[i] {
+				t.Errorf("index %d: got %q, want %q", i, result[i], arr[i])
+			}
+		}
+	})
+}

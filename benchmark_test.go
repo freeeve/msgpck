@@ -77,15 +77,8 @@ func BenchmarkMsgpckSmallMapUnmarshal(b *testing.B) {
 	data, _ := Marshal(smallMap)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		UnmarshalMapStringAny(data, false)
-	}
-}
-
-func BenchmarkMsgpckSmallMapUnmarshalZeroCopy(b *testing.B) {
-	data, _ := Marshal(smallMap)
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		UnmarshalMapStringAny(data, true)
+		var m map[string]any
+		Unmarshal(data, &m)
 	}
 }
 
@@ -93,35 +86,17 @@ func BenchmarkMsgpckMediumMapUnmarshal(b *testing.B) {
 	data, _ := Marshal(mediumMap)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		UnmarshalMapStringAny(data, false)
+		var m map[string]any
+		Unmarshal(data, &m)
 	}
 }
-
-func BenchmarkMsgpckMediumMapUnmarshalZeroCopy(b *testing.B) {
-	data, _ := Marshal(mediumMap)
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		UnmarshalMapStringAny(data, true)
-	}
-}
-
-// ============================================================================
-// Typed Map Decoding Benchmarks
-// ============================================================================
 
 func BenchmarkMsgpckStringMapUnmarshal(b *testing.B) {
 	data, _ := Marshal(stringMap)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		UnmarshalMapStringString(data, false)
-	}
-}
-
-func BenchmarkMsgpckStringMapUnmarshalZeroCopy(b *testing.B) {
-	data, _ := Marshal(stringMap)
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		UnmarshalMapStringString(data, true)
+		var m map[string]string
+		Unmarshal(data, &m)
 	}
 }
 
@@ -162,7 +137,7 @@ func BenchmarkMsgpckSmallStructUnmarshal(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		var s SmallStruct
-		UnmarshalStruct(data, &s)
+		Unmarshal(data, &s)
 	}
 }
 
@@ -189,7 +164,7 @@ func BenchmarkMsgpckMediumStructUnmarshal(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		var s MediumStruct
-		UnmarshalStruct(data, &s)
+		Unmarshal(data, &s)
 	}
 }
 
@@ -208,54 +183,6 @@ func BenchmarkMsgpckMediumStructUnmarshalZeroCopy(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		var s MediumStruct
 		mediumStructDecZC.Decode(data, &s)
-	}
-}
-
-// ============================================================================
-// Callback API Benchmarks (Safe Zero-Copy)
-// ============================================================================
-
-func BenchmarkMsgpckSmallStructCallback(b *testing.B) {
-	data, _ := Marshal(smallStruct)
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		DecodeStructFunc(data, func(s *SmallStruct) error {
-			_ = s.Name
-			return nil
-		})
-	}
-}
-
-func BenchmarkMsgpckMediumStructCallback(b *testing.B) {
-	data, _ := Marshal(mediumStruct)
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		DecodeStructFunc(data, func(s *MediumStruct) error {
-			_ = s.Name
-			return nil
-		})
-	}
-}
-
-func BenchmarkMsgpckSmallMapCallback(b *testing.B) {
-	data, _ := Marshal(smallMap)
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		DecodeMapFunc(data, func(m map[string]any) error {
-			_ = m["name"]
-			return nil
-		})
-	}
-}
-
-func BenchmarkMsgpckStringMapCallback(b *testing.B) {
-	data, _ := Marshal(stringMap)
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		DecodeStringMapFunc(data, func(m map[string]string) error {
-			_ = m["name"]
-			return nil
-		})
 	}
 }
 

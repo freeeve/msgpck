@@ -22,7 +22,7 @@ func TestSkipTaggedField(t *testing.T) {
 
 	var d Data
 	d.Skip = 999 // should remain unchanged
-	err := UnmarshalStruct(b, &d)
+	err := Unmarshal(b, &d)
 	if err != nil || d.Name != "test" || d.Value != 42 || d.Skip != 999 {
 		t.Error("skip tagged field failed")
 	}

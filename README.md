@@ -40,9 +40,9 @@ Benchmarks vs vmihailenco/msgpack (Apple M3 Max):
 |-----------|-------------|--------|---------|
 | SmallMap Encode (`Marshal`) | 127 ns, 2 allocs | 73 ns, 1 allocs | **1.7x** |
 | MediumMap Encode (`Marshal`) | 491 ns, 4 allocs | 216 ns, 1 allocs | **2.3x** |
-| SmallMap Decode (`UnmarshalMapStringAny`) | 201 ns, 8 allocs | 107 ns, 3 allocs | **1.9x** |
-| MediumMap Decode (`UnmarshalMapStringAny`) | 810 ns, 34 allocs | 392 ns, 15 allocs | **2.1x** |
-| StringMap Decode (`UnmarshalMapStringString`) | 305 ns, 12 allocs | 114 ns, 2 allocs | **2.7x** |
+| SmallMap Decode (`Unmarshal`) | 201 ns, 8 allocs | 107 ns, 3 allocs | **1.9x** |
+| MediumMap Decode (`Unmarshal`) | 810 ns, 34 allocs | 392 ns, 15 allocs | **2.1x** |
+| StringMap Decode (`Unmarshal`) | 305 ns, 12 allocs | 114 ns, 2 allocs | **2.7x** |
 
 Run benchmarks yourself:
 ```bash
@@ -55,14 +55,15 @@ go test -bench=. -benchmem
 import "github.com/freeeve/msgpck"
 
 // Encode any value
-data, _ := msgpck.MarshalCopy(map[string]any{"name": "Alice", "age": 30})
+data, _ := msgpck.Marshal(map[string]any{"name": "Alice", "age": 30})
 
 // Decode to map
-m, _ := msgpck.UnmarshalMapStringAny(data, false)
+var m map[string]any
+msgpck.Unmarshal(data, &m)
 
 // Decode to struct
 var user User
-msgpck.UnmarshalStruct(data, &user)
+msgpck.Unmarshal(data, &user)
 ```
 
 ## Key Features
@@ -96,41 +97,15 @@ dec := msgpck.GetStructDecoder[User](true)
 dec.Decode(data, &user)
 ```
 
-**Warning**: Zero-copy strings are only valid while the input buffer exists. Use the callback API when buffer lifetime is uncertain:
-
-```go
-// Safe zero-copy: strings valid only within callback
-msgpck.DecodeStructFunc(data, func(user *User) error {
-    // Use user.Name here - it points into data
-    processUser(user)
-    return nil
-})
-// After callback returns, data can be reused safely
-```
-
-### Typed Map Decoding
-
-When you know your map types, avoid `any` boxing overhead:
-
-```go
-// map[string]any - general purpose
-m, _ := msgpck.UnmarshalMapStringAny(data, false)
-
-// map[string]string - faster when you know the type
-m, _ := msgpck.UnmarshalMapStringString(data, false)
-
-// Zero-copy variants (strings point into input buffer)
-m, _ := msgpck.UnmarshalMapStringAny(data, true)
-m, _ := msgpck.UnmarshalMapStringString(data, true)
-```
+**Warning**: Zero-copy strings are only valid while the input buffer exists. Copy strings if you need them to outlive the buffer.
 
 ## API Reference
 
 ### Encoding
 
 ```go
-// Encode any Go value to msgpack
-msgpck.Marshal(v any) ([]byte, error)  // safe to retain
+// Encode any Go value to msgpack (safe to retain, concurrent-safe)
+msgpck.Marshal(v any) ([]byte, error)
 
 // For hot paths: cached struct encoder
 enc := msgpck.GetStructEncoder[MyStruct]()
@@ -140,33 +115,26 @@ enc.EncodeWith(e, &src)  // zero-alloc with your own Encoder
 
 ### Decoding
 
+The API matches `encoding/json`:
+
 ```go
-// General decoding
-msgpck.Unmarshal(data []byte) (any, error)
+// Decode to any type - structs, maps, slices, primitives
+var user User
+msgpck.Unmarshal(data, &user)
 
-// Map decoding
-msgpck.UnmarshalMapStringAny(data []byte, zeroCopy bool) (map[string]any, error)
-msgpck.UnmarshalMapStringString(data []byte, zeroCopy bool) (map[string]string, error)
+var m map[string]any
+msgpck.Unmarshal(data, &m)
 
-// Struct decoding (reflection-based, works with any struct)
-msgpck.UnmarshalStruct(data []byte, dst any) error
+var s map[string]string
+msgpck.Unmarshal(data, &s)
 
 // For hot paths: cached struct decoder
 dec := msgpck.GetStructDecoder[MyStruct](false)
 dec.Decode(data, &dst)
 
-// Zero-copy cached decoder
+// Zero-copy cached decoder (strings point into input buffer)
 dec := msgpck.GetStructDecoder[MyStruct](true)
 dec.Decode(data, &dst)
-```
-
-### Callback APIs (Safe Zero-Copy)
-
-```go
-// Buffer guaranteed valid during callback - safest for zero-copy
-msgpck.DecodeStructFunc(data, func(v *MyStruct) error { ... })
-msgpck.DecodeMapFunc(data, func(m map[string]any) error { ... })
-msgpck.DecodeStringMapFunc(data, func(m map[string]string) error { ... })
 ```
 
 ### Timestamps
@@ -197,7 +165,7 @@ if msgpck.IsTimestamp(ext) {
 ## Concurrency
 
 All public APIs are concurrent-safe:
-- `Marshal`, `MarshalCopy`, `Unmarshal*` functions use internal pools
+- `Marshal` and `Unmarshal` functions use internal pools
 - `GetStructEncoder[T]()`, `GetStructDecoder[T](zeroCopy)` return cached, thread-safe codecs
 - `StructEncoder` and `StructDecoder` instances are safe to use from multiple goroutines
 

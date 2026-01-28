@@ -115,6 +115,14 @@ func (sd *StructDecoder[T]) Decode(data []byte, dst *T) error {
 	return err
 }
 
+// DecodeWith decodes msgpack data using a provided decoder.
+// Use this to avoid pool overhead when you manage your own decoder.
+// The decoder will be reset with the provided data before decoding.
+func (sd *StructDecoder[T]) DecodeWith(d *Decoder, data []byte, dst *T) error {
+	d.Reset(data)
+	return sd.decodeInto(d, unsafe.Pointer(dst))
+}
+
 func (sd *StructDecoder[T]) decodeInto(d *Decoder, ptr unsafe.Pointer) error {
 	format, err := d.readByte()
 	if err != nil {
@@ -158,11 +166,11 @@ func (sd *StructDecoder[T]) decodeInto(d *Decoder, ptr unsafe.Pointer) error {
 		}
 		key := unsafe.String(unsafe.SliceData(keyBytes), len(keyBytes))
 
-		// Find matching field (linear scan - fast for small n)
+		// Find matching field via linear scan (fastest for typical struct sizes)
 		var field *structField
-		for j := range sd.fields {
-			if sd.fields[j].name == key {
-				field = &sd.fields[j]
+		for i := range sd.fields {
+			if sd.fields[i].name == key {
+				field = &sd.fields[i]
 				break
 			}
 		}

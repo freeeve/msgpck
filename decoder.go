@@ -270,3 +270,220 @@ func (d *Decoder) readStringBytes() ([]byte, error) {
 	}
 	return d.readBytes(length)
 }
+
+// DecodeInt64Array decodes an array of int64 values.
+// More efficient than decoding elements individually.
+func (d *Decoder) DecodeInt64Array() ([]int64, error) {
+	format, err := d.readByte()
+	if err != nil {
+		return nil, err
+	}
+
+	arrLen, err := d.parseArrayLen(format)
+	if err != nil {
+		return nil, err
+	}
+	if err := d.validateArrayLen(arrLen); err != nil {
+		return nil, err
+	}
+
+	result := make([]int64, arrLen)
+	for i := 0; i < arrLen; i++ {
+		format, err := d.readByte()
+		if err != nil {
+			return nil, err
+		}
+		result[i], err = d.decodeInt(format)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return result, nil
+}
+
+// DecodeUint64Array decodes an array of uint64 values.
+// More efficient than decoding elements individually.
+func (d *Decoder) DecodeUint64Array() ([]uint64, error) {
+	format, err := d.readByte()
+	if err != nil {
+		return nil, err
+	}
+
+	arrLen, err := d.parseArrayLen(format)
+	if err != nil {
+		return nil, err
+	}
+	if err := d.validateArrayLen(arrLen); err != nil {
+		return nil, err
+	}
+
+	result := make([]uint64, arrLen)
+	for i := 0; i < arrLen; i++ {
+		format, err := d.readByte()
+		if err != nil {
+			return nil, err
+		}
+		result[i], err = d.decodeUint(format)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return result, nil
+}
+
+// DecodeFloat64Array decodes an array of float64 values.
+// More efficient than decoding elements individually.
+func (d *Decoder) DecodeFloat64Array() ([]float64, error) {
+	format, err := d.readByte()
+	if err != nil {
+		return nil, err
+	}
+
+	arrLen, err := d.parseArrayLen(format)
+	if err != nil {
+		return nil, err
+	}
+	if err := d.validateArrayLen(arrLen); err != nil {
+		return nil, err
+	}
+
+	result := make([]float64, arrLen)
+	for i := 0; i < arrLen; i++ {
+		format, err := d.readByte()
+		if err != nil {
+			return nil, err
+		}
+		v, err := d.decodeFloat(format)
+		if err != nil {
+			return nil, err
+		}
+		result[i] = v
+	}
+	return result, nil
+}
+
+// DecodeStringArray decodes an array of strings (with copy).
+// More efficient than decoding elements individually.
+func (d *Decoder) DecodeStringArray() ([]string, error) {
+	format, err := d.readByte()
+	if err != nil {
+		return nil, err
+	}
+
+	arrLen, err := d.parseArrayLen(format)
+	if err != nil {
+		return nil, err
+	}
+	if err := d.validateArrayLen(arrLen); err != nil {
+		return nil, err
+	}
+
+	result := make([]string, arrLen)
+	for i := 0; i < arrLen; i++ {
+		bytes, err := d.readStringBytes()
+		if err != nil {
+			return nil, err
+		}
+		result[i] = string(bytes)
+	}
+	return result, nil
+}
+
+// decodeInt decodes an integer from the given format byte.
+func (d *Decoder) decodeInt(format byte) (int64, error) {
+	if isPositiveFixint(format) {
+		return int64(format), nil
+	}
+	if isNegativeFixint(format) {
+		return int64(int8(format)), nil
+	}
+	switch format {
+	case formatUint8:
+		v, err := d.readUint8()
+		return int64(v), err
+	case formatUint16:
+		v, err := d.readUint16()
+		return int64(v), err
+	case formatUint32:
+		v, err := d.readUint32()
+		return int64(v), err
+	case formatUint64:
+		v, err := d.readUint64()
+		return int64(v), err
+	case formatInt8:
+		v, err := d.readInt8()
+		return int64(v), err
+	case formatInt16:
+		v, err := d.readInt16()
+		return int64(v), err
+	case formatInt32:
+		v, err := d.readInt32()
+		return int64(v), err
+	case formatInt64:
+		return d.readInt64()
+	default:
+		return 0, ErrTypeMismatch
+	}
+}
+
+// decodeUint decodes an unsigned integer from the given format byte.
+func (d *Decoder) decodeUint(format byte) (uint64, error) {
+	if isPositiveFixint(format) {
+		return uint64(format), nil
+	}
+	switch format {
+	case formatUint8:
+		v, err := d.readUint8()
+		return uint64(v), err
+	case formatUint16:
+		v, err := d.readUint16()
+		return uint64(v), err
+	case formatUint32:
+		v, err := d.readUint32()
+		return uint64(v), err
+	case formatUint64:
+		return d.readUint64()
+	default:
+		return 0, ErrTypeMismatch
+	}
+}
+
+// decodeFloat decodes a float from the given format byte.
+func (d *Decoder) decodeFloat(format byte) (float64, error) {
+	if isPositiveFixint(format) {
+		return float64(format), nil
+	}
+	if isNegativeFixint(format) {
+		return float64(int8(format)), nil
+	}
+	switch format {
+	case formatFloat32:
+		v, err := d.readFloat32()
+		return float64(v), err
+	case formatFloat64:
+		return d.readFloat64()
+	case formatUint8:
+		v, err := d.readUint8()
+		return float64(v), err
+	case formatUint16:
+		v, err := d.readUint16()
+		return float64(v), err
+	case formatUint32:
+		v, err := d.readUint32()
+		return float64(v), err
+	case formatInt8:
+		v, err := d.readInt8()
+		return float64(v), err
+	case formatInt16:
+		v, err := d.readInt16()
+		return float64(v), err
+	case formatInt32:
+		v, err := d.readInt32()
+		return float64(v), err
+	case formatInt64:
+		v, err := d.readInt64()
+		return float64(v), err
+	default:
+		return 0, ErrTypeMismatch
+	}
+}

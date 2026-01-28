@@ -2,16 +2,6 @@ package msgpck
 
 import "unsafe"
 
-// UnmarshalMapStringAny decodes msgpack into map[string]any.
-// Zero-copy strings when zeroCopy is true.
-func UnmarshalMapStringAny(data []byte, zeroCopy bool) (map[string]any, error) {
-	d := decoderPool.Get().(*Decoder)
-	d.Reset(data)
-	m, err := decodeMapStringAny(d, zeroCopy)
-	decoderPool.Put(d)
-	return m, err
-}
-
 // bytesToString converts bytes to string based on zeroCopy flag.
 func bytesToString(b []byte, zeroCopy bool) string {
 	if zeroCopy {
@@ -317,51 +307,4 @@ func decodeMapStringStringCore(d *Decoder, zeroCopy bool) (map[string]string, er
 	}
 
 	return m, nil
-}
-
-// UnmarshalMapStringString decodes msgpack into map[string]string.
-// Much faster than map[string]any when you know the type.
-func UnmarshalMapStringString(data []byte, zeroCopy bool) (map[string]string, error) {
-	d := decoderPool.Get().(*Decoder)
-	d.Reset(data)
-	m, err := decodeMapStringStringCore(d, zeroCopy)
-	decoderPool.Put(d)
-	return m, err
-}
-
-// Callback-based APIs for safe zero-copy usage.
-// The callback guarantees the buffer stays valid for its duration.
-// Strings are only valid within the callback - do not store them.
-
-// DecodeMapFunc decodes msgpack into map[string]any and calls fn.
-// Zero-copy strings: valid only within the callback.
-// This is the safest way to use zero-copy when the buffer may be reused.
-func DecodeMapFunc(data []byte, fn func(m map[string]any) error) error {
-	m, err := UnmarshalMapStringAny(data, true)
-	if err != nil {
-		return err
-	}
-	return fn(m)
-}
-
-// DecodeStringMapFunc decodes msgpack into map[string]string and calls fn.
-// Zero-copy strings: valid only within the callback.
-func DecodeStringMapFunc(data []byte, fn func(m map[string]string) error) error {
-	m, err := UnmarshalMapStringString(data, true)
-	if err != nil {
-		return err
-	}
-	return fn(m)
-}
-
-// DecodeStructFunc decodes msgpack into struct T and calls fn.
-// Zero-copy strings: valid only within the callback.
-// Uses cached zero-copy decoder for repeated types.
-func DecodeStructFunc[T any](data []byte, fn func(v *T) error) error {
-	dec := GetStructDecoder[T](true)
-	var v T
-	if err := dec.Decode(data, &v); err != nil {
-		return err
-	}
-	return fn(&v)
 }

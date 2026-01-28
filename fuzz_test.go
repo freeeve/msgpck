@@ -78,7 +78,8 @@ func FuzzRoundTrip(f *testing.F) {
 		if err != nil {
 			return
 		}
-		decoded, err := Unmarshal(encoded)
+		var decoded any
+		err = Unmarshal(encoded, &decoded)
 		if err != nil {
 			t.Fatalf("failed to decode string: %v", err)
 		}
@@ -91,7 +92,8 @@ func FuzzRoundTrip(f *testing.F) {
 		if err != nil {
 			return
 		}
-		decoded2, err := Unmarshal(encoded2)
+		var decoded2 any
+		err = Unmarshal(encoded2, &decoded2)
 		if err != nil {
 			t.Fatalf("failed to decode bytes: %v", err)
 		}
@@ -120,7 +122,8 @@ func FuzzRoundTripInt(f *testing.F) {
 		if err != nil {
 			t.Fatalf("failed to encode int64: %v", err)
 		}
-		decoded, err := Unmarshal(encoded)
+		var decoded any
+		err = Unmarshal(encoded, &decoded)
 		if err != nil {
 			t.Fatalf("failed to decode int64: %v", err)
 		}
@@ -143,7 +146,8 @@ func FuzzRoundTripFloat(f *testing.F) {
 		if err != nil {
 			t.Fatalf("failed to encode float64: %v", err)
 		}
-		decoded, err := Unmarshal(encoded)
+		var decoded any
+		err = Unmarshal(encoded, &decoded)
 		if err != nil {
 			t.Fatalf("failed to decode float64: %v", err)
 		}
@@ -165,27 +169,19 @@ func FuzzMapDecode(f *testing.F) {
 	f.Add([]byte{0x81, 0xa4, 'n', 'a', 'm', 'e', 0xa5, 'A', 'l', 'i', 'c', 'e'}) // {"name":"Alice"}
 
 	f.Fuzz(func(t *testing.T, data []byte) {
-		// Test UnmarshalMap - shouldn't panic
-		_, _ = UnmarshalMapStringAny(data, false)
+		// Test Unmarshal into map[string]any - shouldn't panic
+		var m map[string]any
+		_ = Unmarshal(data, &m)
 
-		// Test UnmarshalMapZeroCopy - shouldn't panic
-		_, _ = UnmarshalMapStringAny(data, true)
-
-		// Test DecodeMapFunc - shouldn't panic
-		_ = DecodeMapFunc(data, func(m map[string]any) error {
-			// Access some fields to exercise the map
+		// Access some fields to exercise the map
+		if m != nil {
 			_ = m["test"]
 			_ = m["name"]
 			for k, v := range m {
 				_ = k
 				_ = v
 			}
-			return nil
-		})
-
-		// Test UnmarshalMapStringAny with both modes
-		_, _ = UnmarshalMapStringAny(data, true)
-		_, _ = UnmarshalMapStringAny(data, false)
+		}
 	})
 }
 
@@ -197,18 +193,17 @@ func FuzzMapStringString(f *testing.F) {
 	f.Add([]byte{0x82, 0xa1, 'a', 0xa1, 'x', 0xa1, 'b', 0xa1, 'y'}) // {"a":"x","b":"y"}
 
 	f.Fuzz(func(t *testing.T, data []byte) {
-		// Test UnmarshalMapStringString - shouldn't panic
-		_, _ = UnmarshalMapStringString(data, false)
-		_, _ = UnmarshalMapStringString(data, true)
+		// Test Unmarshal into map[string]string - shouldn't panic
+		var m map[string]string
+		_ = Unmarshal(data, &m)
 
-		// Test DecodeStringMapFunc - shouldn't panic
-		_ = DecodeStringMapFunc(data, func(m map[string]string) error {
+		// Iterate if not nil
+		if m != nil {
 			for k, v := range m {
 				_ = k
 				_ = v
 			}
-			return nil
-		})
+		}
 	})
 }
 
@@ -233,7 +228,7 @@ func FuzzStructDecode(f *testing.F) {
 
 	f.Fuzz(func(t *testing.T, data []byte) {
 		var s TestStruct
-		_ = UnmarshalStruct(data, &s) // Shouldn't panic, errors expected
+		_ = Unmarshal(data, &s) // Shouldn't panic, errors expected
 	})
 }
 
@@ -272,8 +267,8 @@ func FuzzCachedStructDecoder(f *testing.F) {
 	})
 }
 
-// FuzzDecodeStructFunc tests the callback-based struct decoder
-func FuzzDecodeStructFunc(f *testing.F) {
+// FuzzStructUnmarshal tests the struct decoding
+func FuzzStructUnmarshal(f *testing.F) {
 	type Data struct {
 		ID    int64  `msgpack:"id"`
 		Value string `msgpack:"value"`
@@ -292,12 +287,9 @@ func FuzzDecodeStructFunc(f *testing.F) {
 	f.Add([]byte{0xc0}) // nil
 
 	f.Fuzz(func(t *testing.T, data []byte) {
-		// Test DecodeStructFunc - shouldn't panic
-		_ = DecodeStructFunc(data, func(d *Data) error {
-			_ = d.ID
-			_ = d.Value
-			return nil
-		})
+		// Test Unmarshal into struct - shouldn't panic
+		var d Data
+		_ = Unmarshal(data, &d)
 	})
 }
 
@@ -350,7 +342,8 @@ func FuzzNestedStructures(f *testing.F) {
 
 	f.Fuzz(func(t *testing.T, data []byte) {
 		// Test with default config
-		_, _ = Unmarshal(data)
+		var result any
+		_ = Unmarshal(data, &result)
 
 		// Test with strict depth limit
 		cfg := Config{
@@ -391,7 +384,8 @@ func FuzzLargeCollections(f *testing.F) {
 		_, _ = d.DecodeAny()
 
 		// Also test map decoding
-		_, _ = UnmarshalMapStringAny(data, false)
+		var m map[string]any
+		_ = Unmarshal(data, &m)
 	})
 }
 

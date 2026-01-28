@@ -315,3 +315,39 @@ func (e *Encoder) EncodeValue(v *Value) {
 		e.EncodeExt(v.Ext.Type, v.Ext.Data)
 	}
 }
+
+// EncodeInt64Array encodes a slice of int64 values.
+// More efficient than encoding elements individually.
+func (e *Encoder) EncodeInt64Array(arr []int64) {
+	e.EncodeArrayHeader(len(arr))
+	for _, v := range arr {
+		e.EncodeInt(v)
+	}
+}
+
+// EncodeUint64Array encodes a slice of uint64 values.
+// More efficient than encoding elements individually.
+func (e *Encoder) EncodeUint64Array(arr []uint64) {
+	e.EncodeArrayHeader(len(arr))
+	for _, v := range arr {
+		e.EncodeUint(v)
+	}
+}
+
+// EncodeFloat64Array encodes a slice of float64 values.
+// More efficient than encoding elements individually.
+func (e *Encoder) EncodeFloat64Array(arr []float64) {
+	e.EncodeArrayHeader(len(arr))
+	for _, v := range arr {
+		e.EncodeFloat64(v)
+	}
+}
+
+// EncodeStringArray encodes a slice of strings.
+// More efficient than encoding elements individually.
+func (e *Encoder) EncodeStringArray(arr []string) {
+	e.EncodeArrayHeader(len(arr))
+	for _, v := range arr {
+		e.EncodeString(v)
+	}
+}

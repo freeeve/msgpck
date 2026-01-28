@@ -853,15 +853,3 @@ func (d *Decoder) decodeStringKey() ([]byte, error) {
 	}
 	return d.decodeStringKeyWithFormat(format)
 }
-
-// UnmarshalStruct is a convenience function that decodes msgpack data into a struct.
-func UnmarshalStruct(data []byte, v any) error {
-	d := NewDecoder(data)
-	return d.DecodeStruct(v)
-}
-
-// UnmarshalStructWithConfig decodes msgpack data into a struct with custom config.
-func UnmarshalStructWithConfig(data []byte, v any, cfg Config) error {
-	d := NewDecoderWithConfig(data, cfg)
-	return d.DecodeStruct(v)
-}

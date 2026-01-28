@@ -395,7 +395,8 @@ func TestMarshalVariants(t *testing.T) {
 			t.Error(err)
 		}
 		// Verify we can use it after return
-		_, err = Unmarshal(b)
+		var result any
+		err = Unmarshal(b, &result)
 		if err != nil {
 			t.Error(err)
 		}
@@ -454,7 +455,8 @@ func TestEncodePointerTypes(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		decoded, _ := Unmarshal(b)
+		var decoded any
+		_ = Unmarshal(b, &decoded)
 		if decoded != int64(42) {
 			t.Error("pointer encode failed")
 		}
@@ -466,7 +468,8 @@ func TestEncodePointerTypes(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		decoded, _ := Unmarshal(b)
+		var decoded any
+		_ = Unmarshal(b, &decoded)
 		if decoded != nil {
 			t.Error("nil pointer encode failed")
 		}
@@ -481,7 +484,8 @@ func TestEncodeNilTypes(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		decoded, _ := Unmarshal(b)
+		var decoded any
+		_ = Unmarshal(b, &decoded)
 		if decoded != nil {
 			t.Error("nil slice encode failed")
 		}
@@ -493,7 +497,8 @@ func TestEncodeNilTypes(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		decoded, _ := Unmarshal(b)
+		var decoded any
+		_ = Unmarshal(b, &decoded)
 		if decoded != nil {
 			t.Error("nil map encode failed")
 		}
@@ -540,7 +545,8 @@ func TestRoundTripPrimitives(t *testing.T) {
 				t.Fatalf(errMsgMarshalFailed, err)
 			}
 
-			decoded, err := Unmarshal(encoded)
+			var decoded any
+			err = Unmarshal(encoded, &decoded)
 			if err != nil {
 				t.Fatalf(errMsgUnmarshalFailed, err)
 			}
@@ -577,7 +583,8 @@ func TestRoundTripContainers(t *testing.T) {
 				t.Fatalf(errMsgMarshalFailed, err)
 			}
 
-			decoded, err := Unmarshal(encoded)
+			var decoded any
+			err = Unmarshal(encoded, &decoded)
 			if err != nil {
 				t.Fatalf(errMsgUnmarshalFailed, err)
 			}
@@ -597,7 +604,8 @@ func TestBinaryData(t *testing.T) {
 		t.Fatalf(errMsgMarshalFailed, err)
 	}
 
-	decoded, err := Unmarshal(encoded)
+	var decoded any
+	err = Unmarshal(encoded, &decoded)
 	if err != nil {
 		t.Fatalf(errMsgUnmarshalFailed, err)
 	}
@@ -627,7 +635,8 @@ func TestFloatSpecialValues(t *testing.T) {
 				t.Fatalf(errMsgMarshalFailed, err)
 			}
 
-			decoded, err := Unmarshal(encoded)
+			var decoded any
+			err = Unmarshal(encoded, &decoded)
 			if err != nil {
 				t.Fatalf(errMsgUnmarshalFailed, err)
 			}
@@ -677,7 +686,7 @@ func TestMarshalConcurrent(t *testing.T) {
 				}
 
 				var decoded TestStruct
-				if err := UnmarshalStruct(data, &decoded); err != nil {
+				if err := Unmarshal(data, &decoded); err != nil {
 					errChan <- err
 					return
 				}
@@ -695,5 +704,365 @@ func TestMarshalConcurrent(t *testing.T) {
 
 	for err := range errChan {
 		t.Error(err)
+	}
+}
+
+// TestStructEncoderConcurrent tests StructEncoder for concurrent safety.
+// This simulates storing encoded data and reading it back later.
+func TestStructEncoderConcurrent(t *testing.T) {
+	type Record struct {
+		ID     uint64            `msgpack:"id"`
+		Name   string            `msgpack:"name"`
+		Tags   []string          `msgpack:"tags"`
+		Meta   map[string]string `msgpack:"meta"`
+		Score  float64           `msgpack:"score"`
+		Active bool              `msgpack:"active"`
+		Counts []int64           `msgpack:"counts"`
+		Nested *Record           `msgpack:"nested,omitempty"`
+	}
+
+	enc := GetStructEncoder[Record]()
+	dec := GetStructDecoder[Record](false)
+
+	const numGoroutines = 100
+	const recordsPerGoroutine = 100
+
+	// Shared storage simulating a database
+	type storedRecord struct {
+		original Record
+		encoded  []byte
+	}
+	storage := make(chan storedRecord, numGoroutines*recordsPerGoroutine)
+
+	var wg sync.WaitGroup
+	errChan := make(chan error, numGoroutines*recordsPerGoroutine)
+
+	// Writers: encode and store
+	for i := range numGoroutines {
+		wg.Add(1)
+		go func(n int) {
+			defer wg.Done()
+			for j := range recordsPerGoroutine {
+				rec := Record{
+					ID:     uint64(n*10000 + j),
+					Name:   "Record with a longer name for testing buffer handling",
+					Tags:   []string{"tag1", "tag2", "tag3", "tag4"},
+					Meta:   map[string]string{"key1": "value1", "key2": "value2"},
+					Score:  float64(n) + float64(j)/100.0,
+					Active: j%2 == 0,
+					Counts: []int64{1, 2, 3, 4, 5},
+				}
+
+				data, err := enc.Encode(&rec)
+				if err != nil {
+					errChan <- err
+					return
+				}
+
+				// Store a copy (simulating database write)
+				stored := make([]byte, len(data))
+				copy(stored, data)
+				storage <- storedRecord{original: rec, encoded: stored}
+			}
+		}(i)
+	}
+
+	// Wait for all writers
+	wg.Wait()
+	close(storage)
+
+	// Readers: decode and verify
+	for stored := range storage {
+		var decoded Record
+		if err := dec.Decode(stored.encoded, &decoded); err != nil {
+			t.Errorf("decode failed for ID %d (len=%d): %v",
+				stored.original.ID, len(stored.encoded), err)
+			continue
+		}
+
+		if decoded.ID != stored.original.ID {
+			t.Errorf("ID mismatch: got %d, want %d", decoded.ID, stored.original.ID)
+		}
+		if decoded.Name != stored.original.Name {
+			t.Errorf("Name mismatch for ID %d", stored.original.ID)
+		}
+		if decoded.Score != stored.original.Score {
+			t.Errorf("Score mismatch for ID %d", stored.original.ID)
+		}
+	}
+
+	close(errChan)
+	for err := range errChan {
+		t.Error(err)
+	}
+}
+
+// TestMarshalConcurrentWithStorage simulates database write/read pattern.
+// Encodes with Marshal, stores bytes, then decodes from multiple goroutines.
+func TestMarshalConcurrentWithStorage(t *testing.T) {
+	type Record struct {
+		ID     uint64            `msgpack:"id"`
+		Name   string            `msgpack:"name"`
+		Tags   []string          `msgpack:"tags,omitempty"`
+		Meta   map[string]string `msgpack:"meta,omitempty"`
+		Score  float64           `msgpack:"score"`
+		Active bool              `msgpack:"active"`
+	}
+
+	const numWriters = 50
+	const numReaders = 50
+	const recordsPerWriter = 100
+
+	// Simulated storage (like a database)
+	var mu sync.Mutex
+	storage := make(map[uint64][]byte)
+
+	var writeWg, readWg sync.WaitGroup
+	errChan := make(chan error, numWriters*recordsPerWriter+numReaders*recordsPerWriter)
+	done := make(chan struct{})
+
+	// Writers: encode with Marshal and store
+	for i := range numWriters {
+		writeWg.Add(1)
+		go func(n int) {
+			defer writeWg.Done()
+			for j := range recordsPerWriter {
+				rec := Record{
+					ID:     uint64(n*recordsPerWriter + j),
+					Name:   "Record name with enough content to exercise the encoder",
+					Tags:   []string{"tag1", "tag2", "tag3"},
+					Meta:   map[string]string{"k1": "v1", "k2": "v2"},
+					Score:  float64(n) * 1.5,
+					Active: j%2 == 0,
+				}
+
+				data, err := Marshal(&rec)
+				if err != nil {
+					errChan <- err
+					return
+				}
+
+				// Store (simulating database write)
+				mu.Lock()
+				storage[rec.ID] = data
+				mu.Unlock()
+			}
+		}(i)
+	}
+
+	// Readers: concurrently read and decode
+	for i := range numReaders {
+		readWg.Add(1)
+		go func(n int) {
+			defer readWg.Done()
+			for {
+				select {
+				case <-done:
+					return
+				default:
+				}
+
+				// Pick a random ID to read
+				id := uint64((n * recordsPerWriter) + (n % recordsPerWriter))
+
+				mu.Lock()
+				data, ok := storage[id]
+				mu.Unlock()
+
+				if !ok {
+					continue
+				}
+
+				var decoded Record
+				if err := Unmarshal(data, &decoded); err != nil {
+					errChan <- err
+					return
+				}
+
+				if decoded.ID != id {
+					errChan <- errors.New("ID mismatch in concurrent read")
+					return
+				}
+			}
+		}(i)
+	}
+
+	// Wait for writers, then signal readers to stop
+	writeWg.Wait()
+	close(done)
+	readWg.Wait()
+
+	// Final verification: decode all stored records
+	for id, data := range storage {
+		var decoded Record
+		if err := Unmarshal(data, &decoded); err != nil {
+			t.Errorf("final decode failed for ID %d (len=%d): %v", id, len(data), err)
+		}
+	}
+
+	close(errChan)
+	for err := range errChan {
+		t.Error(err)
+	}
+}
+
+// TestMarshalConcurrentAggressive is an aggressive test to find race conditions.
+func TestMarshalConcurrentAggressive(t *testing.T) {
+	type Data struct {
+		ID     uint64            `msgpack:"id"`
+		Name   string            `msgpack:"name"`
+		Tags   []string          `msgpack:"tags"`
+		Values map[string]int64  `msgpack:"values"`
+		Nested map[string]string `msgpack:"nested"`
+	}
+
+	const numGoroutines = 500
+	const iterations = 200
+
+	var wg sync.WaitGroup
+	failures := make([]error, 0)
+	var mu sync.Mutex
+
+	for i := range numGoroutines {
+		wg.Add(1)
+		go func(n int) {
+			defer wg.Done()
+			for j := range iterations {
+				original := Data{
+					ID:     uint64(n*iterations + j),
+					Name:   "A moderately long name to exercise buffer handling properly",
+					Tags:   []string{"alpha", "beta", "gamma", "delta", "epsilon"},
+					Values: map[string]int64{"a": 1, "b": 2, "c": 3, "d": 4},
+					Nested: map[string]string{"k1": "v1", "k2": "v2", "k3": "v3"},
+				}
+
+				// Encode
+				data, err := Marshal(&original)
+				if err != nil {
+					mu.Lock()
+					failures = append(failures, err)
+					mu.Unlock()
+					return
+				}
+
+				// Verify length is reasonable (not truncated)
+				if len(data) < 50 {
+					mu.Lock()
+					failures = append(failures, errors.New("data too short - possible truncation"))
+					mu.Unlock()
+					return
+				}
+
+				// Decode immediately
+				var decoded Data
+				if err := Unmarshal(data, &decoded); err != nil {
+					mu.Lock()
+					failures = append(failures, err)
+					mu.Unlock()
+					return
+				}
+
+				// Verify
+				if decoded.ID != original.ID {
+					mu.Lock()
+					failures = append(failures, errors.New("ID mismatch"))
+					mu.Unlock()
+					return
+				}
+				if decoded.Name != original.Name {
+					mu.Lock()
+					failures = append(failures, errors.New("Name mismatch"))
+					mu.Unlock()
+					return
+				}
+				if len(decoded.Tags) != len(original.Tags) {
+					mu.Lock()
+					failures = append(failures, errors.New("Tags length mismatch"))
+					mu.Unlock()
+					return
+				}
+			}
+		}(i)
+	}
+
+	wg.Wait()
+
+	if len(failures) > 0 {
+		for i, err := range failures {
+			if i >= 10 {
+				t.Errorf("... and %d more failures", len(failures)-10)
+				break
+			}
+			t.Error(err)
+		}
+	}
+}
+
+// TestConcurrentEncodeDecodeStress is a stress test for concurrent encode/decode.
+func TestConcurrentEncodeDecodeStress(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping stress test in short mode")
+	}
+
+	type Data struct {
+		ID    uint64   `msgpack:"id"`
+		Value string   `msgpack:"value"`
+		Items []string `msgpack:"items"`
+	}
+
+	enc := GetStructEncoder[Data]()
+	dec := GetStructDecoder[Data](false)
+
+	const numGoroutines = 200
+	const iterations = 500
+
+	var wg sync.WaitGroup
+	failures := make(chan string, numGoroutines*iterations)
+
+	for i := range numGoroutines {
+		wg.Add(1)
+		go func(n int) {
+			defer wg.Done()
+			for j := range iterations {
+				original := Data{
+					ID:    uint64(n*iterations + j),
+					Value: "test value with some content to make it larger",
+					Items: []string{"item1", "item2", "item3"},
+				}
+
+				// Encode
+				data, err := enc.Encode(&original)
+				if err != nil {
+					failures <- err.Error()
+					return
+				}
+
+				// Immediately decode (no copy - tests if data is stable)
+				var decoded Data
+				if err := dec.Decode(data, &decoded); err != nil {
+					failures <- err.Error()
+					return
+				}
+
+				if decoded.ID != original.ID || decoded.Value != original.Value {
+					failures <- "data corruption detected"
+					return
+				}
+			}
+		}(i)
+	}
+
+	wg.Wait()
+	close(failures)
+
+	failCount := 0
+	for msg := range failures {
+		if failCount < 10 {
+			t.Error(msg)
+		}
+		failCount++
+	}
+	if failCount > 10 {
+		t.Errorf("... and %d more failures", failCount-10)
 	}
 }

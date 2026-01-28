@@ -19,7 +19,8 @@ func TestPeekByte(t *testing.T) {
 func TestNilDecode(t *testing.T) {
 	t.Run("nil map", func(t *testing.T) {
 		data := []byte{formatNil}
-		m, err := UnmarshalMapStringAny(data, true)
+		var m map[string]any
+		err := Unmarshal(data, &m)
 		if err != nil || m != nil {
 			t.Error("nil map decode should return nil")
 		}
@@ -31,29 +32,11 @@ func TestNilDecode(t *testing.T) {
 		}
 		data := []byte{formatNil}
 		var d Data
-		err := UnmarshalStruct(data, &d)
+		err := Unmarshal(data, &d)
 		if err != nil {
 			t.Error("nil to struct should succeed")
 		}
 	})
-}
-
-func TestDecodeStringMapFunc(t *testing.T) {
-	e := NewEncoder(64)
-	e.EncodeMapHeader(1)
-	e.EncodeString("key")
-	e.EncodeString("value")
-	b := make([]byte, len(e.Bytes()))
-	copy(b, e.Bytes())
-
-	var got string
-	err := DecodeStringMapFunc(b, func(m map[string]string) error {
-		got = m["key"]
-		return nil
-	})
-	if err != nil || got != "value" {
-		t.Error("DecodeStringMapFunc failed")
-	}
 }
 
 func TestUint64Overflow(t *testing.T) {
@@ -86,7 +69,7 @@ func TestDecodeStringKeyFormats(t *testing.T) {
 			0x42, // 66
 		}
 		var o Outer
-		err := UnmarshalStruct(data, &o)
+		err := Unmarshal(data, &o)
 		if err != nil || o.I.V != 66 {
 			t.Error("str8 key in nested failed")
 		}
@@ -100,7 +83,7 @@ func TestDecodeStringKeyFormats(t *testing.T) {
 			0x42, // 66
 		}
 		var o Outer
-		err := UnmarshalStruct(data, &o)
+		err := Unmarshal(data, &o)
 		if err != nil || o.I.V != 66 {
 			t.Error("str16 key in nested failed")
 		}
@@ -114,7 +97,7 @@ func TestDecodeStringKeyFormats(t *testing.T) {
 			0x42, // 66
 		}
 		var o Outer
-		err := UnmarshalStruct(data, &o)
+		err := Unmarshal(data, &o)
 		if err != nil || o.I.V != 66 {
 			t.Error("str32 key in nested failed")
 		}
@@ -166,7 +149,7 @@ func TestDecodeBoolTypeMismatch(t *testing.T) {
 
 	data := []byte{0x81, 0xa1, 'b', 0x42} // int instead of bool
 	var d Data
-	err := UnmarshalStruct(data, &d)
+	err := Unmarshal(data, &d)
 	if err != ErrTypeMismatch {
 		t.Errorf("expected ErrTypeMismatch for bool, got %v", err)
 	}
@@ -179,7 +162,7 @@ func TestDecodeIntTypeMismatch(t *testing.T) {
 
 	data := []byte{0x81, 0xa1, 'i', formatTrue} // bool instead of int
 	var d Data
-	err := UnmarshalStruct(data, &d)
+	err := Unmarshal(data, &d)
 	if err != ErrTypeMismatch {
 		t.Errorf("expected ErrTypeMismatch for int, got %v", err)
 	}
@@ -192,7 +175,7 @@ func TestDecodeUintTypeMismatch(t *testing.T) {
 
 	data := []byte{0x81, 0xa1, 'u', formatTrue} // bool instead of uint
 	var d Data
-	err := UnmarshalStruct(data, &d)
+	err := Unmarshal(data, &d)
 	if err != ErrTypeMismatch {
 		t.Errorf("expected ErrTypeMismatch for uint, got %v", err)
 	}
@@ -205,7 +188,7 @@ func TestDecodeFloatTypeMismatch(t *testing.T) {
 
 	data := []byte{0x81, 0xa1, 'f', formatTrue} // bool instead of float
 	var d Data
-	err := UnmarshalStruct(data, &d)
+	err := Unmarshal(data, &d)
 	if err != ErrTypeMismatch {
 		t.Errorf("expected ErrTypeMismatch for float, got %v", err)
 	}
@@ -218,7 +201,7 @@ func TestDecodeStringTypeMismatch(t *testing.T) {
 
 	data := []byte{0x81, 0xa1, 's', 0x42} // int instead of string
 	var d Data
-	err := UnmarshalStruct(data, &d)
+	err := Unmarshal(data, &d)
 	if err != ErrTypeMismatch {
 		t.Errorf("expected ErrTypeMismatch for string, got %v", err)
 	}
@@ -231,7 +214,7 @@ func TestDecodeBytesTypeMismatch(t *testing.T) {
 
 	data := []byte{0x81, 0xa1, 'b', 0x42} // int instead of bytes
 	var d Data
-	err := UnmarshalStruct(data, &d)
+	err := Unmarshal(data, &d)
 	if err != ErrTypeMismatch {
 		t.Errorf("expected ErrTypeMismatch for bytes, got %v", err)
 	}
@@ -244,7 +227,7 @@ func TestDecodeSliceTypeMismatch(t *testing.T) {
 
 	data := []byte{0x81, 0xa1, 's', 0x42} // int instead of array
 	var d Data
-	err := UnmarshalStruct(data, &d)
+	err := Unmarshal(data, &d)
 	if err != ErrTypeMismatch {
 		t.Errorf("expected ErrTypeMismatch for slice, got %v", err)
 	}
@@ -257,7 +240,7 @@ func TestDecodeArrayTypeMismatch(t *testing.T) {
 
 	data := []byte{0x81, 0xa1, 'a', 0x42} // int instead of array
 	var d Data
-	err := UnmarshalStruct(data, &d)
+	err := Unmarshal(data, &d)
 	if err != ErrTypeMismatch {
 		t.Errorf("expected ErrTypeMismatch for array, got %v", err)
 	}
@@ -599,7 +582,7 @@ func TestDecodeStringKeyStr16(t *testing.T) {
 	enc.EncodeInt(42)
 
 	var s S
-	err := UnmarshalStruct(enc.Bytes(), &s)
+	err := Unmarshal(enc.Bytes(), &s)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -622,7 +605,7 @@ func TestDecodeStringKeyStr32(t *testing.T) {
 	enc.EncodeInt(42)
 
 	var s S
-	err := UnmarshalStruct(enc.Bytes(), &s)
+	err := Unmarshal(enc.Bytes(), &s)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -639,7 +622,7 @@ func TestDecodeStringKeyStr8EOF(t *testing.T) {
 	// str8 format but no length
 	data := []byte{0x81, formatStr8}
 	var s S
-	err := UnmarshalStruct(data, &s)
+	err := Unmarshal(data, &s)
 	if err == nil {
 		t.Error(errMsgEOFError)
 	}
@@ -653,7 +636,7 @@ func TestDecodeStringKeyStr16EOF(t *testing.T) {
 	// str16 format but no length
 	data := []byte{0x81, formatStr16}
 	var s S
-	err := UnmarshalStruct(data, &s)
+	err := Unmarshal(data, &s)
 	if err == nil {
 		t.Error(errMsgEOFError)
 	}
@@ -667,7 +650,7 @@ func TestDecodeStringKeyStr32EOF(t *testing.T) {
 	// str32 format but no length
 	data := []byte{0x81, formatStr32}
 	var s S
-	err := UnmarshalStruct(data, &s)
+	err := Unmarshal(data, &s)
 	if err == nil {
 		t.Error(errMsgEOFError)
 	}
@@ -688,7 +671,7 @@ func TestDecodeStringKeyStr8TooLong(t *testing.T) {
 	}
 	// str8 format with length 5
 	data := []byte{0x81, formatStr8, 5, 'h', 'e', 'l', 'l', 'o', 0x01}
-	err := UnmarshalStructWithConfig(data, &S{}, cfg)
+	err := UnmarshalWithConfig(data, &S{}, cfg)
 	if err != ErrStringTooLong {
 		t.Errorf(errMsgStringTooLong, err)
 	}
@@ -858,7 +841,7 @@ func TestDecodeStringKeyFixstrValidation(t *testing.T) {
 	}
 	// fixstr with length 5 (0xa5 = fixstr of length 5)
 	data := []byte{0x81, 0xa5, 'h', 'e', 'l', 'l', 'o', 0x01}
-	err := UnmarshalStructWithConfig(data, &S{}, cfg)
+	err := UnmarshalWithConfig(data, &S{}, cfg)
 	if err != ErrStringTooLong {
 		t.Errorf(errMsgStringTooLong, err)
 	}
@@ -970,7 +953,7 @@ func TestDecodeStringKeyStr16Validation(t *testing.T) {
 	enc.EncodeInt(42)
 
 	var s S
-	err := UnmarshalStructWithConfig(enc.Bytes(), &s, cfg)
+	err := UnmarshalWithConfig(enc.Bytes(), &s, cfg)
 	if err != ErrStringTooLong {
 		t.Errorf(errMsgStringTooLong, err)
 	}
@@ -998,7 +981,7 @@ func TestDecodeStringKeyStr32Validation(t *testing.T) {
 	enc.EncodeInt(42)
 
 	var s S
-	err := UnmarshalStructWithConfig(enc.Bytes(), &s, cfg)
+	err := UnmarshalWithConfig(enc.Bytes(), &s, cfg)
 	if err != ErrStringTooLong {
 		t.Errorf(errMsgStringTooLong, err)
 	}
@@ -1057,7 +1040,7 @@ func TestDecodeFloatUint64(t *testing.T) {
 	enc.EncodeUint(9223372036854775808) // > max int64, uses uint64 format
 
 	var s S
-	err := UnmarshalStruct(enc.Bytes(), &s)
+	err := Unmarshal(enc.Bytes(), &s)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1207,7 +1190,7 @@ func TestDecodeStringKeyStr8DataEOF(t *testing.T) {
 	// Only 3 bytes for key, expected 20
 
 	var s TestStruct
-	err := UnmarshalStruct(enc.Bytes(), &s)
+	err := Unmarshal(enc.Bytes(), &s)
 	if err == nil {
 		t.Error(errMsgEOFError)
 	}
@@ -1226,7 +1209,7 @@ func TestDecodeStringKeyStr16DataEOF(t *testing.T) {
 	// Only 3 bytes for key, expected 20
 
 	var s TestStruct
-	err := UnmarshalStruct(enc.Bytes(), &s)
+	err := Unmarshal(enc.Bytes(), &s)
 	if err == nil {
 		t.Error(errMsgEOFError)
 	}
@@ -1245,7 +1228,7 @@ func TestDecodeStringKeyStr32DataEOF(t *testing.T) {
 	// Only 3 bytes for key, expected 20
 
 	var s TestStruct
-	err := UnmarshalStruct(enc.Bytes(), &s)
+	err := Unmarshal(enc.Bytes(), &s)
 	if err == nil {
 		t.Error(errMsgEOFError)
 	}
@@ -1312,7 +1295,7 @@ func TestDecodeStringKeyTypeMismatch(t *testing.T) {
 	enc.EncodeString("value")
 
 	var s TestStruct
-	err := UnmarshalStruct(enc.Bytes(), &s)
+	err := Unmarshal(enc.Bytes(), &s)
 	// Should fail since we can't skip boolean key in decodeStringKey
 	if err != nil {
 		t.Errorf("expected to skip non-string key, got error: %v", err)
@@ -1394,7 +1377,8 @@ func TestErrorCases(t *testing.T) {
 	t.Run("UnmarshalWithConfig", func(t *testing.T) {
 		cfg := DefaultConfig().WithMaxMapLen(1)
 		data := []byte{0x82, 0xa1, 'a', 0x01, 0xa1, 'b', 0x02}
-		_, err := UnmarshalWithConfig(data, cfg)
+		var result any
+		err := UnmarshalWithConfig(data, &result, cfg)
 		if err != ErrMapTooLong {
 			t.Error("expected ErrMapTooLong")
 		}
@@ -1407,7 +1391,7 @@ func TestErrorCases(t *testing.T) {
 		cfg := DefaultConfig().WithMaxMapLen(0)
 		data := []byte{0x81, 0xa1, 'a', 0x01}
 		var s S
-		err := UnmarshalStructWithConfig(data, &s, cfg)
+		err := UnmarshalWithConfig(data, &s, cfg)
 		if err != ErrMapTooLong {
 			t.Error("expected ErrMapTooLong")
 		}

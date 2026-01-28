@@ -842,7 +842,8 @@ func TestStructCodecs(t *testing.T) {
 			t.Fatal(err)
 		}
 		// Decode and verify
-		m, _ := Unmarshal(b)
+		var m any
+		_ = Unmarshal(b, &m)
 		if m.(map[string]any)["name"] != "Alice" {
 			t.Error("encode failed")
 		}
@@ -884,21 +885,6 @@ func TestStructCodecs(t *testing.T) {
 		err := dec.Decode(b, &result)
 		if err != nil || result.Name != "Dave" {
 			t.Error("GetStructDecoder failed")
-		}
-	})
-
-	t.Run("DecodeStructFunc", func(t *testing.T) {
-		enc := GetStructEncoder[Person]()
-		p := Person{Name: "Eve", Age: 45}
-		b, _ := enc.Encode(&p)
-
-		var got string
-		err := DecodeStructFunc(b, func(v *Person) error {
-			got = v.Name
-			return nil
-		})
-		if err != nil || got != "Eve" {
-			t.Error("DecodeStructFunc failed")
 		}
 	})
 }
