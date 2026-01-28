@@ -305,19 +305,68 @@ func (sd *StructDecoder[T]) decodeField(d *Decoder, ptr unsafe.Pointer, field *s
 		}
 
 	case reflect.Slice:
-		if field.elem.Kind() == reflect.String {
+		switch field.elem.Kind() {
+		case reflect.String:
 			arr, err := sd.decodeStringSlice(d, format)
 			if err != nil {
 				return err
 			}
 			*(*[]string)(ptr) = arr
-		} else if field.elem.Kind() == reflect.Uint8 {
+		case reflect.Uint8:
 			b, err := sd.decodeBytes(d, format)
 			if err != nil {
 				return err
 			}
 			*(*[]byte)(ptr) = b
-		} else {
+		case reflect.Int64:
+			arr, err := sd.decodeInt64Slice(d, format)
+			if err != nil {
+				return err
+			}
+			*(*[]int64)(ptr) = arr
+		case reflect.Int:
+			arr, err := sd.decodeIntSlice(d, format)
+			if err != nil {
+				return err
+			}
+			*(*[]int)(ptr) = arr
+		case reflect.Int32:
+			arr, err := sd.decodeInt32Slice(d, format)
+			if err != nil {
+				return err
+			}
+			*(*[]int32)(ptr) = arr
+		case reflect.Uint64:
+			arr, err := sd.decodeUint64Slice(d, format)
+			if err != nil {
+				return err
+			}
+			*(*[]uint64)(ptr) = arr
+		case reflect.Uint:
+			arr, err := sd.decodeUintSlice(d, format)
+			if err != nil {
+				return err
+			}
+			*(*[]uint)(ptr) = arr
+		case reflect.Uint32:
+			arr, err := sd.decodeUint32Slice(d, format)
+			if err != nil {
+				return err
+			}
+			*(*[]uint32)(ptr) = arr
+		case reflect.Float64:
+			arr, err := sd.decodeFloat64Slice(d, format)
+			if err != nil {
+				return err
+			}
+			*(*[]float64)(ptr) = arr
+		case reflect.Float32:
+			arr, err := sd.decodeFloat32Slice(d, format)
+			if err != nil {
+				return err
+			}
+			*(*[]float32)(ptr) = arr
+		default:
 			d.pos--
 			if _, err := d.Decode(); err != nil {
 				return err
@@ -325,13 +374,28 @@ func (sd *StructDecoder[T]) decodeField(d *Decoder, ptr unsafe.Pointer, field *s
 		}
 
 	case reflect.Map:
-		if field.elem.Kind() == reflect.String {
+		switch field.elem.Kind() {
+		case reflect.String:
 			m, err := sd.decodeStringMap(d, format)
 			if err != nil {
 				return err
 			}
 			*(*map[string]string)(ptr) = m
-		} else {
+		case reflect.Interface:
+			// map[string]any - use the generic map decoder
+			m, err := sd.decodeMapStringAny(d, format)
+			if err != nil {
+				return err
+			}
+			*(*map[string]any)(ptr) = m
+		case reflect.Map:
+			// Nested map like map[string]map[string][]byte
+			m, err := sd.decodeNestedMap(d, format, field.elem)
+			if err != nil {
+				return err
+			}
+			reflect.NewAt(reflect.MapOf(reflect.TypeOf(""), field.elem), ptr).Elem().Set(reflect.ValueOf(m))
+		default:
 			d.pos--
 			if _, err := d.Decode(); err != nil {
 				return err
@@ -422,6 +486,187 @@ func (sd *StructDecoder[T]) decodeStringSlice(d *Decoder, format byte) ([]string
 	return result, nil
 }
 
+func (sd *StructDecoder[T]) decodeInt64Slice(d *Decoder, format byte) ([]int64, error) {
+	arrLen, err := d.parseArrayLen(format)
+	if err != nil {
+		return nil, err
+	}
+	if err := d.validateArrayLen(arrLen); err != nil {
+		return nil, err
+	}
+	result := make([]int64, arrLen)
+	for i := 0; i < arrLen; i++ {
+		f, err := d.readByte()
+		if err != nil {
+			return nil, err
+		}
+		result[i], err = d.decodeInt(f)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return result, nil
+}
+
+func (sd *StructDecoder[T]) decodeIntSlice(d *Decoder, format byte) ([]int, error) {
+	arrLen, err := d.parseArrayLen(format)
+	if err != nil {
+		return nil, err
+	}
+	if err := d.validateArrayLen(arrLen); err != nil {
+		return nil, err
+	}
+	result := make([]int, arrLen)
+	for i := 0; i < arrLen; i++ {
+		f, err := d.readByte()
+		if err != nil {
+			return nil, err
+		}
+		v, err := d.decodeInt(f)
+		if err != nil {
+			return nil, err
+		}
+		result[i] = int(v)
+	}
+	return result, nil
+}
+
+func (sd *StructDecoder[T]) decodeInt32Slice(d *Decoder, format byte) ([]int32, error) {
+	arrLen, err := d.parseArrayLen(format)
+	if err != nil {
+		return nil, err
+	}
+	if err := d.validateArrayLen(arrLen); err != nil {
+		return nil, err
+	}
+	result := make([]int32, arrLen)
+	for i := 0; i < arrLen; i++ {
+		f, err := d.readByte()
+		if err != nil {
+			return nil, err
+		}
+		v, err := d.decodeInt(f)
+		if err != nil {
+			return nil, err
+		}
+		result[i] = int32(v)
+	}
+	return result, nil
+}
+
+func (sd *StructDecoder[T]) decodeUint64Slice(d *Decoder, format byte) ([]uint64, error) {
+	arrLen, err := d.parseArrayLen(format)
+	if err != nil {
+		return nil, err
+	}
+	if err := d.validateArrayLen(arrLen); err != nil {
+		return nil, err
+	}
+	result := make([]uint64, arrLen)
+	for i := 0; i < arrLen; i++ {
+		f, err := d.readByte()
+		if err != nil {
+			return nil, err
+		}
+		result[i], err = d.decodeUint(f)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return result, nil
+}
+
+func (sd *StructDecoder[T]) decodeUintSlice(d *Decoder, format byte) ([]uint, error) {
+	arrLen, err := d.parseArrayLen(format)
+	if err != nil {
+		return nil, err
+	}
+	if err := d.validateArrayLen(arrLen); err != nil {
+		return nil, err
+	}
+	result := make([]uint, arrLen)
+	for i := 0; i < arrLen; i++ {
+		f, err := d.readByte()
+		if err != nil {
+			return nil, err
+		}
+		v, err := d.decodeUint(f)
+		if err != nil {
+			return nil, err
+		}
+		result[i] = uint(v)
+	}
+	return result, nil
+}
+
+func (sd *StructDecoder[T]) decodeUint32Slice(d *Decoder, format byte) ([]uint32, error) {
+	arrLen, err := d.parseArrayLen(format)
+	if err != nil {
+		return nil, err
+	}
+	if err := d.validateArrayLen(arrLen); err != nil {
+		return nil, err
+	}
+	result := make([]uint32, arrLen)
+	for i := 0; i < arrLen; i++ {
+		f, err := d.readByte()
+		if err != nil {
+			return nil, err
+		}
+		v, err := d.decodeUint(f)
+		if err != nil {
+			return nil, err
+		}
+		result[i] = uint32(v)
+	}
+	return result, nil
+}
+
+func (sd *StructDecoder[T]) decodeFloat64Slice(d *Decoder, format byte) ([]float64, error) {
+	arrLen, err := d.parseArrayLen(format)
+	if err != nil {
+		return nil, err
+	}
+	if err := d.validateArrayLen(arrLen); err != nil {
+		return nil, err
+	}
+	result := make([]float64, arrLen)
+	for i := 0; i < arrLen; i++ {
+		f, err := d.readByte()
+		if err != nil {
+			return nil, err
+		}
+		result[i], err = d.decodeFloat(f)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return result, nil
+}
+
+func (sd *StructDecoder[T]) decodeFloat32Slice(d *Decoder, format byte) ([]float32, error) {
+	arrLen, err := d.parseArrayLen(format)
+	if err != nil {
+		return nil, err
+	}
+	if err := d.validateArrayLen(arrLen); err != nil {
+		return nil, err
+	}
+	result := make([]float32, arrLen)
+	for i := 0; i < arrLen; i++ {
+		f, err := d.readByte()
+		if err != nil {
+			return nil, err
+		}
+		v, err := d.decodeFloat(f)
+		if err != nil {
+			return nil, err
+		}
+		result[i] = float32(v)
+	}
+	return result, nil
+}
+
 func (sd *StructDecoder[T]) decodeStringMap(d *Decoder, format byte) (map[string]string, error) {
 	mapLen, err := d.parseMapLen(format)
 	if err != nil {
@@ -456,6 +701,145 @@ func (sd *StructDecoder[T]) decodeStringMap(d *Decoder, format byte) (map[string
 		result[key] = val
 	}
 	return result, nil
+}
+
+func (sd *StructDecoder[T]) decodeMapStringAny(d *Decoder, format byte) (map[string]any, error) {
+	mapLen, err := d.parseMapLen(format)
+	if err != nil {
+		return nil, err
+	}
+	if err := d.validateMapLen(mapLen); err != nil {
+		return nil, err
+	}
+	return decodeMapStringAnyWithLen(d, mapLen, sd.zeroCopy)
+}
+
+func (sd *StructDecoder[T]) decodeNestedMap(d *Decoder, format byte, elemType reflect.Type) (any, error) {
+	mapLen, err := d.parseMapLen(format)
+	if err != nil {
+		return nil, err
+	}
+	if err := d.validateMapLen(mapLen); err != nil {
+		return nil, err
+	}
+
+	// Create a new map of the appropriate type
+	mapType := reflect.MapOf(reflect.TypeOf(""), elemType)
+	result := reflect.MakeMapWithSize(mapType, mapLen)
+
+	for i := 0; i < mapLen; i++ {
+		keyBytes, err := d.readStringBytes()
+		if err != nil {
+			return nil, err
+		}
+		var key string
+		if sd.zeroCopy {
+			key = unsafe.String(unsafe.SliceData(keyBytes), len(keyBytes))
+		} else {
+			key = string(keyBytes)
+		}
+
+		// Decode the nested map value
+		f, err := d.readByte()
+		if err != nil {
+			return nil, err
+		}
+		nestedLen, err := d.parseMapLen(f)
+		if err != nil {
+			return nil, err
+		}
+
+		// Create nested map
+		nestedMap := reflect.MakeMapWithSize(elemType, nestedLen)
+		nestedElemType := elemType.Elem()
+
+		for j := 0; j < nestedLen; j++ {
+			nestedKeyBytes, err := d.readStringBytes()
+			if err != nil {
+				return nil, err
+			}
+			var nestedKey string
+			if sd.zeroCopy {
+				nestedKey = unsafe.String(unsafe.SliceData(nestedKeyBytes), len(nestedKeyBytes))
+			} else {
+				nestedKey = string(nestedKeyBytes)
+			}
+
+			// Decode the value based on type
+			val, err := sd.decodeNestedMapValue(d, nestedElemType)
+			if err != nil {
+				return nil, err
+			}
+			nestedMap.SetMapIndex(reflect.ValueOf(nestedKey), reflect.ValueOf(val))
+		}
+
+		result.SetMapIndex(reflect.ValueOf(key), nestedMap)
+	}
+	return result.Interface(), nil
+}
+
+func (sd *StructDecoder[T]) decodeNestedMapValue(d *Decoder, elemType reflect.Type) (any, error) {
+	f, err := d.readByte()
+	if err != nil {
+		return nil, err
+	}
+
+	switch elemType.Kind() {
+	case reflect.Slice:
+		if elemType.Elem().Kind() == reflect.Uint8 {
+			// []byte
+			b, err := sd.decodeBytes(d, f)
+			return b, err
+		}
+	case reflect.String:
+		return sd.decodeString(d, f)
+	case reflect.Int64:
+		return d.decodeInt(f)
+	case reflect.Interface:
+		d.pos--
+		return decodeAnyValue(d, sd.zeroCopy)
+	}
+
+	// Fall back to generic decode
+	d.pos--
+	v, err := d.Decode()
+	if err != nil {
+		return nil, err
+	}
+	return convertValue(v), nil
+}
+
+func convertValue(v Value) any {
+	switch v.Type {
+	case TypeString:
+		return string(v.Bytes)
+	case TypeBinary:
+		return v.Bytes
+	case TypeArray:
+		result := make([]any, len(v.Array))
+		for i, item := range v.Array {
+			result[i] = convertValue(item)
+		}
+		return result
+	case TypeMap:
+		result := make(map[string]any, len(v.Map))
+		for _, kv := range v.Map {
+			result[string(kv.Key)] = convertValue(kv.Value)
+		}
+		return result
+	case TypeBool:
+		return v.Bool
+	case TypeFloat32:
+		return v.Float32
+	case TypeFloat64:
+		return v.Float64
+	case TypeUint:
+		return v.Uint
+	case TypeInt:
+		return v.Int
+	default:
+		return nil
+	}
 }
 
 // Helper functions for decoding primitives

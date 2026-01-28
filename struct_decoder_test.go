@@ -929,3 +929,186 @@ func TestStructDecoderDecodeWith(t *testing.T) {
 		t.Errorf("got name %q, want Bob", result2.Name)
 	}
 }
+
+// Test nested maps: map[string]map[string][]byte
+func TestStructDecoderNestedMaps(t *testing.T) {
+	type BitmapFilterData struct {
+		Fields map[string]map[string][]byte `msgpack:"fields"`
+	}
+
+	original := BitmapFilterData{
+		Fields: map[string]map[string][]byte{
+			"category": {
+				"electronics": []byte{1, 2, 3},
+				"books":       []byte{4, 5, 6},
+			},
+			"status": {
+				"active": []byte{7, 8},
+			},
+		},
+	}
+
+	// First test with regular Marshal/Unmarshal
+	t.Run("regular Marshal/Unmarshal", func(t *testing.T) {
+		data, err := Marshal(original)
+		if err != nil {
+			t.Fatalf("Marshal failed: %v", err)
+		}
+
+		var result BitmapFilterData
+		err = Unmarshal(data, &result)
+		if err != nil {
+			t.Fatalf("Unmarshal failed: %v", err)
+		}
+
+		// Verify nested map contents
+		if len(result.Fields) != 2 {
+			t.Errorf("expected 2 fields, got %d", len(result.Fields))
+		}
+		if cat, ok := result.Fields["category"]; !ok || len(cat) != 2 {
+			t.Errorf("category field missing or wrong size")
+		}
+		if string(result.Fields["category"]["electronics"]) != string([]byte{1, 2, 3}) {
+			t.Errorf("electronics data mismatch")
+		}
+	})
+
+	// Test with struct encoder/decoder
+	t.Run("struct encoder/decoder", func(t *testing.T) {
+		enc := GetStructEncoder[BitmapFilterData]()
+		data, err := enc.Encode(&original)
+		if err != nil {
+			t.Fatalf("Encode failed: %v", err)
+		}
+
+		dec := GetStructDecoder[BitmapFilterData](false)
+		var result BitmapFilterData
+		err = dec.Decode(data, &result)
+		if err != nil {
+			t.Fatalf("Decode failed: %v", err)
+		}
+
+		// Verify nested map contents
+		if len(result.Fields) != 2 {
+			t.Errorf("expected 2 fields, got %d", len(result.Fields))
+		}
+		if cat, ok := result.Fields["category"]; !ok || len(cat) != 2 {
+			t.Errorf("category field missing or wrong size: %v", result.Fields)
+		}
+	})
+}
+
+// Test generic struct with type parameter - comprehensive tests
+func TestStructDecoderGenericTypeParam(t *testing.T) {
+	type SortColumnData[T any] struct {
+		Values   []T    `msgpack:"values"`
+		MaxDocID uint32 `msgpack:"max_doc_id"`
+	}
+
+	t.Run("int64 values", func(t *testing.T) {
+		original := SortColumnData[int64]{
+			Values:   []int64{100, 200, 300, 400, 500},
+			MaxDocID: 1000,
+		}
+
+		// Test with regular Marshal/Unmarshal
+		data, err := Marshal(original)
+		if err != nil {
+			t.Fatalf("Marshal failed: %v", err)
+		}
+
+		var result SortColumnData[int64]
+		err = Unmarshal(data, &result)
+		if err != nil {
+			t.Fatalf("Unmarshal failed: %v", err)
+		}
+
+		if result.MaxDocID != 1000 {
+			t.Errorf("MaxDocID: got %d, want 1000", result.MaxDocID)
+		}
+		if len(result.Values) != 5 || result.Values[4] != 500 {
+			t.Errorf("Values mismatch: got %v", result.Values)
+		}
+	})
+
+	t.Run("int64 struct encoder/decoder", func(t *testing.T) {
+		original := SortColumnData[int64]{
+			Values:   []int64{100, 200, 300, 400, 500},
+			MaxDocID: 1000,
+		}
+
+		enc := GetStructEncoder[SortColumnData[int64]]()
+		data, err := enc.Encode(&original)
+		if err != nil {
+			t.Fatalf("Encode failed: %v", err)
+		}
+
+		dec := GetStructDecoder[SortColumnData[int64]](false)
+		var result SortColumnData[int64]
+		err = dec.Decode(data, &result)
+		if err != nil {
+			t.Fatalf("Decode failed: %v", err)
+		}
+
+		if result.MaxDocID != 1000 {
+			t.Errorf("MaxDocID: got %d, want 1000", result.MaxDocID)
+		}
+		if len(result.Values) != 5 || result.Values[4] != 500 {
+			t.Errorf("Values mismatch: got %v", result.Values)
+		}
+	})
+
+	t.Run("float64 struct encoder/decoder", func(t *testing.T) {
+		original := SortColumnData[float64]{
+			Values:   []float64{1.1, 2.2, 3.3},
+			MaxDocID: 500,
+		}
+
+		enc := GetStructEncoder[SortColumnData[float64]]()
+		data, err := enc.Encode(&original)
+		if err != nil {
+			t.Fatalf("Encode failed: %v", err)
+		}
+
+		dec := GetStructDecoder[SortColumnData[float64]](false)
+		var result SortColumnData[float64]
+		err = dec.Decode(data, &result)
+		if err != nil {
+			t.Fatalf("Decode failed: %v", err)
+		}
+
+		if result.MaxDocID != 500 {
+			t.Errorf("MaxDocID: got %d, want 500", result.MaxDocID)
+		}
+		if len(result.Values) != 3 {
+			t.Errorf("Values length: got %d, want 3", len(result.Values))
+		}
+	})
+
+	t.Run("string struct encoder/decoder", func(t *testing.T) {
+		original := SortColumnData[string]{
+			Values:   []string{"apple", "banana", "cherry"},
+			MaxDocID: 100,
+		}
+
+		enc := GetStructEncoder[SortColumnData[string]]()
+		data, err := enc.Encode(&original)
+		if err != nil {
+			t.Fatalf("Encode failed: %v", err)
+		}
+
+		dec := GetStructDecoder[SortColumnData[string]](false)
+		var result SortColumnData[string]
+		err = dec.Decode(data, &result)
+		if err != nil {
+			t.Fatalf("Decode failed: %v", err)
+		}
+
+		if result.MaxDocID != 100 {
+			t.Errorf("MaxDocID: got %d, want 100", result.MaxDocID)
+		}
+		if len(result.Values) != 3 || result.Values[0] != "apple" {
+			t.Errorf("Values mismatch: got %v", result.Values)
+		}
+	})
+}
