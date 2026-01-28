@@ -28,21 +28,34 @@ Benchmarks vs vmihailenco/msgpack (Apple M3 Max):
 ### Struct Operations (using cached `GetStructEncoder`/`GetStructDecoder`)
 | Operation | msgpck | allocs |
 |-----------|--------|--------|
-| SmallStruct Encode | 52 ns | 1 |
-| MediumStruct Encode | 201 ns | 1 |
-| SmallStruct Decode | 59 ns | 2 |
-| SmallStruct Decode (`zeroCopy: true`) | 44 ns | 1 |
-| MediumStruct Decode | 388 ns | 13 |
-| MediumStruct Decode (`zeroCopy: true`) | 287 ns | 4 |
+| SmallStruct Encode | 61 ns | 1 |
+| MediumStruct Encode | 226 ns | 1 |
+| SmallStruct Decode | 65 ns | 2 |
+| SmallStruct Decode (`zeroCopy: true`) | 50 ns | 1 |
+| MediumStruct Decode | 446 ns | 13 |
+| MediumStruct Decode (`zeroCopy: true`) | 338 ns | 4 |
+
+### Large Struct Operations
+| Operation | msgpck | allocs |
+|-----------|--------|--------|
+| LargeStruct Encode (cached) | 768 ns | 9 |
+| LargeStruct Decode (cached) | 1169 ns | 30 |
+| LargeStruct Decode (`zeroCopy: true`) | 839 ns | 6 |
+
+### Generic Slice (1M items - simulates database column storage)
+| Operation | msgpck | allocs |
+|-----------|--------|--------|
+| 1M int64 Decode | 4.5 ms | 3 |
+| 1M uint16 Decode | 3.4 ms | 2 |
 
 ### Map Operations
 | Operation | msgpck | allocs |
 |-----------|--------|--------|
 | SmallMap Encode (`Marshal`) | 82 ns | 1 |
-| MediumMap Encode (`Marshal`) | 246 ns | 1 |
-| SmallMap Decode (`Unmarshal`) | 337 ns | 10 |
-| MediumMap Decode (`Unmarshal`) | 1256 ns | 40 |
-| StringMap Decode (`Unmarshal`) | 496 ns | 19 |
+| MediumMap Encode (`Marshal`) | 251 ns | 1 |
+| SmallMap Decode (`Unmarshal`) | 336 ns | 10 |
+| MediumMap Decode (`Unmarshal`) | 1235 ns | 40 |
+| StringMap Decode (`Unmarshal`) | 532 ns | 19 |
 
 Run benchmarks yourself:
 ```bash

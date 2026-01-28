@@ -21,6 +21,39 @@ type MediumStruct struct {
 	Metadata map[string]string
 }
 
+// LargeStruct has many fields to benchmark worst-case struct handling
+type LargeStruct struct {
+	ID           int64             `msgpack:"id"`
+	UUID         string            `msgpack:"uuid"`
+	Name         string            `msgpack:"name"`
+	Email        string            `msgpack:"email"`
+	Phone        string            `msgpack:"phone"`
+	Address      string            `msgpack:"address"`
+	City         string            `msgpack:"city"`
+	Country      string            `msgpack:"country"`
+	PostalCode   string            `msgpack:"postal_code"`
+	Age          int               `msgpack:"age"`
+	Score        float64           `msgpack:"score"`
+	Rating       float32           `msgpack:"rating"`
+	Active       bool              `msgpack:"active"`
+	Verified     bool              `msgpack:"verified"`
+	Premium      bool              `msgpack:"premium"`
+	CreatedAt    int64             `msgpack:"created_at"`
+	UpdatedAt    int64             `msgpack:"updated_at"`
+	LoginCount   uint32            `msgpack:"login_count"`
+	FailedLogins uint16            `msgpack:"failed_logins"`
+	Tags         []string          `msgpack:"tags"`
+	Roles        []string          `msgpack:"roles"`
+	Scores       []int64           `msgpack:"scores"`
+	Metadata     map[string]string `msgpack:"metadata"`
+}
+
+// GenericSliceStruct tests generic type parameter handling (like roaringsearch sortColumnData)
+type GenericSliceStruct[T any] struct {
+	Values   []T    `msgpack:"values"`
+	MaxDocID uint32 `msgpack:"max_doc_id"`
+}
+
 var (
 	smallStruct  = SmallStruct{Name: "Alice", Age: 30}
 	mediumStruct = MediumStruct{
@@ -28,6 +61,17 @@ var (
 		Age: 42, Active: true, Score: 98.6,
 		Tags:     []string{"admin", "user", "premium"},
 		Metadata: map[string]string{"role": "manager", "dept": "engineering"},
+	}
+	largeStruct = LargeStruct{
+		ID: 12345, UUID: "550e8400-e29b-41d4-a716-446655440000",
+		Name: "Bob Smith", Email: "bob@example.com", Phone: "+1-555-123-4567",
+		Address: "123 Main St", City: "San Francisco", Country: "USA", PostalCode: "94102",
+		Age: 42, Score: 98.6, Rating: 4.5, Active: true, Verified: true, Premium: true,
+		CreatedAt: 1609459200, UpdatedAt: 1704067200, LoginCount: 1500, FailedLogins: 3,
+		Tags:     []string{"admin", "user", "premium", "beta", "early-adopter"},
+		Roles:    []string{"admin", "moderator", "contributor"},
+		Scores:   []int64{100, 95, 88, 92, 97, 100, 85, 90},
+		Metadata: map[string]string{"role": "manager", "dept": "engineering", "team": "platform", "level": "senior"},
 	}
 	smallMap  = map[string]any{"name": "Alice", "age": 30}
 	mediumMap = map[string]any{
@@ -51,6 +95,16 @@ var (
 	mediumStructDec   = GetStructDecoder[MediumStruct](false)
 	mediumStructDecZC = GetStructDecoder[MediumStruct](true)
 	mediumStructEnc   = GetStructEncoder[MediumStruct]()
+
+	largeStructDec   = GetStructDecoder[LargeStruct](false)
+	largeStructDecZC = GetStructDecoder[LargeStruct](true)
+	largeStructEnc   = GetStructEncoder[LargeStruct]()
+
+	// Generic slice struct codecs (1M items)
+	genericSliceInt64Enc  = GetStructEncoder[GenericSliceStruct[int64]]()
+	genericSliceInt64Dec  = GetStructDecoder[GenericSliceStruct[int64]](false)
+	genericSliceUint16Enc = GetStructEncoder[GenericSliceStruct[uint16]]()
+	genericSliceUint16Dec = GetStructDecoder[GenericSliceStruct[uint16]](false)
 )
 
 // ============================================================================
@@ -334,5 +388,104 @@ func BenchmarkDecodeInt64ArrayManual(b *testing.B) {
 		d.Reset(data)
 		v, _ := d.Decode()
 		_ = v.Array
+	}
+}
+
+// ============================================================================
+// Large Struct Benchmarks
+// ============================================================================
+
+func BenchmarkMsgpckLargeStructMarshal(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		Marshal(largeStruct)
+	}
+}
+
+func BenchmarkMsgpckLargeStructMarshalPreReg(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		largeStructEnc.Encode(&largeStruct)
+	}
+}
+
+func BenchmarkMsgpckLargeStructUnmarshal(b *testing.B) {
+	data, _ := Marshal(largeStruct)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		var s LargeStruct
+		Unmarshal(data, &s)
+	}
+}
+
+func BenchmarkMsgpckLargeStructUnmarshalPreReg(b *testing.B) {
+	data, _ := Marshal(largeStruct)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		var s LargeStruct
+		largeStructDec.Decode(data, &s)
+	}
+}
+
+func BenchmarkMsgpckLargeStructUnmarshalZeroCopy(b *testing.B) {
+	data, _ := Marshal(largeStruct)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		var s LargeStruct
+		largeStructDecZC.Decode(data, &s)
+	}
+}
+
+// ============================================================================
+// Generic Slice Struct Benchmarks (1M items - simulates roaringsearch sortColumnData)
+// ============================================================================
+
+func BenchmarkGenericSlice1M_Int64_Encode(b *testing.B) {
+	values := make([]int64, 1_000_000)
+	for i := range values {
+		values[i] = int64(i * 7)
+	}
+	data := GenericSliceStruct[int64]{Values: values, MaxDocID: 999999}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		genericSliceInt64Enc.Encode(&data)
+	}
+}
+
+func BenchmarkGenericSlice1M_Int64_Decode(b *testing.B) {
+	values := make([]int64, 1_000_000)
+	for i := range values {
+		values[i] = int64(i * 7)
+	}
+	data := GenericSliceStruct[int64]{Values: values, MaxDocID: 999999}
+	encoded, _ := genericSliceInt64Enc.Encode(&data)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		var result GenericSliceStruct[int64]
+		genericSliceInt64Dec.Decode(encoded, &result)
+	}
+}
+
+func BenchmarkGenericSlice1M_Uint16_Encode(b *testing.B) {
+	values := make([]uint16, 1_000_000)
+	for i := range values {
+		values[i] = uint16(i % 65536)
+	}
+	data := GenericSliceStruct[uint16]{Values: values, MaxDocID: 999999}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		genericSliceUint16Enc.Encode(&data)
+	}
+}
+
+func BenchmarkGenericSlice1M_Uint16_Decode(b *testing.B) {
+	values := make([]uint16, 1_000_000)
+	for i := range values {
+		values[i] = uint16(i % 65536)
+	}
+	data := GenericSliceStruct[uint16]{Values: values, MaxDocID: 999999}
+	encoded, _ := genericSliceUint16Enc.Encode(&data)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		var result GenericSliceStruct[uint16]
+		genericSliceUint16Dec.Decode(encoded, &result)
 	}
 }
