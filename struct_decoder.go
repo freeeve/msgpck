@@ -399,6 +399,48 @@ func (sd *StructDecoder[T]) decodeField(d *Decoder, ptr unsafe.Pointer, field *s
 				return err
 			}
 			*(*map[string]string)(ptr) = m
+		case reflect.Int:
+			m, err := sd.decodeMapStringInt(d, format)
+			if err != nil {
+				return err
+			}
+			*(*map[string]int)(ptr) = m
+		case reflect.Int64:
+			m, err := sd.decodeMapStringInt64(d, format)
+			if err != nil {
+				return err
+			}
+			*(*map[string]int64)(ptr) = m
+		case reflect.Int32:
+			m, err := sd.decodeMapStringInt32(d, format)
+			if err != nil {
+				return err
+			}
+			*(*map[string]int32)(ptr) = m
+		case reflect.Uint64:
+			m, err := sd.decodeMapStringUint64(d, format)
+			if err != nil {
+				return err
+			}
+			*(*map[string]uint64)(ptr) = m
+		case reflect.Uint32:
+			m, err := sd.decodeMapStringUint32(d, format)
+			if err != nil {
+				return err
+			}
+			*(*map[string]uint32)(ptr) = m
+		case reflect.Float64:
+			m, err := sd.decodeMapStringFloat64(d, format)
+			if err != nil {
+				return err
+			}
+			*(*map[string]float64)(ptr) = m
+		case reflect.Bool:
+			m, err := sd.decodeMapStringBool(d, format)
+			if err != nil {
+				return err
+			}
+			*(*map[string]bool)(ptr) = m
 		case reflect.Interface:
 			// map[string]any - use the generic map decoder
 			m, err := sd.decodeMapStringAny(d, format)
@@ -786,6 +828,239 @@ func (sd *StructDecoder[T]) decodeStringMap(d *Decoder, format byte) (map[string
 			return nil, err
 		}
 		result[key] = val
+	}
+	return result, nil
+}
+
+func (sd *StructDecoder[T]) decodeMapStringInt(d *Decoder, format byte) (map[string]int, error) {
+	mapLen, err := d.parseMapLen(format)
+	if err != nil {
+		return nil, err
+	}
+	if err := d.validateMapLen(mapLen); err != nil {
+		return nil, err
+	}
+	result := make(map[string]int, mapLen)
+	for i := 0; i < mapLen; i++ {
+		keyBytes, err := d.readStringBytes()
+		if err != nil {
+			return nil, err
+		}
+		var key string
+		if sd.zeroCopy {
+			key = unsafe.String(unsafe.SliceData(keyBytes), len(keyBytes))
+		} else {
+			key = string(keyBytes)
+		}
+		f, err := d.readByte()
+		if err != nil {
+			return nil, err
+		}
+		val, err := d.decodeInt(f)
+		if err != nil {
+			return nil, err
+		}
+		result[key] = int(val)
+	}
+	return result, nil
+}
+
+func (sd *StructDecoder[T]) decodeMapStringInt64(d *Decoder, format byte) (map[string]int64, error) {
+	mapLen, err := d.parseMapLen(format)
+	if err != nil {
+		return nil, err
+	}
+	if err := d.validateMapLen(mapLen); err != nil {
+		return nil, err
+	}
+	result := make(map[string]int64, mapLen)
+	for i := 0; i < mapLen; i++ {
+		keyBytes, err := d.readStringBytes()
+		if err != nil {
+			return nil, err
+		}
+		var key string
+		if sd.zeroCopy {
+			key = unsafe.String(unsafe.SliceData(keyBytes), len(keyBytes))
+		} else {
+			key = string(keyBytes)
+		}
+		f, err := d.readByte()
+		if err != nil {
+			return nil, err
+		}
+		val, err := d.decodeInt(f)
+		if err != nil {
+			return nil, err
+		}
+		result[key] = val
+	}
+	return result, nil
+}
+
+func (sd *StructDecoder[T]) decodeMapStringInt32(d *Decoder, format byte) (map[string]int32, error) {
+	mapLen, err := d.parseMapLen(format)
+	if err != nil {
+		return nil, err
+	}
+	if err := d.validateMapLen(mapLen); err != nil {
+		return nil, err
+	}
+	result := make(map[string]int32, mapLen)
+	for i := 0; i < mapLen; i++ {
+		keyBytes, err := d.readStringBytes()
+		if err != nil {
+			return nil, err
+		}
+		var key string
+		if sd.zeroCopy {
+			key = unsafe.String(unsafe.SliceData(keyBytes), len(keyBytes))
+		} else {
+			key = string(keyBytes)
+		}
+		f, err := d.readByte()
+		if err != nil {
+			return nil, err
+		}
+		val, err := d.decodeInt(f)
+		if err != nil {
+			return nil, err
+		}
+		result[key] = int32(val)
+	}
+	return result, nil
+}
+
+func (sd *StructDecoder[T]) decodeMapStringUint64(d *Decoder, format byte) (map[string]uint64, error) {
+	mapLen, err := d.parseMapLen(format)
+	if err != nil {
+		return nil, err
+	}
+	if err := d.validateMapLen(mapLen); err != nil {
+		return nil, err
+	}
+	result := make(map[string]uint64, mapLen)
+	for i := 0; i < mapLen; i++ {
+		keyBytes, err := d.readStringBytes()
+		if err != nil {
+			return nil, err
+		}
+		var key string
+		if sd.zeroCopy {
+			key = unsafe.String(unsafe.SliceData(keyBytes), len(keyBytes))
+		} else {
+			key = string(keyBytes)
+		}
+		f, err := d.readByte()
+		if err != nil {
+			return nil, err
+		}
+		val, err := d.decodeUint(f)
+		if err != nil {
+			return nil, err
+		}
+		result[key] = val
+	}
+	return result, nil
+}
+
+func (sd *StructDecoder[T]) decodeMapStringUint32(d *Decoder, format byte) (map[string]uint32, error) {
+	mapLen, err := d.parseMapLen(format)
+	if err != nil {
+		return nil, err
+	}
+	if err := d.validateMapLen(mapLen); err != nil {
+		return nil, err
+	}
+	result := make(map[string]uint32, mapLen)
+	for i := 0; i < mapLen; i++ {
+		keyBytes, err := d.readStringBytes()
+		if err != nil {
+			return nil, err
+		}
+		var key string
+		if sd.zeroCopy {
+			key = unsafe.String(unsafe.SliceData(keyBytes), len(keyBytes))
+		} else {
+			key = string(keyBytes)
+		}
+		f, err := d.readByte()
+		if err != nil {
+			return nil, err
+		}
+		val, err := d.decodeUint(f)
+		if err != nil {
+			return nil, err
+		}
+		result[key] = uint32(val)
+	}
+	return result, nil
+}
+
+func (sd *StructDecoder[T]) decodeMapStringFloat64(d *Decoder, format byte) (map[string]float64, error) {
+	mapLen, err := d.parseMapLen(format)
+	if err != nil {
+		return nil, err
+	}
+	if err := d.validateMapLen(mapLen); err != nil {
+		return nil, err
+	}
+	result := make(map[string]float64, mapLen)
+	for i := 0; i < mapLen; i++ {
+		keyBytes, err := d.readStringBytes()
+		if err != nil {
+			return nil, err
+		}
+		var key string
+		if sd.zeroCopy {
+			key = unsafe.String(unsafe.SliceData(keyBytes), len(keyBytes))
+		} else {
+			key = string(keyBytes)
+		}
+		f, err := d.readByte()
+		if err != nil {
+			return nil, err
+		}
+		val, err := decodeFloat(d, f)
+		if err != nil {
+			return nil, err
+		}
+		result[key] = val
+	}
+	return result, nil
+}
+
+func (sd *StructDecoder[T]) decodeMapStringBool(d *Decoder, format byte) (map[string]bool, error) {
+	mapLen, err := d.parseMapLen(format)
+	if err != nil {
+		return nil, err
+	}
+	if err := d.validateMapLen(mapLen); err != nil {
+		return nil, err
+	}
+	result := make(map[string]bool, mapLen)
+	for i := 0; i < mapLen; i++ {
+		keyBytes, err := d.readStringBytes()
+		if err != nil {
+			return nil, err
+		}
+		var key string
+		if sd.zeroCopy {
+			key = unsafe.String(unsafe.SliceData(keyBytes), len(keyBytes))
+		} else {
+			key = string(keyBytes)
+		}
+		f, err := d.readByte()
+		if err != nil {
+			return nil, err
+		}
+		if f == formatTrue {
+			result[key] = true
+		} else if f == formatFalse {
+			result[key] = false
+		} else {
+			return nil, ErrTypeMismatch
+		}
 	}
 	return result, nil
 }
