@@ -321,7 +321,7 @@ func TestEncoderBatchArrays(t *testing.T) {
 			t.Fatalf("DecodeInt64Array failed: %v", err)
 		}
 		if len(result) != len(arr) {
-			t.Errorf("length mismatch: got %d, want %d", len(result), len(arr))
+			t.Errorf(errMsgLengthMismatch, len(result), len(arr))
 		}
 		for i := range arr {
 			if result[i] != arr[i] {
@@ -341,7 +341,7 @@ func TestEncoderBatchArrays(t *testing.T) {
 			t.Fatalf("DecodeUint64Array failed: %v", err)
 		}
 		if len(result) != len(arr) {
-			t.Errorf("length mismatch: got %d, want %d", len(result), len(arr))
+			t.Errorf(errMsgLengthMismatch, len(result), len(arr))
 		}
 		for i := range arr {
 			if result[i] != arr[i] {
@@ -361,7 +361,7 @@ func TestEncoderBatchArrays(t *testing.T) {
 			t.Fatalf("DecodeFloat64Array failed: %v", err)
 		}
 		if len(result) != len(arr) {
-			t.Errorf("length mismatch: got %d, want %d", len(result), len(arr))
+			t.Errorf(errMsgLengthMismatch, len(result), len(arr))
 		}
 		for i := range arr {
 			if result[i] != arr[i] {
@@ -381,7 +381,7 @@ func TestEncoderBatchArrays(t *testing.T) {
 			t.Fatalf("DecodeStringArray failed: %v", err)
 		}
 		if len(result) != len(arr) {
-			t.Errorf("length mismatch: got %d, want %d", len(result), len(arr))
+			t.Errorf(errMsgLengthMismatch, len(result), len(arr))
 		}
 		for i := range arr {
 			if result[i] != arr[i] {

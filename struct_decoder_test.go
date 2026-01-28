@@ -57,7 +57,7 @@ func TestStructDecoderUintFormats(t *testing.T) {
 		name string
 		data []byte
 	}{
-		{"positive fixint", []byte{0x82, 0xa1, 'u', 0x42, 0xa3, 'u', '6', '4', 0x42}},
+		{testPositiveFixint, []byte{0x82, 0xa1, 'u', 0x42, 0xa3, 'u', '6', '4', 0x42}},
 		{"uint8", []byte{0x82, 0xa1, 'u', formatUint8, 200, 0xa3, 'u', '6', '4', formatUint8, 200}},
 		{"uint16", []byte{0x82, 0xa1, 'u', formatUint16, 0x01, 0x00, 0xa3, 'u', '6', '4', formatUint16, 0x01, 0x00}},
 		{"uint32", []byte{0x82, 0xa1, 'u', formatUint32, 0, 0, 0x01, 0x00, 0xa3, 'u', '6', '4', formatUint32, 0, 0, 0x01, 0x00}},
@@ -417,7 +417,7 @@ func TestStructDecoderIntFormats(t *testing.T) {
 		data []byte
 		want int64
 	}{
-		{"positive fixint", []byte{0x81, 0xa1, 'i', 0x42}, 66},
+		{testPositiveFixint, []byte{0x81, 0xa1, 'i', 0x42}, 66},
 		{"negative fixint", []byte{0x81, 0xa1, 'i', 0xe0}, -32},
 		{"uint8", []byte{0x81, 0xa1, 'i', formatUint8, 200}, 200},
 		{"uint16", []byte{0x81, 0xa1, 'i', formatUint16, 0x01, 0x00}, 256},
@@ -467,7 +467,7 @@ func TestStructDecoderUintField(t *testing.T) {
 		name string
 		data []byte
 	}{
-		{"positive fixint", []byte{0x81, 0xa1, 'u', 0x42}},
+		{testPositiveFixint, []byte{0x81, 0xa1, 'u', 0x42}},
 		{"uint8", []byte{0x81, 0xa1, 'u', formatUint8, 200}},
 		{"uint16", []byte{0x81, 0xa1, 'u', formatUint16, 0x01, 0x00}},
 		{"uint32", []byte{0x81, 0xa1, 'u', formatUint32, 0, 0, 0x01, 0x00}},
@@ -978,14 +978,14 @@ func TestStructDecoderNestedMaps(t *testing.T) {
 		enc := GetStructEncoder[BitmapFilterData]()
 		data, err := enc.Encode(&original)
 		if err != nil {
-			t.Fatalf("Encode failed: %v", err)
+			t.Fatalf(errMsgEncodeFailed, err)
 		}
 
 		dec := GetStructDecoder[BitmapFilterData](false)
 		var result BitmapFilterData
 		err = dec.Decode(data, &result)
 		if err != nil {
-			t.Fatalf("Decode failed: %v", err)
+			t.Fatalf(errMsgDecodeFailedCap, err)
 		}
 
 		// Verify nested map contents
@@ -1024,10 +1024,10 @@ func TestStructDecoderGenericTypeParam(t *testing.T) {
 		}
 
 		if result.MaxDocID != 1000 {
-			t.Errorf("MaxDocID: got %d, want 1000", result.MaxDocID)
+			t.Errorf(errMsgMaxDocID1000, result.MaxDocID)
 		}
 		if len(result.Values) != 5 || result.Values[4] != 500 {
-			t.Errorf("Values mismatch: got %v", result.Values)
+			t.Errorf(errMsgValuesMismatch, result.Values)
 		}
 	})
 
@@ -1040,21 +1040,21 @@ func TestStructDecoderGenericTypeParam(t *testing.T) {
 		enc := GetStructEncoder[SortColumnData[int64]]()
 		data, err := enc.Encode(&original)
 		if err != nil {
-			t.Fatalf("Encode failed: %v", err)
+			t.Fatalf(errMsgEncodeFailed, err)
 		}
 
 		dec := GetStructDecoder[SortColumnData[int64]](false)
 		var result SortColumnData[int64]
 		err = dec.Decode(data, &result)
 		if err != nil {
-			t.Fatalf("Decode failed: %v", err)
+			t.Fatalf(errMsgDecodeFailedCap, err)
 		}
 
 		if result.MaxDocID != 1000 {
-			t.Errorf("MaxDocID: got %d, want 1000", result.MaxDocID)
+			t.Errorf(errMsgMaxDocID1000, result.MaxDocID)
 		}
 		if len(result.Values) != 5 || result.Values[4] != 500 {
-			t.Errorf("Values mismatch: got %v", result.Values)
+			t.Errorf(errMsgValuesMismatch, result.Values)
 		}
 	})
 
@@ -1067,21 +1067,21 @@ func TestStructDecoderGenericTypeParam(t *testing.T) {
 		enc := GetStructEncoder[SortColumnData[float64]]()
 		data, err := enc.Encode(&original)
 		if err != nil {
-			t.Fatalf("Encode failed: %v", err)
+			t.Fatalf(errMsgEncodeFailed, err)
 		}
 
 		dec := GetStructDecoder[SortColumnData[float64]](false)
 		var result SortColumnData[float64]
 		err = dec.Decode(data, &result)
 		if err != nil {
-			t.Fatalf("Decode failed: %v", err)
+			t.Fatalf(errMsgDecodeFailedCap, err)
 		}
 
 		if result.MaxDocID != 500 {
-			t.Errorf("MaxDocID: got %d, want 500", result.MaxDocID)
+			t.Errorf(errMsgMaxDocID500, result.MaxDocID)
 		}
 		if len(result.Values) != 3 {
-			t.Errorf("Values length: got %d, want 3", len(result.Values))
+			t.Errorf(errMsgValuesLength3, len(result.Values))
 		}
 	})
 
@@ -1094,21 +1094,21 @@ func TestStructDecoderGenericTypeParam(t *testing.T) {
 		enc := GetStructEncoder[SortColumnData[string]]()
 		data, err := enc.Encode(&original)
 		if err != nil {
-			t.Fatalf("Encode failed: %v", err)
+			t.Fatalf(errMsgEncodeFailed, err)
 		}
 
 		dec := GetStructDecoder[SortColumnData[string]](false)
 		var result SortColumnData[string]
 		err = dec.Decode(data, &result)
 		if err != nil {
-			t.Fatalf("Decode failed: %v", err)
+			t.Fatalf(errMsgDecodeFailedCap, err)
 		}
 
 		if result.MaxDocID != 100 {
 			t.Errorf("MaxDocID: got %d, want 100", result.MaxDocID)
 		}
 		if len(result.Values) != 3 || result.Values[0] != "apple" {
-			t.Errorf("Values mismatch: got %v", result.Values)
+			t.Errorf(errMsgValuesMismatch, result.Values)
 		}
 	})
 }
@@ -1132,20 +1132,20 @@ func TestStructDecoderSortColumnDataPattern(t *testing.T) {
 
 		data, err := enc.Encode(&original)
 		if err != nil {
-			t.Fatalf("Encode failed: %v", err)
+			t.Fatalf(errMsgEncodeFailed, err)
 		}
 
 		var result sortColumnData[int64]
 		err = dec.Decode(data, &result)
 		if err != nil {
-			t.Fatalf("Decode failed: %v", err)
+			t.Fatalf(errMsgDecodeFailedCap, err)
 		}
 
 		if result.MaxDocID != 1000 {
-			t.Errorf("MaxDocID: got %d, want 1000", result.MaxDocID)
+			t.Errorf(errMsgMaxDocID1000, result.MaxDocID)
 		}
 		if len(result.Values) != 3 {
-			t.Errorf("Values length: got %d, want 3", len(result.Values))
+			t.Errorf(errMsgValuesLength3, len(result.Values))
 		}
 		if len(result.Values) > 0 && result.Values[0] != 500 {
 			t.Errorf("Values[0]: got %d, want 500", result.Values[0])
@@ -1163,20 +1163,20 @@ func TestStructDecoderSortColumnDataPattern(t *testing.T) {
 
 		data, err := enc.Encode(&original)
 		if err != nil {
-			t.Fatalf("Encode failed: %v", err)
+			t.Fatalf(errMsgEncodeFailed, err)
 		}
 
 		var result sortColumnData[float64]
 		err = dec.Decode(data, &result)
 		if err != nil {
-			t.Fatalf("Decode failed: %v", err)
+			t.Fatalf(errMsgDecodeFailedCap, err)
 		}
 
 		if result.MaxDocID != 500 {
-			t.Errorf("MaxDocID: got %d, want 500", result.MaxDocID)
+			t.Errorf(errMsgMaxDocID500, result.MaxDocID)
 		}
 		if len(result.Values) != 3 {
-			t.Errorf("Values length: got %d, want 3", len(result.Values))
+			t.Errorf(errMsgValuesLength3, len(result.Values))
 		}
 	})
 }
@@ -1193,19 +1193,19 @@ func TestStructDecoderGenericFunctionContext(t *testing.T) {
 
 		data, err := encodeTestSortColumn(&original)
 		if err != nil {
-			t.Fatalf("Encode failed: %v", err)
+			t.Fatalf(errMsgEncodeFailed, err)
 		}
 
 		result, err := decodeTestSortColumn[int64](data)
 		if err != nil {
-			t.Fatalf("Decode failed: %v", err)
+			t.Fatalf(errMsgDecodeFailedCap, err)
 		}
 
 		if result.MaxDocID != 1000 {
-			t.Errorf("MaxDocID: got %d, want 1000", result.MaxDocID)
+			t.Errorf(errMsgMaxDocID1000, result.MaxDocID)
 		}
 		if len(result.Values) != 3 {
-			t.Errorf("Values length: got %d, want 3", len(result.Values))
+			t.Errorf(errMsgValuesLength3, len(result.Values))
 		}
 		if len(result.Values) > 0 && result.Values[0] != 500 {
 			t.Errorf("Values[0]: got %d, want 500", result.Values[0])
@@ -1223,19 +1223,19 @@ func TestStructDecoderGenericFunctionContext(t *testing.T) {
 
 		data, err := encodeTestSortColumn(&original)
 		if err != nil {
-			t.Fatalf("Encode failed: %v", err)
+			t.Fatalf(errMsgEncodeFailed, err)
 		}
 
 		result, err := decodeTestSortColumn[float64](data)
 		if err != nil {
-			t.Fatalf("Decode failed: %v", err)
+			t.Fatalf(errMsgDecodeFailedCap, err)
 		}
 
 		if result.MaxDocID != 500 {
-			t.Errorf("MaxDocID: got %d, want 500", result.MaxDocID)
+			t.Errorf(errMsgMaxDocID500, result.MaxDocID)
 		}
 		if len(result.Values) != 3 {
-			t.Errorf("Values length: got %d, want 3", len(result.Values))
+			t.Errorf(errMsgValuesLength3, len(result.Values))
 		}
 	})
 
@@ -1247,19 +1247,19 @@ func TestStructDecoderGenericFunctionContext(t *testing.T) {
 
 		data, err := encodeTestSortColumn(&original)
 		if err != nil {
-			t.Fatalf("Encode failed: %v", err)
+			t.Fatalf(errMsgEncodeFailed, err)
 		}
 
 		result, err := decodeTestSortColumn[uint16](data)
 		if err != nil {
-			t.Fatalf("Decode failed: %v", err)
+			t.Fatalf(errMsgDecodeFailedCap, err)
 		}
 
 		if result.MaxDocID != 1000 {
-			t.Errorf("MaxDocID: got %d, want 1000", result.MaxDocID)
+			t.Errorf(errMsgMaxDocID1000, result.MaxDocID)
 		}
 		if len(result.Values) != 3 {
-			t.Errorf("Values length: got %d, want 3", len(result.Values))
+			t.Errorf(errMsgValuesLength3, len(result.Values))
 		}
 		if len(result.Values) > 0 && result.Values[0] != 100 {
 			t.Errorf("Values[0]: got %d, want 100", result.Values[0])

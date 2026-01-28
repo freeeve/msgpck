@@ -57,14 +57,14 @@ type GenericSliceStruct[T any] struct {
 var (
 	smallStruct  = SmallStruct{Name: "Alice", Age: 30}
 	mediumStruct = MediumStruct{
-		ID: 12345, Name: "Bob Smith", Email: "bob@example.com",
+		ID: 12345, Name: testBobName, Email: testBobEmail,
 		Age: 42, Active: true, Score: 98.6,
 		Tags:     []string{"admin", "user", "premium"},
 		Metadata: map[string]string{"role": "manager", "dept": "engineering"},
 	}
 	largeStruct = LargeStruct{
 		ID: 12345, UUID: "550e8400-e29b-41d4-a716-446655440000",
-		Name: "Bob Smith", Email: "bob@example.com", Phone: "+1-555-123-4567",
+		Name: testBobName, Email: testBobEmail, Phone: "+1-555-123-4567",
 		Address: "123 Main St", City: "San Francisco", Country: "USA", PostalCode: "94102",
 		Age: 42, Score: 98.6, Rating: 4.5, Active: true, Verified: true, Premium: true,
 		CreatedAt: 1609459200, UpdatedAt: 1704067200, LoginCount: 1500, FailedLogins: 3,
@@ -75,7 +75,7 @@ var (
 	}
 	smallMap  = map[string]any{"name": "Alice", "age": 30}
 	mediumMap = map[string]any{
-		"id": int64(12345), "name": "Bob Smith", "email": "bob@example.com",
+		"id": int64(12345), "name": testBobName, "email": testBobEmail,
 		"age": 42, "active": true, "score": 98.6,
 		"tags":     []any{"admin", "user", "premium"},
 		"metadata": map[string]any{"role": "manager", "dept": "engineering"},
@@ -438,7 +438,7 @@ func BenchmarkMsgpckLargeStructUnmarshalZeroCopy(b *testing.B) {
 // Generic Slice Struct Benchmarks (1M items - simulates roaringsearch sortColumnData)
 // ============================================================================
 
-func BenchmarkGenericSlice1M_Int64_Encode(b *testing.B) {
+func BenchmarkGenericSlice1MInt64Encode(b *testing.B) {
 	values := make([]int64, 1_000_000)
 	for i := range values {
 		values[i] = int64(i * 7)
@@ -450,7 +450,7 @@ func BenchmarkGenericSlice1M_Int64_Encode(b *testing.B) {
 	}
 }
 
-func BenchmarkGenericSlice1M_Int64_Decode(b *testing.B) {
+func BenchmarkGenericSlice1MInt64Decode(b *testing.B) {
 	values := make([]int64, 1_000_000)
 	for i := range values {
 		values[i] = int64(i * 7)
@@ -464,7 +464,7 @@ func BenchmarkGenericSlice1M_Int64_Decode(b *testing.B) {
 	}
 }
 
-func BenchmarkGenericSlice1M_Uint16_Encode(b *testing.B) {
+func BenchmarkGenericSlice1MUint16Encode(b *testing.B) {
 	values := make([]uint16, 1_000_000)
 	for i := range values {
 		values[i] = uint16(i % 65536)
@@ -476,7 +476,7 @@ func BenchmarkGenericSlice1M_Uint16_Encode(b *testing.B) {
 	}
 }
 
-func BenchmarkGenericSlice1M_Uint16_Decode(b *testing.B) {
+func BenchmarkGenericSlice1MUint16Decode(b *testing.B) {
 	values := make([]uint16, 1_000_000)
 	for i := range values {
 		values[i] = uint16(i % 65536)

@@ -1020,7 +1020,7 @@ func TestDecodeValueStr8String(t *testing.T) {
 		t.Fatal(err)
 	}
 	if s.S != "hello" {
-		t.Errorf("got %s, want hello", s.S)
+		t.Errorf(errMsgGotWantHello, s.S)
 	}
 }
 
@@ -1042,7 +1042,7 @@ func TestDecodeValueStr16String(t *testing.T) {
 		t.Fatal(err)
 	}
 	if s.S != "hello" {
-		t.Errorf("got %s, want hello", s.S)
+		t.Errorf(errMsgGotWantHello, s.S)
 	}
 }
 
@@ -1064,7 +1064,7 @@ func TestDecodeValueStr32String(t *testing.T) {
 		t.Fatal(err)
 	}
 	if s.S != "hello" {
-		t.Errorf("got %s, want hello", s.S)
+		t.Errorf(errMsgGotWantHello, s.S)
 	}
 }
 
@@ -1086,7 +1086,7 @@ func TestDecodeValueBin8Bytes(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(s.B) != 3 {
-		t.Errorf("got len=%d, want 3", len(s.B))
+		t.Errorf(errMsgGotLen3, len(s.B))
 	}
 }
 
@@ -1108,7 +1108,7 @@ func TestDecodeValueBin16Bytes(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(s.B) != 3 {
-		t.Errorf("got len=%d, want 3", len(s.B))
+		t.Errorf(errMsgGotLen3, len(s.B))
 	}
 }
 
@@ -1130,7 +1130,7 @@ func TestDecodeValueBin32Bytes(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(s.B) != 3 {
-		t.Errorf("got len=%d, want 3", len(s.B))
+		t.Errorf(errMsgGotLen3, len(s.B))
 	}
 }
 

@@ -159,7 +159,7 @@ func TestDecodeReflectionPaths(t *testing.T) {
 }
 
 func TestDecodeMapAnyFormats(t *testing.T) {
-	t.Run("str8 key", func(t *testing.T) {
+	t.Run(testStr8Key, func(t *testing.T) {
 		key := string(make([]byte, 50)) // needs str8
 		e := NewEncoder(128)
 		e.EncodeMapHeader(1)
@@ -175,7 +175,7 @@ func TestDecodeMapAnyFormats(t *testing.T) {
 		}
 	})
 
-	t.Run("str16 key", func(t *testing.T) {
+	t.Run(testStr16Key, func(t *testing.T) {
 		key := string(make([]byte, 300)) // needs str16
 		e := NewEncoder(512)
 		e.EncodeMapHeader(1)
@@ -601,7 +601,7 @@ func TestReflectionDecodeWithStringKeyFormats(t *testing.T) {
 		V int `msgpack:"v"`
 	}
 
-	t.Run("str8 key", func(t *testing.T) {
+	t.Run(testStr8Key, func(t *testing.T) {
 		// Test str8 format key parsing
 		data := []byte{0x81}                    // fixmap 1
 		data = append(data, formatStr8, 1, 'v') // str8 "v"
@@ -614,7 +614,7 @@ func TestReflectionDecodeWithStringKeyFormats(t *testing.T) {
 		}
 	})
 
-	t.Run("str16 key", func(t *testing.T) {
+	t.Run(testStr16Key, func(t *testing.T) {
 		data := []byte{0x81}                        // fixmap 1
 		data = append(data, formatStr16, 0, 1, 'v') // str16 "v"
 		data = append(data, 0x42)                   // value 66
@@ -626,7 +626,7 @@ func TestReflectionDecodeWithStringKeyFormats(t *testing.T) {
 		}
 	})
 
-	t.Run("str32 key", func(t *testing.T) {
+	t.Run(testStr32Key, func(t *testing.T) {
 		data := []byte{0x81}                              // fixmap 1
 		data = append(data, formatStr32, 0, 0, 0, 1, 'v') // str32 "v"
 		data = append(data, 0x42)                         // value 66
@@ -753,7 +753,7 @@ func TestDecodeMapAnyStr32Key(t *testing.T) {
 }
 
 func TestDecodeMapKeyStr8Str16(t *testing.T) {
-	t.Run("str8 key", func(t *testing.T) {
+	t.Run(testStr8Key, func(t *testing.T) {
 		data := []byte{0x81, formatStr8, 3, 'k', 'e', 'y', 0x42}
 		d := NewDecoder(data)
 		v, err := d.DecodeAny()
@@ -766,7 +766,7 @@ func TestDecodeMapKeyStr8Str16(t *testing.T) {
 		}
 	})
 
-	t.Run("str16 key", func(t *testing.T) {
+	t.Run(testStr16Key, func(t *testing.T) {
 		data := []byte{0x81, formatStr16, 0, 3, 'k', 'e', 'y', 0x42}
 		d := NewDecoder(data)
 		v, err := d.DecodeAny()
@@ -1095,7 +1095,7 @@ func TestReflectionDecodeUnexportedField(t *testing.T) {
 }
 
 func TestDecodeMapAnyFormatsKeyFormats(t *testing.T) {
-	t.Run("str8 key", func(t *testing.T) {
+	t.Run(testStr8Key, func(t *testing.T) {
 		data := []byte{0x81, formatStr8, 1, 'k', 0x42}
 		d := NewDecoder(data)
 		v, err := d.DecodeAny()
@@ -1108,7 +1108,7 @@ func TestDecodeMapAnyFormatsKeyFormats(t *testing.T) {
 		}
 	})
 
-	t.Run("str16 key", func(t *testing.T) {
+	t.Run(testStr16Key, func(t *testing.T) {
 		data := []byte{0x81, formatStr16, 0, 1, 'k', 0x42}
 		d := NewDecoder(data)
 		v, err := d.DecodeAny()
@@ -1121,7 +1121,7 @@ func TestDecodeMapAnyFormatsKeyFormats(t *testing.T) {
 		}
 	})
 
-	t.Run("str32 key", func(t *testing.T) {
+	t.Run(testStr32Key, func(t *testing.T) {
 		data := []byte{0x81, formatStr32, 0, 0, 0, 1, 'k', 0x42}
 		d := NewDecoder(data)
 		v, err := d.DecodeAny()
@@ -1140,7 +1140,7 @@ func TestReflectionDecodeIntoMapKeyFormats(t *testing.T) {
 		M map[string]int `msgpack:"m"`
 	}
 
-	t.Run("str8 key", func(t *testing.T) {
+	t.Run(testStr8Key, func(t *testing.T) {
 		data := []byte{0x81, 0xa1, 'm', 0x81, formatStr8, 1, 'k', 0x42}
 		var d Data
 		err := Unmarshal(data, &d)
@@ -1149,7 +1149,7 @@ func TestReflectionDecodeIntoMapKeyFormats(t *testing.T) {
 		}
 	})
 
-	t.Run("str16 key", func(t *testing.T) {
+	t.Run(testStr16Key, func(t *testing.T) {
 		data := []byte{0x81, 0xa1, 'm', 0x81, formatStr16, 0, 1, 'k', 0x42}
 		var d Data
 		err := Unmarshal(data, &d)
@@ -1158,7 +1158,7 @@ func TestReflectionDecodeIntoMapKeyFormats(t *testing.T) {
 		}
 	})
 
-	t.Run("str32 key", func(t *testing.T) {
+	t.Run(testStr32Key, func(t *testing.T) {
 		data := []byte{0x81, 0xa1, 'm', 0x81, formatStr32, 0, 0, 0, 1, 'k', 0x42}
 		var d Data
 		err := Unmarshal(data, &d)
@@ -2678,7 +2678,7 @@ func TestDecodeIntoStructNonStringKeySkip(t *testing.T) {
 		t.Errorf(errMsgUnexpectedErr, err)
 	}
 	if s.Name != "Alice" {
-		t.Errorf("expected 'Alice', got %q", s.Name)
+		t.Errorf(errMsgExpectedAlice, s.Name)
 	}
 }
 
@@ -2778,7 +2778,7 @@ func TestBuildStructFieldsSkipTag(t *testing.T) {
 		t.Errorf(errMsgUnexpectedErr, err)
 	}
 	if s.Name != "Alice" {
-		t.Errorf("expected 'Alice', got %q", s.Name)
+		t.Errorf(errMsgExpectedAlice, s.Name)
 	}
 	// Skip and Ignore should remain empty
 	if s.Skip != "" || s.Ignore != "" {
@@ -2842,7 +2842,7 @@ func TestDecodeIntoStructUnknownFieldSkip(t *testing.T) {
 		t.Errorf(errMsgUnexpectedErr, err)
 	}
 	if s.Name != "Alice" {
-		t.Errorf("expected 'Alice', got %q", s.Name)
+		t.Errorf(errMsgExpectedAlice, s.Name)
 	}
 }
 
@@ -2881,7 +2881,7 @@ func TestDecodeIntoStructUnexportedFieldSkip(t *testing.T) {
 		t.Errorf(errMsgUnexpectedErr, err)
 	}
 	if s.Name != "Alice" {
-		t.Errorf("expected 'Alice', got %q", s.Name)
+		t.Errorf(errMsgExpectedAlice, s.Name)
 	}
 }
 
