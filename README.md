@@ -26,23 +26,23 @@ So I built msgpck focused on the common case: decoding known struct types and ma
 Benchmarks vs vmihailenco/msgpack (Apple M3 Max):
 
 ### Struct Operations (using cached `GetStructEncoder`/`GetStructDecoder`)
-| Operation | vmihailenco | msgpck | Speedup |
-|-----------|-------------|--------|---------|
-| SmallStruct Encode | 137 ns, 3 allocs | 32 ns, 0 allocs | **4.3x** |
-| MediumStruct Encode | 431 ns, 5 allocs | 157 ns, 0 allocs | **2.7x** |
-| SmallStruct Decode | 167 ns, 3 allocs | 40 ns, 1 alloc | **4.2x** |
-| SmallStruct Decode (`zeroCopy: true`) | - | 29 ns, 0 allocs | **5.8x** |
-| MediumStruct Decode | 671 ns, 14 allocs | 324 ns, 12 allocs | **2.1x** |
-| MediumStruct Decode (`zeroCopy: true`) | - | 230 ns, 3 allocs | **2.9x** |
+| Operation | msgpck | allocs |
+|-----------|--------|--------|
+| SmallStruct Encode | 52 ns | 1 |
+| MediumStruct Encode | 201 ns | 1 |
+| SmallStruct Decode | 59 ns | 2 |
+| SmallStruct Decode (`zeroCopy: true`) | 44 ns | 1 |
+| MediumStruct Decode | 388 ns | 13 |
+| MediumStruct Decode (`zeroCopy: true`) | 287 ns | 4 |
 
 ### Map Operations
-| Operation | vmihailenco | msgpck | Speedup |
-|-----------|-------------|--------|---------|
-| SmallMap Encode (`Marshal`) | 127 ns, 2 allocs | 73 ns, 1 allocs | **1.7x** |
-| MediumMap Encode (`Marshal`) | 491 ns, 4 allocs | 216 ns, 1 allocs | **2.3x** |
-| SmallMap Decode (`Unmarshal`) | 201 ns, 8 allocs | 107 ns, 3 allocs | **1.9x** |
-| MediumMap Decode (`Unmarshal`) | 810 ns, 34 allocs | 392 ns, 15 allocs | **2.1x** |
-| StringMap Decode (`Unmarshal`) | 305 ns, 12 allocs | 114 ns, 2 allocs | **2.7x** |
+| Operation | msgpck | allocs |
+|-----------|--------|--------|
+| SmallMap Encode (`Marshal`) | 82 ns | 1 |
+| MediumMap Encode (`Marshal`) | 246 ns | 1 |
+| SmallMap Decode (`Unmarshal`) | 337 ns | 10 |
+| MediumMap Decode (`Unmarshal`) | 1256 ns | 40 |
+| StringMap Decode (`Unmarshal`) | 496 ns | 19 |
 
 Run benchmarks yourself:
 ```bash
@@ -98,6 +98,30 @@ dec.Decode(data, &user)
 ```
 
 **Warning**: Zero-copy strings are only valid while the input buffer exists. Copy strings if you need them to outlive the buffer.
+
+### Generic Type Support
+
+The struct encoder/decoder fully supports Go generics:
+
+```go
+type SortColumn[T cmp.Ordered] struct {
+    Values   []T    `msgpack:"values"`
+    MaxDocID uint32 `msgpack:"max_doc_id"`
+}
+
+// Works with any concrete type
+enc := msgpck.GetStructEncoder[SortColumn[int64]]()
+dec := msgpck.GetStructDecoder[SortColumn[int64]](false)
+```
+
+### Supported Field Types
+
+The cached struct codecs support:
+- **Primitives**: all int/uint sizes (8/16/32/64), float32/64, bool, string
+- **Slices**: `[]T` for all primitive types, `[]string`, `[]byte`
+- **Maps**: `map[string]string`, `map[string]any`, nested maps
+- **Nested structs**: automatically handled
+- **Pointers**: pointer fields are supported
 
 ## API Reference
 
