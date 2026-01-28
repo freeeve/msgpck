@@ -336,6 +336,18 @@ func (sd *StructDecoder[T]) decodeField(d *Decoder, ptr unsafe.Pointer, field *s
 				return err
 			}
 			*(*[]int32)(ptr) = arr
+		case reflect.Int16:
+			arr, err := sd.decodeInt16Slice(d, format)
+			if err != nil {
+				return err
+			}
+			*(*[]int16)(ptr) = arr
+		case reflect.Int8:
+			arr, err := sd.decodeInt8Slice(d, format)
+			if err != nil {
+				return err
+			}
+			*(*[]int8)(ptr) = arr
 		case reflect.Uint64:
 			arr, err := sd.decodeUint64Slice(d, format)
 			if err != nil {
@@ -354,6 +366,12 @@ func (sd *StructDecoder[T]) decodeField(d *Decoder, ptr unsafe.Pointer, field *s
 				return err
 			}
 			*(*[]uint32)(ptr) = arr
+		case reflect.Uint16:
+			arr, err := sd.decodeUint16Slice(d, format)
+			if err != nil {
+				return err
+			}
+			*(*[]uint16)(ptr) = arr
 		case reflect.Float64:
 			arr, err := sd.decodeFloat64Slice(d, format)
 			if err != nil {
@@ -554,6 +572,52 @@ func (sd *StructDecoder[T]) decodeInt32Slice(d *Decoder, format byte) ([]int32, 
 	return result, nil
 }
 
+func (sd *StructDecoder[T]) decodeInt16Slice(d *Decoder, format byte) ([]int16, error) {
+	arrLen, err := d.parseArrayLen(format)
+	if err != nil {
+		return nil, err
+	}
+	if err := d.validateArrayLen(arrLen); err != nil {
+		return nil, err
+	}
+	result := make([]int16, arrLen)
+	for i := 0; i < arrLen; i++ {
+		f, err := d.readByte()
+		if err != nil {
+			return nil, err
+		}
+		v, err := d.decodeInt(f)
+		if err != nil {
+			return nil, err
+		}
+		result[i] = int16(v)
+	}
+	return result, nil
+}
+
+func (sd *StructDecoder[T]) decodeInt8Slice(d *Decoder, format byte) ([]int8, error) {
+	arrLen, err := d.parseArrayLen(format)
+	if err != nil {
+		return nil, err
+	}
+	if err := d.validateArrayLen(arrLen); err != nil {
+		return nil, err
+	}
+	result := make([]int8, arrLen)
+	for i := 0; i < arrLen; i++ {
+		f, err := d.readByte()
+		if err != nil {
+			return nil, err
+		}
+		v, err := d.decodeInt(f)
+		if err != nil {
+			return nil, err
+		}
+		result[i] = int8(v)
+	}
+	return result, nil
+}
+
 func (sd *StructDecoder[T]) decodeUint64Slice(d *Decoder, format byte) ([]uint64, error) {
 	arrLen, err := d.parseArrayLen(format)
 	if err != nil {
@@ -618,6 +682,29 @@ func (sd *StructDecoder[T]) decodeUint32Slice(d *Decoder, format byte) ([]uint32
 			return nil, err
 		}
 		result[i] = uint32(v)
+	}
+	return result, nil
+}
+
+func (sd *StructDecoder[T]) decodeUint16Slice(d *Decoder, format byte) ([]uint16, error) {
+	arrLen, err := d.parseArrayLen(format)
+	if err != nil {
+		return nil, err
+	}
+	if err := d.validateArrayLen(arrLen); err != nil {
+		return nil, err
+	}
+	result := make([]uint16, arrLen)
+	for i := 0; i < arrLen; i++ {
+		f, err := d.readByte()
+		if err != nil {
+			return nil, err
+		}
+		v, err := d.decodeUint(f)
+		if err != nil {
+			return nil, err
+		}
+		result[i] = uint16(v)
 	}
 	return result, nil
 }

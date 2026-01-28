@@ -1112,3 +1112,178 @@ func TestStructDecoderGenericTypeParam(t *testing.T) {
 		}
 	})
 }
+
+// Test the exact pattern from roaringsearch sortColumnData
+func TestStructDecoderSortColumnDataPattern(t *testing.T) {
+	// Simulating cmp.Ordered constraint with concrete types
+	type sortColumnData[T int64 | float64 | string] struct {
+		Values   []T    `msgpack:"values"`
+		MaxDocID uint32 `msgpack:"max_doc_id"`
+	}
+
+	t.Run("int64 roundtrip", func(t *testing.T) {
+		original := sortColumnData[int64]{
+			Values:   []int64{500, 200, 1000},
+			MaxDocID: 1000,
+		}
+
+		enc := GetStructEncoder[sortColumnData[int64]]()
+		dec := GetStructDecoder[sortColumnData[int64]](false)
+
+		data, err := enc.Encode(&original)
+		if err != nil {
+			t.Fatalf("Encode failed: %v", err)
+		}
+
+		var result sortColumnData[int64]
+		err = dec.Decode(data, &result)
+		if err != nil {
+			t.Fatalf("Decode failed: %v", err)
+		}
+
+		if result.MaxDocID != 1000 {
+			t.Errorf("MaxDocID: got %d, want 1000", result.MaxDocID)
+		}
+		if len(result.Values) != 3 {
+			t.Errorf("Values length: got %d, want 3", len(result.Values))
+		}
+		if len(result.Values) > 0 && result.Values[0] != 500 {
+			t.Errorf("Values[0]: got %d, want 500", result.Values[0])
+		}
+	})
+
+	t.Run("float64 roundtrip", func(t *testing.T) {
+		original := sortColumnData[float64]{
+			Values:   []float64{1.5, 2.5, 3.5},
+			MaxDocID: 500,
+		}
+
+		enc := GetStructEncoder[sortColumnData[float64]]()
+		dec := GetStructDecoder[sortColumnData[float64]](false)
+
+		data, err := enc.Encode(&original)
+		if err != nil {
+			t.Fatalf("Encode failed: %v", err)
+		}
+
+		var result sortColumnData[float64]
+		err = dec.Decode(data, &result)
+		if err != nil {
+			t.Fatalf("Decode failed: %v", err)
+		}
+
+		if result.MaxDocID != 500 {
+			t.Errorf("MaxDocID: got %d, want 500", result.MaxDocID)
+		}
+		if len(result.Values) != 3 {
+			t.Errorf("Values length: got %d, want 3", len(result.Values))
+		}
+	})
+}
+
+// Test calling struct decoder from within a generic function (like roaringsearch does)
+// Uses package-level generic functions since Go doesn't allow generic function literals
+
+func TestStructDecoderGenericFunctionContext(t *testing.T) {
+	t.Run("int64 via generic function", func(t *testing.T) {
+		original := testSortColumnData[int64]{
+			Values:   []int64{500, 200, 1000},
+			MaxDocID: 1000,
+		}
+
+		data, err := encodeTestSortColumn(&original)
+		if err != nil {
+			t.Fatalf("Encode failed: %v", err)
+		}
+
+		result, err := decodeTestSortColumn[int64](data)
+		if err != nil {
+			t.Fatalf("Decode failed: %v", err)
+		}
+
+		if result.MaxDocID != 1000 {
+			t.Errorf("MaxDocID: got %d, want 1000", result.MaxDocID)
+		}
+		if len(result.Values) != 3 {
+			t.Errorf("Values length: got %d, want 3", len(result.Values))
+		}
+		if len(result.Values) > 0 && result.Values[0] != 500 {
+			t.Errorf("Values[0]: got %d, want 500", result.Values[0])
+		}
+		if len(result.Values) > 1 && result.Values[1] != 200 {
+			t.Errorf("Values[1]: got %d, want 200", result.Values[1])
+		}
+	})
+
+	t.Run("float64 via generic function", func(t *testing.T) {
+		original := testSortColumnData[float64]{
+			Values:   []float64{1.5, 2.5, 3.5},
+			MaxDocID: 500,
+		}
+
+		data, err := encodeTestSortColumn(&original)
+		if err != nil {
+			t.Fatalf("Encode failed: %v", err)
+		}
+
+		result, err := decodeTestSortColumn[float64](data)
+		if err != nil {
+			t.Fatalf("Decode failed: %v", err)
+		}
+
+		if result.MaxDocID != 500 {
+			t.Errorf("MaxDocID: got %d, want 500", result.MaxDocID)
+		}
+		if len(result.Values) != 3 {
+			t.Errorf("Values length: got %d, want 3", len(result.Values))
+		}
+	})
+
+	t.Run("uint16 via generic function (roaringsearch pattern)", func(t *testing.T) {
+		original := testSortColumnData[uint16]{
+			Values:   []uint16{100, 200, 500},
+			MaxDocID: 1000,
+		}
+
+		data, err := encodeTestSortColumn(&original)
+		if err != nil {
+			t.Fatalf("Encode failed: %v", err)
+		}
+
+		result, err := decodeTestSortColumn[uint16](data)
+		if err != nil {
+			t.Fatalf("Decode failed: %v", err)
+		}
+
+		if result.MaxDocID != 1000 {
+			t.Errorf("MaxDocID: got %d, want 1000", result.MaxDocID)
+		}
+		if len(result.Values) != 3 {
+			t.Errorf("Values length: got %d, want 3", len(result.Values))
+		}
+		if len(result.Values) > 0 && result.Values[0] != 100 {
+			t.Errorf("Values[0]: got %d, want 100", result.Values[0])
+		}
+		if len(result.Values) > 2 && result.Values[2] != 500 {
+			t.Errorf("Values[2]: got %d, want 500", result.Values[2])
+		}
+	})
+}
+
+// Helper types for generic function context tests
+type testSortColumnData[T any] struct {
+	Values   []T    `msgpack:"values"`
+	MaxDocID uint32 `msgpack:"max_doc_id"`
+}
+
+func decodeTestSortColumn[T any](data []byte) (testSortColumnData[T], error) {
+	dec := GetStructDecoder[testSortColumnData[T]](false)
+	var result testSortColumnData[T]
+	err := dec.Decode(data, &result)
+	return result, err
+}
+
+func encodeTestSortColumn[T any](s *testSortColumnData[T]) ([]byte, error) {
+	enc := GetStructEncoder[testSortColumnData[T]]()
+	return enc.Encode(s)
+}
