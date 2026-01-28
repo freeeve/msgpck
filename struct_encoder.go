@@ -88,24 +88,9 @@ func parseFieldTag(tag, fieldName string) (string, bool) {
 }
 
 // Encode encodes the struct to msgpack bytes.
-// Returns bytes from a pooled buffer - copy if you need to retain.
+// The returned bytes are a copy and safe to retain.
+// For zero-allocation encoding, use EncodeWith with your own Encoder.
 func (se *StructEncoder[T]) Encode(src *T) ([]byte, error) {
-	e := encoderPool.Get().(*Encoder)
-	e.Reset()
-
-	err := se.encodeInto(e, unsafe.Pointer(src))
-	if err != nil {
-		encoderPool.Put(e)
-		return nil, err
-	}
-
-	result := e.Bytes()
-	encoderPool.Put(e)
-	return result, nil
-}
-
-// EncodeCopy encodes and returns a copy (safe to retain).
-func (se *StructEncoder[T]) EncodeCopy(src *T) ([]byte, error) {
 	e := encoderPool.Get().(*Encoder)
 	e.Reset()
 
@@ -121,22 +106,11 @@ func (se *StructEncoder[T]) EncodeCopy(src *T) ([]byte, error) {
 	return result, nil
 }
 
-// EncodeAppend encodes and appends to dst.
-func (se *StructEncoder[T]) EncodeAppend(dst []byte, src *T) ([]byte, error) {
-	e := encoderPool.Get().(*Encoder)
-	e.buf = dst
-
-	err := se.encodeInto(e, unsafe.Pointer(src))
-	if err != nil {
-		e.buf = nil
-		encoderPool.Put(e)
-		return nil, err
-	}
-
-	result := e.buf
-	e.buf = nil
-	encoderPool.Put(e)
-	return result, nil
+// EncodeWith encodes using a provided encoder.
+// Use this to avoid pool overhead when you manage your own encoder.
+// The encoder is NOT reset - call e.Reset() before if needed.
+func (se *StructEncoder[T]) EncodeWith(e *Encoder, src *T) error {
+	return se.encodeInto(e, unsafe.Pointer(src))
 }
 
 func (se *StructEncoder[T]) encodeInto(e *Encoder, ptr unsafe.Pointer) error {

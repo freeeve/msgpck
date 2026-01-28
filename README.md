@@ -38,8 +38,8 @@ Benchmarks vs vmihailenco/msgpack (Apple M3 Max):
 ### Map Operations
 | Operation | vmihailenco | msgpck | Speedup |
 |-----------|-------------|--------|---------|
-| SmallMap Encode (`Marshal`) | 127 ns, 2 allocs | 62 ns, 0 allocs | **2.0x** |
-| MediumMap Encode (`Marshal`) | 491 ns, 4 allocs | 193 ns, 0 allocs | **2.5x** |
+| SmallMap Encode (`Marshal`) | 127 ns, 2 allocs | 73 ns, 1 allocs | **1.7x** |
+| MediumMap Encode (`Marshal`) | 491 ns, 4 allocs | 216 ns, 1 allocs | **2.3x** |
 | SmallMap Decode (`UnmarshalMapStringAny`) | 201 ns, 8 allocs | 107 ns, 3 allocs | **1.9x** |
 | MediumMap Decode (`UnmarshalMapStringAny`) | 810 ns, 34 allocs | 392 ns, 15 allocs | **2.1x** |
 | StringMap Decode (`UnmarshalMapStringString`) | 305 ns, 12 allocs | 114 ns, 2 allocs | **2.7x** |
@@ -130,13 +130,12 @@ m, _ := msgpck.UnmarshalMapStringString(data, true)
 
 ```go
 // Encode any Go value to msgpack
-msgpck.Marshal(v any) ([]byte, error)       // pooled buffer - don't retain
-msgpck.MarshalCopy(v any) ([]byte, error)   // safe to retain
+msgpck.Marshal(v any) ([]byte, error)  // safe to retain
 
 // For hot paths: cached struct encoder
 enc := msgpck.GetStructEncoder[MyStruct]()
-enc.Encode(&src)      // pooled buffer
-enc.EncodeCopy(&src)  // safe to retain
+enc.Encode(&src)         // safe to retain (1 alloc)
+enc.EncodeWith(e, &src)  // zero-alloc with your own Encoder
 ```
 
 ### Decoding

@@ -30,7 +30,7 @@ func TestStructDecoderAllTypes(t *testing.T) {
 	}
 
 	enc := GetStructEncoder[AllTypes]()
-	b, err := enc.EncodeCopy(&original)
+	b, err := enc.Encode(&original)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -783,7 +783,7 @@ func TestStructDecoderAllIntegerTypes(t *testing.T) {
 	}
 
 	enc := GetStructEncoder[AllInts]()
-	data, err := enc.EncodeCopy(&original)
+	data, err := enc.Encode(&original)
 	if err != nil {
 		t.Fatalf("encode failed: %v", err)
 	}
@@ -901,4 +901,45 @@ func TestStructCodecs(t *testing.T) {
 			t.Error("DecodeStructFunc failed")
 		}
 	})
+}
+
+// TestStructDecoderDecodeWith tests the DecodeWith method for decoder reuse
+func TestStructDecoderDecodeWith(t *testing.T) {
+	type Person struct {
+		Name string `msgpack:"name"`
+		Age  int    `msgpack:"age"`
+	}
+
+	enc := GetStructEncoder[Person]()
+	dec := GetStructDecoder[Person](false)
+
+	// Create test data
+	original := Person{Name: "Alice", Age: 30}
+	data, err := enc.Encode(&original)
+	if err != nil {
+		t.Fatalf("encode failed: %v", err)
+	}
+
+	// Use DecodeWith with a user-managed decoder
+	d := NewDecoder(nil)
+	var result Person
+	err = dec.DecodeWith(d, data, &result)
+	if err != nil {
+		t.Fatalf("DecodeWith failed: %v", err)
+	}
+
+	if result.Name != original.Name || result.Age != original.Age {
+		t.Errorf("got %+v, want %+v", result, original)
+	}
+
+	// Verify decoder can be reused
+	data2, _ := enc.Encode(&Person{Name: "Bob", Age: 25})
+	var result2 Person
+	err = dec.DecodeWith(d, data2, &result2)
+	if err != nil {
+		t.Fatalf("second DecodeWith failed: %v", err)
+	}
+	if result2.Name != "Bob" {
+		t.Errorf("got name %q, want Bob", result2.Name)
+	}
 }

@@ -243,10 +243,7 @@ var encoderPool = sync.Pool{
 }
 
 // Marshal encodes a Go value to msgpack bytes.
-// WARNING: The returned slice is only valid until the next Marshal call
-// from the same goroutine. Copy the bytes if you need to retain them,
-// or use MarshalCopy for a safe copy.
-// This is zero-allocation for map[string]any and primitive types.
+// The returned bytes are a copy and safe to retain.
 func Marshal(v any) ([]byte, error) {
 	e := encoderPool.Get().(*Encoder)
 	e.Reset()
@@ -256,44 +253,9 @@ func Marshal(v any) ([]byte, error) {
 		return nil, err
 	}
 
-	// Return slice directly - caller must copy if needed
-	result := e.Bytes()
-	encoderPool.Put(e)
-	return result, nil
-}
-
-// MarshalCopy encodes a Go value to msgpack bytes.
-// The returned bytes are a copy and safe to retain.
-func MarshalCopy(v any) ([]byte, error) {
-	e := encoderPool.Get().(*Encoder)
-	e.Reset()
-
-	if err := e.Encode(v); err != nil {
-		encoderPool.Put(e)
-		return nil, err
-	}
-
-	// Copy result since encoder goes back to pool
+	// Copy result before returning encoder to pool to avoid race conditions
 	result := make([]byte, len(e.buf))
 	copy(result, e.buf)
-	encoderPool.Put(e)
-	return result, nil
-}
-
-// MarshalAppend encodes a Go value to msgpack, appending to dst.
-// The returned slice is safe to retain (it's the caller's buffer).
-func MarshalAppend(dst []byte, v any) ([]byte, error) {
-	e := encoderPool.Get().(*Encoder)
-	e.buf = dst
-
-	if err := e.Encode(v); err != nil {
-		e.buf = nil // don't return caller's buffer to pool
-		encoderPool.Put(e)
-		return nil, err
-	}
-
-	result := e.buf
-	e.buf = nil // don't return caller's buffer to pool
 	encoderPool.Put(e)
 	return result, nil
 }

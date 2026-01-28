@@ -13,30 +13,19 @@ func TestStructEncoderMethods(t *testing.T) {
 	enc := GetStructEncoder[Person]()
 	p := Person{Name: "Test", Age: 25}
 
-	t.Run("EncodeCopy", func(t *testing.T) {
-		b, err := enc.EncodeCopy(&p)
+	t.Run("Encode", func(t *testing.T) {
+		b, err := enc.Encode(&p)
 		if err != nil {
 			t.Fatal(err)
 		}
 		if len(b) == 0 {
-			t.Error("EncodeCopy returned empty")
-		}
-	})
-
-	t.Run("EncodeAppend", func(t *testing.T) {
-		prefix := []byte{0x01, 0x02}
-		b, err := enc.EncodeAppend(prefix, &p)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if len(b) <= 2 {
-			t.Error("EncodeAppend failed")
+			t.Error("Encode returned empty")
 		}
 	})
 
 	t.Run("GetStructEncoder", func(t *testing.T) {
 		enc := GetStructEncoder[Person]()
-		b, err := enc.EncodeCopy(&p)
+		b, err := enc.Encode(&p)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -59,7 +48,7 @@ func TestEncodeOmitemptyVariants(t *testing.T) {
 	}
 
 	d := Data{} // all zero values
-	b, err := MarshalCopy(d)
+	b, err := Marshal(d)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -95,7 +84,7 @@ func TestStructEncoderIsEmptyField(t *testing.T) {
 	// All zero values should be omitted
 	enc := GetStructEncoder[AllTypes]()
 	data := AllTypes{}
-	b, err := enc.EncodeCopy(&data)
+	b, err := enc.Encode(&data)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -128,7 +117,7 @@ func TestStructEncoderIsEmptyField(t *testing.T) {
 		Sl:  []int{1},
 		M:   map[string]string{"k": "v"},
 	}
-	b2, err := enc.EncodeCopy(&data2)
+	b2, err := enc.Encode(&data2)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -152,7 +141,7 @@ func TestStructEncoderGenericTypes(t *testing.T) {
 	}
 
 	enc := GetStructEncoder[Data]()
-	b, err := enc.EncodeCopy(&d)
+	b, err := enc.Encode(&d)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -163,30 +152,16 @@ func TestStructEncoderGenericTypes(t *testing.T) {
 	}
 }
 
-func TestStructEncoderEncodeCopy(t *testing.T) {
+func TestStructEncoderEncode(t *testing.T) {
 	type Data struct {
 		V int `msgpack:"v"`
 	}
 
 	enc := GetStructEncoder[Data]()
 	d := Data{V: 42}
-	b, err := enc.EncodeCopy(&d)
+	b, err := enc.Encode(&d)
 	if err != nil || len(b) == 0 {
-		t.Error("EncodeCopy failed")
-	}
-}
-
-func TestStructEncoderEncodeAppend(t *testing.T) {
-	type Data struct {
-		V int `msgpack:"v"`
-	}
-
-	enc := GetStructEncoder[Data]()
-	d := Data{V: 42}
-	prefix := []byte{0x01, 0x02}
-	b, err := enc.EncodeAppend(prefix, &d)
-	if err != nil || len(b) < 3 || b[0] != 0x01 || b[1] != 0x02 {
-		t.Error("EncodeAppend failed")
+		t.Error("Encode failed")
 	}
 }
 
@@ -213,5 +188,47 @@ func TestStructEncoderMapField(t *testing.T) {
 	b, err := enc.Encode(&d)
 	if err != nil || len(b) == 0 {
 		t.Error("map field encode failed")
+	}
+}
+
+// TestStructEncoderEncodeWith tests the EncodeWith method for encoder reuse
+func TestStructEncoderEncodeWith(t *testing.T) {
+	type Person struct {
+		Name string `msgpack:"name"`
+		Age  int    `msgpack:"age"`
+	}
+
+	enc := GetStructEncoder[Person]()
+	dec := GetStructDecoder[Person](false)
+
+	// Use EncodeWith with a user-managed encoder
+	e := NewEncoder(64)
+	original := Person{Name: "Alice", Age: 30}
+	err := enc.EncodeWith(e, &original)
+	if err != nil {
+		t.Fatalf("EncodeWith failed: %v", err)
+	}
+
+	// Verify the encoded data is valid
+	var result Person
+	err = dec.Decode(e.Bytes(), &result)
+	if err != nil {
+		t.Fatalf("decode failed: %v", err)
+	}
+
+	if result.Name != original.Name || result.Age != original.Age {
+		t.Errorf("got %+v, want %+v", result, original)
+	}
+
+	// Verify encoder can be reused after Reset
+	e.Reset()
+	err = enc.EncodeWith(e, &Person{Name: "Bob", Age: 25})
+	if err != nil {
+		t.Fatalf("second EncodeWith failed: %v", err)
+	}
+	var result2 Person
+	dec.Decode(e.Bytes(), &result2)
+	if result2.Name != "Bob" {
+		t.Errorf("got name %q, want Bob", result2.Name)
 	}
 }

@@ -2,8 +2,10 @@ package msgpck
 
 import (
 	"bytes"
+	"errors"
 	"math"
 	"reflect"
+	"sync"
 	"testing"
 )
 
@@ -61,7 +63,7 @@ func TestEncodeVariousTypesExtra(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			b, err := MarshalCopy(tc.value)
+			b, err := Marshal(tc.value)
 			if err != nil {
 				t.Errorf("%s encode failed: %v", tc.name, err)
 			}
@@ -137,17 +139,6 @@ func TestEncodeMap16(t *testing.T) {
 	b, err := Marshal(m)
 	if err != nil || len(b) == 0 {
 		t.Error("map16 encode failed")
-	}
-}
-
-func TestMarshalAppend(t *testing.T) {
-	prefix := []byte{0x01, 0x02}
-	result, err := MarshalAppend(prefix, "hello")
-	if err != nil {
-		t.Error("MarshalAppend failed")
-	}
-	if len(result) < 3 || result[0] != 0x01 || result[1] != 0x02 {
-		t.Error("MarshalAppend didn't preserve prefix")
 	}
 }
 
@@ -281,35 +272,6 @@ func TestEncodeMapError(t *testing.T) {
 	}
 }
 
-func TestMarshalCopyError(t *testing.T) {
-	// Use channel which can't be encoded
-	ch := make(chan int)
-	_, err := MarshalCopy(ch)
-	if err == nil {
-		t.Error("expected error for channel")
-	}
-}
-
-func TestMarshalAppendError(t *testing.T) {
-	// Use channel which can't be encoded
-	ch := make(chan int)
-	_, err := MarshalAppend(nil, ch)
-	if err == nil {
-		t.Error("expected error for channel")
-	}
-}
-
-func TestMarshalAppendSuccess(t *testing.T) {
-	dst := make([]byte, 0, 64)
-	result, err := MarshalAppend(dst, "test")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(result) == 0 {
-		t.Error("empty result")
-	}
-}
-
 func TestEncodeSliceAnyError(t *testing.T) {
 	// Slice containing unencodable value
 	s := []any{"ok", make(chan int)}
@@ -428,14 +390,7 @@ func TestMarshalVariants(t *testing.T) {
 	data := map[string]any{"key": "value"}
 
 	t.Run("Marshal", func(t *testing.T) {
-		_, err := Marshal(data)
-		if err != nil {
-			t.Error(err)
-		}
-	})
-
-	t.Run("MarshalCopy", func(t *testing.T) {
-		b, err := MarshalCopy(data)
+		b, err := Marshal(data)
 		if err != nil {
 			t.Error(err)
 		}
@@ -446,16 +401,6 @@ func TestMarshalVariants(t *testing.T) {
 		}
 	})
 
-	t.Run("MarshalAppend", func(t *testing.T) {
-		prefix := []byte{0x01, 0x02, 0x03}
-		b, err := MarshalAppend(prefix, data)
-		if err != nil {
-			t.Error(err)
-		}
-		if !bytes.HasPrefix(b, prefix) {
-			t.Error("prefix not preserved")
-		}
-	})
 }
 
 // TestEncodeCollectionTypes tests encoding of arrays, slices, and maps
@@ -696,5 +641,59 @@ func TestFloatSpecialValues(t *testing.T) {
 				t.Errorf("got %v, want %v", got, tt.value)
 			}
 		})
+	}
+}
+
+// TestMarshalConcurrent verifies Marshal is safe for concurrent use.
+// This tests that the encoder pool doesn't cause data races or corruption.
+func TestMarshalConcurrent(t *testing.T) {
+	type TestStruct struct {
+		ID    uint64   `msgpack:"id"`
+		Title string   `msgpack:"t"`
+		Tags  []string `msgpack:"tags,omitempty"`
+	}
+
+	const numGoroutines = 100
+	const iterationsPerGoroutine = 100
+
+	var wg sync.WaitGroup
+	errChan := make(chan error, numGoroutines*iterationsPerGoroutine)
+
+	for i := range numGoroutines {
+		wg.Add(1)
+		go func(n int) {
+			defer wg.Done()
+			for j := range iterationsPerGoroutine {
+				original := &TestStruct{
+					ID:    uint64(n*1000 + j),
+					Title: "Title with some longer text for testing",
+					Tags:  []string{"tag1", "tag2", "tag3"},
+				}
+
+				data, err := Marshal(original)
+				if err != nil {
+					errChan <- err
+					return
+				}
+
+				var decoded TestStruct
+				if err := UnmarshalStruct(data, &decoded); err != nil {
+					errChan <- err
+					return
+				}
+
+				if decoded.ID != original.ID || decoded.Title != original.Title {
+					errChan <- errors.New("data mismatch after concurrent marshal/unmarshal")
+					return
+				}
+			}
+		}(i)
+	}
+
+	wg.Wait()
+	close(errChan)
+
+	for err := range errChan {
+		t.Error(err)
 	}
 }

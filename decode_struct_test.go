@@ -21,7 +21,7 @@ func TestStructWithSliceAndMap(t *testing.T) {
 		}
 
 		enc := GetStructEncoder[Data]()
-		b, err := enc.EncodeCopy(&original)
+		b, err := enc.Encode(&original)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -3048,7 +3048,7 @@ func TestStructRoundtripSignedInts(t *testing.T) {
 
 	original := SignedInts{I: -1000000, I64: -9223372036854775807, I32: -2147483647, I16: -32767, I8: -127}
 	enc := GetStructEncoder[SignedInts]()
-	data, _ := enc.EncodeCopy(&original)
+	data, _ := enc.Encode(&original)
 
 	dec := GetStructDecoder[SignedInts](false)
 	var result SignedInts
@@ -3073,7 +3073,7 @@ func TestStructRoundtripUnsignedInts(t *testing.T) {
 
 	original := UnsignedInts{U: 1000000, U64: 18446744073709551615, U32: 4294967295, U16: 65535, U8: 255}
 	enc := GetStructEncoder[UnsignedInts]()
-	data, _ := enc.EncodeCopy(&original)
+	data, _ := enc.Encode(&original)
 
 	dec := GetStructDecoder[UnsignedInts](false)
 	var result UnsignedInts
@@ -3097,7 +3097,7 @@ func TestStructRoundtripFloatsAndBools(t *testing.T) {
 
 	original := FloatsAndBools{F64: 3.141592653589793, F32: 2.7182817, BoolTrue: true, BoolFalse: false}
 	enc := GetStructEncoder[FloatsAndBools]()
-	data, _ := enc.EncodeCopy(&original)
+	data, _ := enc.Encode(&original)
 
 	dec := GetStructDecoder[FloatsAndBools](false)
 	var result FloatsAndBools
@@ -3124,7 +3124,7 @@ func TestStructRoundtripStringsAndBinary(t *testing.T) {
 		Bin: []byte{0x00, 0x01, 0x02, 0xff, 0xfe}, BinEmpty: []byte{},
 	}
 	enc := GetStructEncoder[StringsAndBinary]()
-	data, _ := enc.EncodeCopy(&original)
+	data, _ := enc.Encode(&original)
 
 	dec := GetStructDecoder[StringsAndBinary](false)
 	var result StringsAndBinary
@@ -3154,7 +3154,7 @@ func TestStructRoundtripCollections(t *testing.T) {
 		StrMap: map[string]string{"key1": "value1", "key2": "value2"}, StrMapEmpty: map[string]string{},
 	}
 	enc := GetStructEncoder[Collections]()
-	data, _ := enc.EncodeCopy(&original)
+	data, _ := enc.Encode(&original)
 
 	dec := GetStructDecoder[Collections](false)
 	var result Collections
@@ -3182,7 +3182,7 @@ func TestStructRoundtripNested(t *testing.T) {
 
 	original := WithNested{Nested: Nested{Value: 42, Label: "nested"}}
 	enc := GetStructEncoder[WithNested]()
-	data, _ := enc.EncodeCopy(&original)
+	data, _ := enc.Encode(&original)
 
 	dec := GetStructDecoder[WithNested](false)
 	var result WithNested

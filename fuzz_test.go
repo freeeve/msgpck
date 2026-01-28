@@ -74,7 +74,7 @@ func FuzzRoundTrip(f *testing.F) {
 
 	f.Fuzz(func(t *testing.T, data []byte) {
 		// Test string round-trip
-		encoded, err := MarshalCopy(string(data))
+		encoded, err := Marshal(string(data))
 		if err != nil {
 			return
 		}
@@ -87,7 +87,7 @@ func FuzzRoundTrip(f *testing.F) {
 		}
 
 		// Test []byte round-trip
-		encoded2, err := MarshalCopy(data)
+		encoded2, err := Marshal(data)
 		if err != nil {
 			return
 		}
@@ -116,7 +116,7 @@ func FuzzRoundTripInt(f *testing.F) {
 	f.Add(int64(-9223372036854775808))
 
 	f.Fuzz(func(t *testing.T, val int64) {
-		encoded, err := MarshalCopy(val)
+		encoded, err := Marshal(val)
 		if err != nil {
 			t.Fatalf("failed to encode int64: %v", err)
 		}
@@ -139,7 +139,7 @@ func FuzzRoundTripFloat(f *testing.F) {
 	f.Add(float64(-1e308))
 
 	f.Fuzz(func(t *testing.T, val float64) {
-		encoded, err := MarshalCopy(val)
+		encoded, err := Marshal(val)
 		if err != nil {
 			t.Fatalf("failed to encode float64: %v", err)
 		}
@@ -320,7 +320,7 @@ func FuzzStructEncoder(f *testing.F) {
 		p := Person{Name: name, Age: age}
 
 		// Encode with cached encoder
-		data, err := enc.EncodeCopy(&p)
+		data, err := enc.Encode(&p)
 		if err != nil {
 			t.Fatalf("failed to encode: %v", err)
 		}
