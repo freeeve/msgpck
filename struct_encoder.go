@@ -13,12 +13,49 @@ type StructEncoder[T any] struct {
 }
 
 type encodeField struct {
-	name      []byte       // msgpack field name (pre-encoded)
-	offset    uintptr      // field offset in struct
-	kind      reflect.Kind // field type
-	typ       reflect.Type // full type (for structs/pointers)
-	elem      reflect.Type // for slices/maps: element type
-	omitempty bool
+	nameEncoded []byte       // fully pre-encoded msgpack string (format + length + bytes)
+	offset      uintptr      // field offset in struct
+	kind        reflect.Kind // field type
+	typ         reflect.Type // full type (for structs/pointers)
+	elem        reflect.Type // for slices/maps: element type
+	omitempty   bool
+}
+
+// preEncodeString returns the full msgpack encoding of a string.
+// This includes the format byte, length (if needed), and string bytes.
+func preEncodeString(s string) []byte {
+	length := len(s)
+	if length <= 31 {
+		// Fixstr: 1 byte format + string
+		buf := make([]byte, 1+length)
+		buf[0] = fixstrPrefix | byte(length)
+		copy(buf[1:], s)
+		return buf
+	} else if length <= 255 {
+		// Str8: 2 bytes header + string
+		buf := make([]byte, 2+length)
+		buf[0] = formatStr8
+		buf[1] = byte(length)
+		copy(buf[2:], s)
+		return buf
+	} else if length <= 65535 {
+		// Str16: 3 bytes header + string
+		buf := make([]byte, 3+length)
+		buf[0] = formatStr16
+		buf[1] = byte(length >> 8)
+		buf[2] = byte(length)
+		copy(buf[3:], s)
+		return buf
+	}
+	// Str32: 5 bytes header + string
+	buf := make([]byte, 5+length)
+	buf[0] = formatStr32
+	buf[1] = byte(length >> 24)
+	buf[2] = byte(length >> 16)
+	buf[3] = byte(length >> 8)
+	buf[4] = byte(length)
+	copy(buf[5:], s)
+	return buf
 }
 
 // newStructEncoder creates a reusable encoder for type T.
@@ -48,11 +85,11 @@ func newStructEncoder[T any]() *StructEncoder[T] {
 		name, omitempty := parseFieldTag(tag, f.Name)
 
 		ef := encodeField{
-			name:      []byte(name),
-			offset:    f.Offset,
-			kind:      f.Type.Kind(),
-			typ:       f.Type,
-			omitempty: omitempty,
+			nameEncoded: preEncodeString(name),
+			offset:      f.Offset,
+			kind:        f.Type.Kind(),
+			typ:         f.Type,
+			omitempty:   omitempty,
 		}
 		if f.Type.Kind() == reflect.Slice || f.Type.Kind() == reflect.Map {
 			ef.elem = f.Type.Elem()
@@ -134,8 +171,8 @@ func (se *StructEncoder[T]) encodeInto(e *Encoder, ptr unsafe.Pointer) error {
 			continue
 		}
 
-		// Write field name
-		e.EncodeStringBytes(f.name)
+		// Write field name (pre-encoded, no computation needed)
+		e.writeBytes(f.nameEncoded)
 
 		// Write field value
 		fieldPtr := unsafe.Add(ptr, f.offset)
