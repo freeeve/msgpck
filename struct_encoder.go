@@ -330,14 +330,78 @@ func (se *StructEncoder[T]) encodeField(e *Encoder, ptr unsafe.Pointer, f *encod
 		}
 
 	case reflect.Map:
-		if f.elem != nil && f.elem.Kind() == reflect.String {
+		if f.elem == nil {
+			return nil
+		}
+		switch f.elem.Kind() {
+		case reflect.String:
 			m := *(*map[string]string)(ptr)
 			e.EncodeMapHeader(len(m))
 			for k, v := range m {
 				e.EncodeString(k)
 				e.EncodeString(v)
 			}
-		} else {
+		case reflect.Int:
+			m := *(*map[string]int)(ptr)
+			e.EncodeMapHeader(len(m))
+			for k, v := range m {
+				e.EncodeString(k)
+				e.EncodeInt(int64(v))
+			}
+		case reflect.Int64:
+			m := *(*map[string]int64)(ptr)
+			e.EncodeMapHeader(len(m))
+			for k, v := range m {
+				e.EncodeString(k)
+				e.EncodeInt(v)
+			}
+		case reflect.Int32:
+			m := *(*map[string]int32)(ptr)
+			e.EncodeMapHeader(len(m))
+			for k, v := range m {
+				e.EncodeString(k)
+				e.EncodeInt(int64(v))
+			}
+		case reflect.Uint64:
+			m := *(*map[string]uint64)(ptr)
+			e.EncodeMapHeader(len(m))
+			for k, v := range m {
+				e.EncodeString(k)
+				e.EncodeUint(v)
+			}
+		case reflect.Uint32:
+			m := *(*map[string]uint32)(ptr)
+			e.EncodeMapHeader(len(m))
+			for k, v := range m {
+				e.EncodeString(k)
+				e.EncodeUint(uint64(v))
+			}
+		case reflect.Float64:
+			m := *(*map[string]float64)(ptr)
+			e.EncodeMapHeader(len(m))
+			for k, v := range m {
+				e.EncodeString(k)
+				e.EncodeFloat64(v)
+			}
+		case reflect.Bool:
+			m := *(*map[string]bool)(ptr)
+			e.EncodeMapHeader(len(m))
+			for k, v := range m {
+				e.EncodeString(k)
+				e.EncodeBool(v)
+			}
+		case reflect.Interface:
+			// map[string]any - encode values based on runtime type
+			m := *(*map[string]any)(ptr)
+			e.EncodeMapHeader(len(m))
+			for k, v := range m {
+				e.EncodeString(k)
+				if err := e.Encode(v); err != nil {
+					return err
+				}
+			}
+		default:
+			// Fallback to reflection
 			rv := reflect.NewAt(reflect.MapOf(reflect.TypeOf(""), f.elem), ptr).Elem()
 			e.EncodeMapHeader(rv.Len())
 			iter := rv.MapRange()
