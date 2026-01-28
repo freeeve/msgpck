@@ -45,8 +45,10 @@ Benchmarks vs vmihailenco/msgpack (Apple M3 Max):
 ### Generic Slice (1M items - simulates database column storage)
 | Operation | msgpck | allocs |
 |-----------|--------|--------|
-| 1M int64 Decode | 4.5 ms | 3 |
-| 1M uint16 Decode | 3.4 ms | 2 |
+| 1M int64 Encode | 8.7 ms | 1 |
+| 1M int64 Decode | 7.2 ms | 3 |
+| 1M uint16 Encode | 8.6 ms | 1 |
+| 1M uint16 Decode | 6.2 ms | 2 |
 
 ### Map Operations
 | Operation | msgpck | allocs |

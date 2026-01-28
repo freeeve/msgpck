@@ -240,15 +240,86 @@ func (se *StructEncoder[T]) encodeField(e *Encoder, ptr unsafe.Pointer, f *encod
 		e.EncodeBool(*(*bool)(ptr))
 
 	case reflect.Slice:
-		if f.elem != nil && f.elem.Kind() == reflect.String {
+		if f.elem == nil {
+			return nil
+		}
+		switch f.elem.Kind() {
+		case reflect.String:
 			s := *(*[]string)(ptr)
 			e.EncodeArrayHeader(len(s))
 			for _, v := range s {
 				e.EncodeString(v)
 			}
-		} else if f.elem != nil && f.elem.Kind() == reflect.Uint8 {
+		case reflect.Uint8:
 			e.EncodeBinary(*(*[]byte)(ptr))
-		} else {
+		case reflect.Int64:
+			s := *(*[]int64)(ptr)
+			e.EncodeArrayHeader(len(s))
+			for _, v := range s {
+				e.EncodeInt(v)
+			}
+		case reflect.Int:
+			s := *(*[]int)(ptr)
+			e.EncodeArrayHeader(len(s))
+			for _, v := range s {
+				e.EncodeInt(int64(v))
+			}
+		case reflect.Int32:
+			s := *(*[]int32)(ptr)
+			e.EncodeArrayHeader(len(s))
+			for _, v := range s {
+				e.EncodeInt(int64(v))
+			}
+		case reflect.Int16:
+			s := *(*[]int16)(ptr)
+			e.EncodeArrayHeader(len(s))
+			for _, v := range s {
+				e.EncodeInt(int64(v))
+			}
+		case reflect.Int8:
+			s := *(*[]int8)(ptr)
+			e.EncodeArrayHeader(len(s))
+			for _, v := range s {
+				e.EncodeInt(int64(v))
+			}
+		case reflect.Uint64:
+			s := *(*[]uint64)(ptr)
+			e.EncodeArrayHeader(len(s))
+			for _, v := range s {
+				e.EncodeUint(v)
+			}
+		case reflect.Uint:
+			s := *(*[]uint)(ptr)
+			e.EncodeArrayHeader(len(s))
+			for _, v := range s {
+				e.EncodeUint(uint64(v))
+			}
+		case reflect.Uint32:
+			s := *(*[]uint32)(ptr)
+			e.EncodeArrayHeader(len(s))
+			for _, v := range s {
+				e.EncodeUint(uint64(v))
+			}
+		case reflect.Uint16:
+			s := *(*[]uint16)(ptr)
+			e.EncodeArrayHeader(len(s))
+			for _, v := range s {
+				e.EncodeUint(uint64(v))
+			}
+		case reflect.Float64:
+			s := *(*[]float64)(ptr)
+			e.EncodeArrayHeader(len(s))
+			for _, v := range s {
+				e.EncodeFloat64(v)
+			}
+		case reflect.Float32:
+			s := *(*[]float32)(ptr)
+			e.EncodeArrayHeader(len(s))
+			for _, v := range s {
+				e.EncodeFloat32(v)
+			}
+		default:
+			// Fallback to reflection for unsupported types
 			rv := reflect.NewAt(reflect.SliceOf(f.elem), ptr).Elem()
 			e.EncodeArrayHeader(rv.Len())
 			for i := 0; i < rv.Len(); i++ {
