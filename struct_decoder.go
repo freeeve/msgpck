@@ -1091,8 +1091,8 @@ func (sd *StructDecoder[T]) decodeNestedStruct(d *Decoder, ptr unsafe.Pointer, s
 		return err
 	}
 
-	// Build field map for the nested struct type
-	fieldMap := buildNestedFieldMap(structType)
+	// Get cached field map for the nested struct type
+	fieldMap := getNestedFieldMap(structType)
 
 	// Decode each key-value pair
 	for i := 0; i < mapLen; i++ {
@@ -1206,6 +1206,19 @@ func (sd *StructDecoder[T]) decodeNestedStruct(d *Decoder, ptr unsafe.Pointer, s
 // Global decoder cache for common struct types
 var structDecoderCache sync.Map
 var structDecoderZeroCopyCache sync.Map
+
+// Cache for nested struct field maps (keyed by reflect.Type)
+var nestedFieldMapCache sync.Map
+
+// getNestedFieldMap returns a cached field map for the given struct type.
+func getNestedFieldMap(structType reflect.Type) map[string]reflect.StructField {
+	if cached, ok := nestedFieldMapCache.Load(structType); ok {
+		return cached.(map[string]reflect.StructField)
+	}
+	fieldMap := buildNestedFieldMap(structType)
+	nestedFieldMapCache.Store(structType, fieldMap)
+	return fieldMap
+}
 
 // GetStructDecoder returns a cached decoder for type T.
 // Creates one if it doesn't exist.
