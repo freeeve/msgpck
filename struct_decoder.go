@@ -17,7 +17,7 @@ type structField struct {
 	name       string       // msgpack field name
 	offset     uintptr      // field offset in struct
 	kind       reflect.Kind // field type
-	elem       reflect.Type // for slices/maps: element type
+	elem       reflect.Type // for slices/maps: element type; for pointers: pointed-to type
 	structType reflect.Type // for struct fields: the struct type
 }
 
@@ -86,6 +86,8 @@ func newStructDecoder[T any]() *StructDecoder[T] {
 			kind:   f.Type.Kind(),
 		}
 		if f.Type.Kind() == reflect.Slice || f.Type.Kind() == reflect.Map {
+			sf.elem = f.Type.Elem()
+		} else if f.Type.Kind() == reflect.Ptr {
 			sf.elem = f.Type.Elem()
 		} else if f.Type.Kind() == reflect.Struct {
 			sf.structType = f.Type
@@ -466,6 +468,122 @@ func (sd *StructDecoder[T]) decodeField(d *Decoder, ptr unsafe.Pointer, field *s
 		d.pos--
 		if err := sd.decodeNestedStruct(d, ptr, field.structType); err != nil {
 			return err
+		}
+
+	case reflect.Ptr:
+		// Handle pointer types like *string, *int, *float64, etc.
+		if field.elem == nil {
+			d.pos--
+			if _, err := d.Decode(); err != nil {
+				return err
+			}
+			return nil
+		}
+		// Decode based on the pointed-to type
+		switch field.elem.Kind() {
+		case reflect.String:
+			s, err := sd.decodeString(d, format)
+			if err != nil {
+				return err
+			}
+			*(**string)(ptr) = &s
+		case reflect.Int:
+			v, err := decodeInt(d, format)
+			if err != nil {
+				return err
+			}
+			val := int(v)
+			*(**int)(ptr) = &val
+		case reflect.Int64:
+			v, err := decodeInt(d, format)
+			if err != nil {
+				return err
+			}
+			*(**int64)(ptr) = &v
+		case reflect.Int32:
+			v, err := decodeInt(d, format)
+			if err != nil {
+				return err
+			}
+			val := int32(v)
+			*(**int32)(ptr) = &val
+		case reflect.Int16:
+			v, err := decodeInt(d, format)
+			if err != nil {
+				return err
+			}
+			val := int16(v)
+			*(**int16)(ptr) = &val
+		case reflect.Int8:
+			v, err := decodeInt(d, format)
+			if err != nil {
+				return err
+			}
+			val := int8(v)
+			*(**int8)(ptr) = &val
+		case reflect.Uint:
+			v, err := decodeUint(d, format)
+			if err != nil {
+				return err
+			}
+			val := uint(v)
+			*(**uint)(ptr) = &val
+		case reflect.Uint64:
+			v, err := decodeUint(d, format)
+			if err != nil {
+				return err
+			}
+			*(**uint64)(ptr) = &v
+		case reflect.Uint32:
+			v, err := decodeUint(d, format)
+			if err != nil {
+				return err
+			}
+			val := uint32(v)
+			*(**uint32)(ptr) = &val
+		case reflect.Uint16:
+			v, err := decodeUint(d, format)
+			if err != nil {
+				return err
+			}
+			val := uint16(v)
+			*(**uint16)(ptr) = &val
+		case reflect.Uint8:
+			v, err := decodeUint(d, format)
+			if err != nil {
+				return err
+			}
+			val := uint8(v)
+			*(**uint8)(ptr) = &val
+		case reflect.Float64:
+			v, err := decodeFloat(d, format)
+			if err != nil {
+				return err
+			}
+			*(**float64)(ptr) = &v
+		case reflect.Float32:
+			v, err := decodeFloat(d, format)
+			if err != nil {
+				return err
+			}
+			val := float32(v)
+			*(**float32)(ptr) = &val
+		case reflect.Bool:
+			var val bool
+			if format == formatTrue {
+				val = true
+			} else if format == formatFalse {
+				val = false
+			} else {
+				return ErrTypeMismatch
+			}
+			*(**bool)(ptr) = &val
+		default:
+			// Fallback for unsupported pointer element types
+			d.pos--
+			if _, err := d.Decode(); err != nil {
+				return err
+			}
 		}
 
 	default:

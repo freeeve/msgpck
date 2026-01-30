@@ -1287,3 +1287,223 @@ func encodeTestSortColumn[T any](s *testSortColumnData[T]) ([]byte, error) {
 	enc := GetStructEncoder[testSortColumnData[T]]()
 	return enc.Encode(s)
 }
+
+// TestStructDecoderPointerFields tests decoding of struct fields that are pointers.
+func TestStructDecoderPointerFields(t *testing.T) {
+	type PersonWithPointers struct {
+		Name    string   `msgpack:"name"`
+		Address *string  `msgpack:"address"`
+		City    *string  `msgpack:"city"`
+		Age     *int     `msgpack:"age"`
+		Score   *float64 `msgpack:"score"`
+		Active  *bool    `msgpack:"active"`
+	}
+
+	t.Run("non-nil pointer fields", func(t *testing.T) {
+		addr := "123 Main St"
+		city := "Boston"
+		age := 30
+		score := 95.5
+		active := true
+
+		original := PersonWithPointers{
+			Name:    "Alice",
+			Address: &addr,
+			City:    &city,
+			Age:     &age,
+			Score:   &score,
+			Active:  &active,
+		}
+
+		enc := GetStructEncoder[PersonWithPointers]()
+		data, err := enc.Encode(&original)
+		if err != nil {
+			t.Fatalf(errMsgEncodeFailed, err)
+		}
+
+		dec := GetStructDecoder[PersonWithPointers](false)
+		var result PersonWithPointers
+		err = dec.Decode(data, &result)
+		if err != nil {
+			t.Fatalf(errMsgDecodeFailedCap, err)
+		}
+
+		if result.Name != "Alice" {
+			t.Errorf("Name: got %q, want Alice", result.Name)
+		}
+		if result.Address == nil {
+			t.Error("Address: got nil, want pointer")
+		} else if *result.Address != "123 Main St" {
+			t.Errorf("Address: got %q, want 123 Main St", *result.Address)
+		}
+		if result.City == nil {
+			t.Error("City: got nil, want pointer")
+		} else if *result.City != "Boston" {
+			t.Errorf("City: got %q, want Boston", *result.City)
+		}
+		if result.Age == nil {
+			t.Error("Age: got nil, want pointer")
+		} else if *result.Age != 30 {
+			t.Errorf("Age: got %d, want 30", *result.Age)
+		}
+		if result.Score == nil {
+			t.Error("Score: got nil, want pointer")
+		} else if *result.Score != 95.5 {
+			t.Errorf("Score: got %f, want 95.5", *result.Score)
+		}
+		if result.Active == nil {
+			t.Error("Active: got nil, want pointer")
+		} else if !*result.Active {
+			t.Errorf("Active: got false, want true")
+		}
+	})
+
+	t.Run("nil pointer fields", func(t *testing.T) {
+		original := PersonWithPointers{
+			Name: "Bob",
+			// All pointer fields are nil
+		}
+
+		enc := GetStructEncoder[PersonWithPointers]()
+		data, err := enc.Encode(&original)
+		if err != nil {
+			t.Fatalf(errMsgEncodeFailed, err)
+		}
+
+		dec := GetStructDecoder[PersonWithPointers](false)
+		var result PersonWithPointers
+		err = dec.Decode(data, &result)
+		if err != nil {
+			t.Fatalf(errMsgDecodeFailedCap, err)
+		}
+
+		if result.Name != "Bob" {
+			t.Errorf("Name: got %q, want Bob", result.Name)
+		}
+		if result.Address != nil {
+			t.Errorf("Address: got %v, want nil", result.Address)
+		}
+		if result.City != nil {
+			t.Errorf("City: got %v, want nil", result.City)
+		}
+		if result.Age != nil {
+			t.Errorf("Age: got %v, want nil", result.Age)
+		}
+		if result.Score != nil {
+			t.Errorf("Score: got %v, want nil", result.Score)
+		}
+		if result.Active != nil {
+			t.Errorf("Active: got %v, want nil", result.Active)
+		}
+	})
+}
+
+// TestStructDecoderAllPointerTypes tests all supported pointer types.
+func TestStructDecoderAllPointerTypes(t *testing.T) {
+	type AllPointers struct {
+		PtrString  *string  `msgpack:"ptr_string"`
+		PtrInt     *int     `msgpack:"ptr_int"`
+		PtrInt64   *int64   `msgpack:"ptr_int64"`
+		PtrInt32   *int32   `msgpack:"ptr_int32"`
+		PtrInt16   *int16   `msgpack:"ptr_int16"`
+		PtrInt8    *int8    `msgpack:"ptr_int8"`
+		PtrUint    *uint    `msgpack:"ptr_uint"`
+		PtrUint64  *uint64  `msgpack:"ptr_uint64"`
+		PtrUint32  *uint32  `msgpack:"ptr_uint32"`
+		PtrUint16  *uint16  `msgpack:"ptr_uint16"`
+		PtrUint8   *uint8   `msgpack:"ptr_uint8"`
+		PtrFloat64 *float64 `msgpack:"ptr_float64"`
+		PtrFloat32 *float32 `msgpack:"ptr_float32"`
+		PtrBool    *bool    `msgpack:"ptr_bool"`
+	}
+
+	// Create values for all pointer fields
+	s := "test"
+	i := -42
+	i64 := int64(-1000000)
+	i32 := int32(-50000)
+	i16 := int16(-1000)
+	i8 := int8(-100)
+	u := uint(42)
+	u64 := uint64(1000000)
+	u32 := uint32(50000)
+	u16 := uint16(1000)
+	u8 := uint8(200)
+	f64 := 3.14159
+	f32 := float32(2.71828)
+	b := true
+
+	original := AllPointers{
+		PtrString:  &s,
+		PtrInt:     &i,
+		PtrInt64:   &i64,
+		PtrInt32:   &i32,
+		PtrInt16:   &i16,
+		PtrInt8:    &i8,
+		PtrUint:    &u,
+		PtrUint64:  &u64,
+		PtrUint32:  &u32,
+		PtrUint16:  &u16,
+		PtrUint8:   &u8,
+		PtrFloat64: &f64,
+		PtrFloat32: &f32,
+		PtrBool:    &b,
+	}
+
+	enc := GetStructEncoder[AllPointers]()
+	data, err := enc.Encode(&original)
+	if err != nil {
+		t.Fatalf(errMsgEncodeFailed, err)
+	}
+
+	dec := GetStructDecoder[AllPointers](false)
+	var result AllPointers
+	err = dec.Decode(data, &result)
+	if err != nil {
+		t.Fatalf(errMsgDecodeFailedCap, err)
+	}
+
+	// Verify all pointer fields
+	if result.PtrString == nil || *result.PtrString != s {
+		t.Errorf("PtrString: got %v, want %q", result.PtrString, s)
+	}
+	if result.PtrInt == nil || *result.PtrInt != i {
+		t.Errorf("PtrInt: got %v, want %d", result.PtrInt, i)
+	}
+	if result.PtrInt64 == nil || *result.PtrInt64 != i64 {
+		t.Errorf("PtrInt64: got %v, want %d", result.PtrInt64, i64)
+	}
+	if result.PtrInt32 == nil || *result.PtrInt32 != i32 {
+		t.Errorf("PtrInt32: got %v, want %d", result.PtrInt32, i32)
+	}
+	if result.PtrInt16 == nil || *result.PtrInt16 != i16 {
+		t.Errorf("PtrInt16: got %v, want %d", result.PtrInt16, i16)
+	}
+	if result.PtrInt8 == nil || *result.PtrInt8 != i8 {
+		t.Errorf("PtrInt8: got %v, want %d", result.PtrInt8, i8)
+	}
+	if result.PtrUint == nil || *result.PtrUint != u {
+		t.Errorf("PtrUint: got %v, want %d", result.PtrUint, u)
+	}
+	if result.PtrUint64 == nil || *result.PtrUint64 != u64 {
+		t.Errorf("PtrUint64: got %v, want %d", result.PtrUint64, u64)
+	}
+	if result.PtrUint32 == nil || *result.PtrUint32 != u32 {
+		t.Errorf("PtrUint32: got %v, want %d", result.PtrUint32, u32)
+	}
+	if result.PtrUint16 == nil || *result.PtrUint16 != u16 {
+		t.Errorf("PtrUint16: got %v, want %d", result.PtrUint16, u16)
+	}
+	if result.PtrUint8 == nil || *result.PtrUint8 != u8 {
+		t.Errorf("PtrUint8: got %v, want %d", result.PtrUint8, u8)
+	}
+	if result.PtrFloat64 == nil || *result.PtrFloat64 != f64 {
+		t.Errorf("PtrFloat64: got %v, want %f", result.PtrFloat64, f64)
+	}
+	if result.PtrFloat32 == nil || *result.PtrFloat32 != f32 {
+		t.Errorf("PtrFloat32: got %v, want %f", result.PtrFloat32, f32)
+	}
+	if result.PtrBool == nil || *result.PtrBool != b {
+		t.Errorf("PtrBool: got %v, want %v", result.PtrBool, b)
+	}
+}

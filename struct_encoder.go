@@ -125,22 +125,18 @@ func parseFieldTag(tag, fieldName string) (string, bool) {
 }
 
 // Encode encodes the struct to msgpack bytes.
-// The returned bytes are a copy and safe to retain.
+// The returned bytes are safe to retain.
+// This method is safe for concurrent use.
 // For zero-allocation encoding, use EncodeWith with your own Encoder.
 func (se *StructEncoder[T]) Encode(src *T) ([]byte, error) {
-	e := encoderPool.Get().(*Encoder)
-	e.Reset()
+	e := NewEncoder(256)
 
 	err := se.encodeInto(e, unsafe.Pointer(src))
 	if err != nil {
-		encoderPool.Put(e)
 		return nil, err
 	}
 
-	result := make([]byte, len(e.buf))
-	copy(result, e.buf)
-	encoderPool.Put(e)
-	return result, nil
+	return e.buf, nil
 }
 
 // EncodeWith encodes using a provided encoder.
