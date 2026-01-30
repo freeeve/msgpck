@@ -393,3 +393,359 @@ func FuzzLargeCollections(f *testing.F) {
 func newEncoder(size int) *Encoder {
 	return NewEncoder(size)
 }
+
+// FuzzStructRoundtrip tests encode/decode roundtrip for structs with all supported field types.
+// This fuzzer uses the fuzz input to populate a struct with various field types including pointers,
+// encodes it, decodes it back, and verifies all fields match.
+func FuzzStructRoundtrip(f *testing.F) {
+	// Seed with various byte patterns
+	f.Add([]byte{0, 0, 0, 0, 0, 0, 0, 0})
+	f.Add([]byte{255, 255, 255, 255, 255, 255, 255, 255})
+	f.Add([]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16})
+	f.Add([]byte("hello world test string"))
+	f.Add([]byte{0x80, 0x00, 0x00, 0x00, 0x7f, 0xff, 0xff, 0xff}) // edge cases
+
+	// AllFieldTypes contains all supported field types for roundtrip testing
+	type AllFieldTypes struct {
+		// Basic types
+		String  string  `msgpack:"string"`
+		Int     int     `msgpack:"int"`
+		Int64   int64   `msgpack:"int64"`
+		Int32   int32   `msgpack:"int32"`
+		Int16   int16   `msgpack:"int16"`
+		Int8    int8    `msgpack:"int8"`
+		Uint    uint    `msgpack:"uint"`
+		Uint64  uint64  `msgpack:"uint64"`
+		Uint32  uint32  `msgpack:"uint32"`
+		Uint16  uint16  `msgpack:"uint16"`
+		Uint8   uint8   `msgpack:"uint8"`
+		Float64 float64 `msgpack:"float64"`
+		Float32 float32 `msgpack:"float32"`
+		Bool    bool    `msgpack:"bool"`
+		Bytes   []byte  `msgpack:"bytes"`
+
+		// Slices
+		StringSlice  []string  `msgpack:"string_slice"`
+		Int64Slice   []int64   `msgpack:"int64_slice"`
+		Float64Slice []float64 `msgpack:"float64_slice"`
+
+		// Maps
+		StringMap  map[string]string  `msgpack:"string_map"`
+		IntMap     map[string]int     `msgpack:"int_map"`
+		Float64Map map[string]float64 `msgpack:"float64_map"`
+
+		// Pointer types
+		PtrString  *string  `msgpack:"ptr_string"`
+		PtrInt     *int     `msgpack:"ptr_int"`
+		PtrInt64   *int64   `msgpack:"ptr_int64"`
+		PtrUint64  *uint64  `msgpack:"ptr_uint64"`
+		PtrFloat64 *float64 `msgpack:"ptr_float64"`
+		PtrBool    *bool    `msgpack:"ptr_bool"`
+	}
+
+	enc := GetStructEncoder[AllFieldTypes]()
+	dec := GetStructDecoder[AllFieldTypes](false)
+
+	f.Fuzz(func(t *testing.T, data []byte) {
+		if len(data) < 8 {
+			return // Need at least some bytes to work with
+		}
+
+		// Use fuzz data to populate struct fields deterministically
+		original := AllFieldTypes{}
+
+		// String from fuzz data
+		if len(data) > 0 {
+			strLen := int(data[0]) % (len(data) + 1)
+			if strLen > len(data) {
+				strLen = len(data)
+			}
+			original.String = string(data[:strLen])
+		}
+
+		// Integer types from fuzz bytes
+		if len(data) >= 8 {
+			original.Int64 = int64(data[0]) | int64(data[1])<<8 | int64(data[2])<<16 | int64(data[3])<<24 |
+				int64(data[4])<<32 | int64(data[5])<<40 | int64(data[6])<<48 | int64(data[7])<<56
+			original.Int = int(original.Int64)
+			original.Int32 = int32(original.Int64)
+			original.Int16 = int16(original.Int64)
+			original.Int8 = int8(original.Int64)
+			original.Uint64 = uint64(original.Int64)
+			original.Uint = uint(original.Uint64)
+			original.Uint32 = uint32(original.Uint64)
+			original.Uint16 = uint16(original.Uint64)
+			original.Uint8 = uint8(original.Uint64)
+		}
+
+		// Float types
+		if len(data) >= 8 {
+			bits := uint64(data[0]) | uint64(data[1])<<8 | uint64(data[2])<<16 | uint64(data[3])<<24 |
+				uint64(data[4])<<32 | uint64(data[5])<<40 | uint64(data[6])<<48 | uint64(data[7])<<56
+			original.Float64 = math.Float64frombits(bits)
+			original.Float32 = float32(original.Float64)
+			// Avoid NaN for comparison simplicity
+			if math.IsNaN(original.Float64) {
+				original.Float64 = 0
+				original.Float32 = 0
+			}
+		}
+
+		// Bool
+		if len(data) > 0 {
+			original.Bool = data[0]%2 == 1
+		}
+
+		// Bytes slice
+		original.Bytes = make([]byte, len(data))
+		copy(original.Bytes, data)
+
+		// String slice
+		if len(data) > 2 {
+			count := int(data[0]) % 5 // 0-4 strings
+			original.StringSlice = make([]string, count)
+			for i := 0; i < count && i < len(data); i++ {
+				original.StringSlice[i] = string(data[i : i+1])
+			}
+		}
+
+		// Int64 slice
+		if len(data) >= 8 {
+			count := int(data[0]) % 4 // 0-3 ints
+			original.Int64Slice = make([]int64, count)
+			for i := 0; i < count; i++ {
+				original.Int64Slice[i] = int64(data[i%len(data)])
+			}
+		}
+
+		// Float64 slice
+		if len(data) >= 8 {
+			count := int(data[0]) % 3 // 0-2 floats
+			original.Float64Slice = make([]float64, count)
+			for i := 0; i < count; i++ {
+				original.Float64Slice[i] = float64(data[i%len(data)])
+			}
+		}
+
+		// String map
+		if len(data) > 2 {
+			count := int(data[0]) % 3 // 0-2 entries
+			if count > 0 {
+				original.StringMap = make(map[string]string, count)
+				for i := 0; i < count && i < len(data); i++ {
+					key := string([]byte{'k', byte('0' + i)})
+					original.StringMap[key] = string(data[i : i+1])
+				}
+			}
+		}
+
+		// Int map
+		if len(data) > 2 {
+			count := int(data[1]) % 3
+			if count > 0 {
+				original.IntMap = make(map[string]int, count)
+				for i := 0; i < count && i < len(data); i++ {
+					key := string([]byte{'i', byte('0' + i)})
+					original.IntMap[key] = int(data[i])
+				}
+			}
+		}
+
+		// Float64 map
+		if len(data) > 2 {
+			count := int(data[2%len(data)]) % 2
+			if count > 0 {
+				original.Float64Map = make(map[string]float64, count)
+				for i := 0; i < count && i < len(data); i++ {
+					key := string([]byte{'f', byte('0' + i)})
+					original.Float64Map[key] = float64(data[i])
+				}
+			}
+		}
+
+		// Pointer fields - set based on fuzz data bit pattern
+		if len(data) > 0 && data[0]&0x01 != 0 {
+			s := original.String
+			original.PtrString = &s
+		}
+		if len(data) > 0 && data[0]&0x02 != 0 {
+			i := original.Int
+			original.PtrInt = &i
+		}
+		if len(data) > 0 && data[0]&0x04 != 0 {
+			i64 := original.Int64
+			original.PtrInt64 = &i64
+		}
+		if len(data) > 0 && data[0]&0x08 != 0 {
+			u64 := original.Uint64
+			original.PtrUint64 = &u64
+		}
+		if len(data) > 0 && data[0]&0x10 != 0 {
+			f64 := original.Float64
+			original.PtrFloat64 = &f64
+		}
+		if len(data) > 0 && data[0]&0x20 != 0 {
+			b := original.Bool
+			original.PtrBool = &b
+		}
+
+		// Encode
+		encoded, err := enc.Encode(&original)
+		if err != nil {
+			t.Fatalf("encode failed: %v", err)
+		}
+
+		// Decode
+		var decoded AllFieldTypes
+		err = dec.Decode(encoded, &decoded)
+		if err != nil {
+			t.Fatalf("decode failed: %v", err)
+		}
+
+		// Verify all fields match
+		if decoded.String != original.String {
+			t.Errorf("String mismatch: got %q, want %q", decoded.String, original.String)
+		}
+		if decoded.Int != original.Int {
+			t.Errorf("Int mismatch: got %d, want %d", decoded.Int, original.Int)
+		}
+		if decoded.Int64 != original.Int64 {
+			t.Errorf("Int64 mismatch: got %d, want %d", decoded.Int64, original.Int64)
+		}
+		if decoded.Int32 != original.Int32 {
+			t.Errorf("Int32 mismatch: got %d, want %d", decoded.Int32, original.Int32)
+		}
+		if decoded.Int16 != original.Int16 {
+			t.Errorf("Int16 mismatch: got %d, want %d", decoded.Int16, original.Int16)
+		}
+		if decoded.Int8 != original.Int8 {
+			t.Errorf("Int8 mismatch: got %d, want %d", decoded.Int8, original.Int8)
+		}
+		if decoded.Uint != original.Uint {
+			t.Errorf("Uint mismatch: got %d, want %d", decoded.Uint, original.Uint)
+		}
+		if decoded.Uint64 != original.Uint64 {
+			t.Errorf("Uint64 mismatch: got %d, want %d", decoded.Uint64, original.Uint64)
+		}
+		if decoded.Uint32 != original.Uint32 {
+			t.Errorf("Uint32 mismatch: got %d, want %d", decoded.Uint32, original.Uint32)
+		}
+		if decoded.Uint16 != original.Uint16 {
+			t.Errorf("Uint16 mismatch: got %d, want %d", decoded.Uint16, original.Uint16)
+		}
+		if decoded.Uint8 != original.Uint8 {
+			t.Errorf("Uint8 mismatch: got %d, want %d", decoded.Uint8, original.Uint8)
+		}
+		if decoded.Float64 != original.Float64 {
+			t.Errorf("Float64 mismatch: got %v, want %v", decoded.Float64, original.Float64)
+		}
+		if decoded.Float32 != original.Float32 {
+			t.Errorf("Float32 mismatch: got %v, want %v", decoded.Float32, original.Float32)
+		}
+		if decoded.Bool != original.Bool {
+			t.Errorf("Bool mismatch: got %v, want %v", decoded.Bool, original.Bool)
+		}
+		if !bytes.Equal(decoded.Bytes, original.Bytes) {
+			t.Errorf("Bytes mismatch: got %v, want %v", decoded.Bytes, original.Bytes)
+		}
+
+		// Verify slices
+		if len(decoded.StringSlice) != len(original.StringSlice) {
+			t.Errorf("StringSlice length mismatch: got %d, want %d", len(decoded.StringSlice), len(original.StringSlice))
+		} else {
+			for i := range original.StringSlice {
+				if decoded.StringSlice[i] != original.StringSlice[i] {
+					t.Errorf("StringSlice[%d] mismatch: got %q, want %q", i, decoded.StringSlice[i], original.StringSlice[i])
+				}
+			}
+		}
+
+		if len(decoded.Int64Slice) != len(original.Int64Slice) {
+			t.Errorf("Int64Slice length mismatch: got %d, want %d", len(decoded.Int64Slice), len(original.Int64Slice))
+		} else {
+			for i := range original.Int64Slice {
+				if decoded.Int64Slice[i] != original.Int64Slice[i] {
+					t.Errorf("Int64Slice[%d] mismatch: got %d, want %d", i, decoded.Int64Slice[i], original.Int64Slice[i])
+				}
+			}
+		}
+
+		if len(decoded.Float64Slice) != len(original.Float64Slice) {
+			t.Errorf("Float64Slice length mismatch: got %d, want %d", len(decoded.Float64Slice), len(original.Float64Slice))
+		} else {
+			for i := range original.Float64Slice {
+				if decoded.Float64Slice[i] != original.Float64Slice[i] {
+					t.Errorf("Float64Slice[%d] mismatch: got %v, want %v", i, decoded.Float64Slice[i], original.Float64Slice[i])
+				}
+			}
+		}
+
+		// Verify maps
+		if len(decoded.StringMap) != len(original.StringMap) {
+			t.Errorf("StringMap length mismatch: got %d, want %d", len(decoded.StringMap), len(original.StringMap))
+		} else {
+			for k, v := range original.StringMap {
+				if decoded.StringMap[k] != v {
+					t.Errorf("StringMap[%q] mismatch: got %q, want %q", k, decoded.StringMap[k], v)
+				}
+			}
+		}
+
+		if len(decoded.IntMap) != len(original.IntMap) {
+			t.Errorf("IntMap length mismatch: got %d, want %d", len(decoded.IntMap), len(original.IntMap))
+		} else {
+			for k, v := range original.IntMap {
+				if decoded.IntMap[k] != v {
+					t.Errorf("IntMap[%q] mismatch: got %d, want %d", k, decoded.IntMap[k], v)
+				}
+			}
+		}
+
+		if len(decoded.Float64Map) != len(original.Float64Map) {
+			t.Errorf("Float64Map length mismatch: got %d, want %d", len(decoded.Float64Map), len(original.Float64Map))
+		} else {
+			for k, v := range original.Float64Map {
+				if decoded.Float64Map[k] != v {
+					t.Errorf("Float64Map[%q] mismatch: got %v, want %v", k, decoded.Float64Map[k], v)
+				}
+			}
+		}
+
+		// Verify pointer fields
+		if (original.PtrString == nil) != (decoded.PtrString == nil) {
+			t.Errorf("PtrString nil mismatch: original=%v, decoded=%v", original.PtrString == nil, decoded.PtrString == nil)
+		} else if original.PtrString != nil && *decoded.PtrString != *original.PtrString {
+			t.Errorf("PtrString mismatch: got %q, want %q", *decoded.PtrString, *original.PtrString)
+		}
+
+		if (original.PtrInt == nil) != (decoded.PtrInt == nil) {
+			t.Errorf("PtrInt nil mismatch: original=%v, decoded=%v", original.PtrInt == nil, decoded.PtrInt == nil)
+		} else if original.PtrInt != nil && *decoded.PtrInt != *original.PtrInt {
+			t.Errorf("PtrInt mismatch: got %d, want %d", *decoded.PtrInt, *original.PtrInt)
+		}
+
+		if (original.PtrInt64 == nil) != (decoded.PtrInt64 == nil) {
+			t.Errorf("PtrInt64 nil mismatch: original=%v, decoded=%v", original.PtrInt64 == nil, decoded.PtrInt64 == nil)
+		} else if original.PtrInt64 != nil && *decoded.PtrInt64 != *original.PtrInt64 {
+			t.Errorf("PtrInt64 mismatch: got %d, want %d", *decoded.PtrInt64, *original.PtrInt64)
+		}
+
+		if (original.PtrUint64 == nil) != (decoded.PtrUint64 == nil) {
+			t.Errorf("PtrUint64 nil mismatch: original=%v, decoded=%v", original.PtrUint64 == nil, decoded.PtrUint64 == nil)
+		} else if original.PtrUint64 != nil && *decoded.PtrUint64 != *original.PtrUint64 {
+			t.Errorf("PtrUint64 mismatch: got %d, want %d", *decoded.PtrUint64, *original.PtrUint64)
+		}
+
+		if (original.PtrFloat64 == nil) != (decoded.PtrFloat64 == nil) {
+			t.Errorf("PtrFloat64 nil mismatch: original=%v, decoded=%v", original.PtrFloat64 == nil, decoded.PtrFloat64 == nil)
+		} else if original.PtrFloat64 != nil && *decoded.PtrFloat64 != *original.PtrFloat64 {
+			t.Errorf("PtrFloat64 mismatch: got %v, want %v", *decoded.PtrFloat64, *original.PtrFloat64)
+		}
+
+		if (original.PtrBool == nil) != (decoded.PtrBool == nil) {
+			t.Errorf("PtrBool nil mismatch: original=%v, decoded=%v", original.PtrBool == nil, decoded.PtrBool == nil)
+		} else if original.PtrBool != nil && *decoded.PtrBool != *original.PtrBool {
+			t.Errorf("PtrBool mismatch: got %v, want %v", *decoded.PtrBool, *original.PtrBool)
+		}
+	})
+}
