@@ -253,3 +253,331 @@ func TestDecodeAnyValueFloat32(t *testing.T) {
 		t.Errorf("expected float64, got %T", v)
 	}
 }
+
+// TestUnmarshalIntoTypedValues tests reflection-based decoding into typed values.
+func TestUnmarshalIntoTypedValues(t *testing.T) {
+	t.Run("uint64", func(t *testing.T) {
+		data, _ := Marshal(uint64(12345))
+		var result uint64
+		err := Unmarshal(data, &result)
+		if err != nil || result != 12345 {
+			t.Errorf("uint64 unmarshal failed: %v, got %d", err, result)
+		}
+	})
+
+	t.Run("uint32", func(t *testing.T) {
+		data, _ := Marshal(uint64(999))
+		var result uint32
+		err := Unmarshal(data, &result)
+		if err != nil || result != 999 {
+			t.Errorf("uint32 unmarshal failed: %v, got %d", err, result)
+		}
+	})
+
+	t.Run("uint16", func(t *testing.T) {
+		data, _ := Marshal(uint64(100))
+		var result uint16
+		err := Unmarshal(data, &result)
+		if err != nil || result != 100 {
+			t.Errorf("uint16 unmarshal failed: %v, got %d", err, result)
+		}
+	})
+
+	t.Run("uint8", func(t *testing.T) {
+		data, _ := Marshal(uint64(50))
+		var result uint8
+		err := Unmarshal(data, &result)
+		if err != nil || result != 50 {
+			t.Errorf("uint8 unmarshal failed: %v, got %d", err, result)
+		}
+	})
+
+	t.Run("float64", func(t *testing.T) {
+		data, _ := Marshal(3.14159)
+		var result float64
+		err := Unmarshal(data, &result)
+		if err != nil || result != 3.14159 {
+			t.Errorf("float64 unmarshal failed: %v, got %f", err, result)
+		}
+	})
+
+	t.Run("float32", func(t *testing.T) {
+		data, _ := Marshal(float64(2.5))
+		var result float32
+		err := Unmarshal(data, &result)
+		if err != nil || result != 2.5 {
+			t.Errorf("float32 unmarshal failed: %v, got %f", err, result)
+		}
+	})
+
+	t.Run("bool true", func(t *testing.T) {
+		data, _ := Marshal(true)
+		var result bool
+		err := Unmarshal(data, &result)
+		if err != nil || result != true {
+			t.Errorf("bool unmarshal failed: %v, got %v", err, result)
+		}
+	})
+
+	t.Run("bool false", func(t *testing.T) {
+		data, _ := Marshal(false)
+		var result bool
+		err := Unmarshal(data, &result)
+		if err != nil || result != false {
+			t.Errorf("bool unmarshal failed: %v, got %v", err, result)
+		}
+	})
+}
+
+// TestUnmarshalIntoSlices tests reflection-based slice decoding.
+func TestUnmarshalIntoSlices(t *testing.T) {
+	t.Run("int slice", func(t *testing.T) {
+		data, _ := Marshal([]int64{1, 2, 3})
+		var result []int
+		err := Unmarshal(data, &result)
+		if err != nil {
+			t.Errorf("int slice unmarshal failed: %v", err)
+		}
+		if len(result) != 3 || result[0] != 1 {
+			t.Errorf("int slice mismatch: got %v", result)
+		}
+	})
+
+	t.Run("float64 slice", func(t *testing.T) {
+		data, _ := Marshal([]float64{1.1, 2.2, 3.3})
+		var result []float64
+		err := Unmarshal(data, &result)
+		if err != nil || len(result) != 3 {
+			t.Errorf("float64 slice unmarshal failed: %v, got %v", err, result)
+		}
+	})
+
+	t.Run("string slice", func(t *testing.T) {
+		data, _ := Marshal([]string{"a", "b", "c"})
+		var result []string
+		err := Unmarshal(data, &result)
+		if err != nil || len(result) != 3 || result[0] != "a" {
+			t.Errorf("string slice unmarshal failed: %v, got %v", err, result)
+		}
+	})
+
+	t.Run("byte slice from binary", func(t *testing.T) {
+		data, _ := Marshal([]byte{1, 2, 3, 4, 5})
+		var result []byte
+		err := Unmarshal(data, &result)
+		if err != nil || len(result) != 5 || result[0] != 1 {
+			t.Errorf("byte slice unmarshal failed: %v, got %v", err, result)
+		}
+	})
+}
+
+// TestUnmarshalIntoPrimitivePointers tests decoding into pointer types.
+func TestUnmarshalIntoPrimitivePointers(t *testing.T) {
+	t.Run("string pointer", func(t *testing.T) {
+		data, _ := Marshal("hello")
+		var result *string
+		err := Unmarshal(data, &result)
+		if err != nil || result == nil || *result != "hello" {
+			t.Errorf("string pointer unmarshal failed: %v", err)
+		}
+	})
+
+	t.Run("int64 pointer", func(t *testing.T) {
+		data, _ := Marshal(int64(42))
+		var result *int64
+		err := Unmarshal(data, &result)
+		if err != nil || result == nil || *result != 42 {
+			t.Errorf("int64 pointer unmarshal failed: %v", err)
+		}
+	})
+}
+
+// TestUnmarshalIntFormats tests decoding various integer formats into typed values.
+func TestUnmarshalIntFormats(t *testing.T) {
+	// Test all integer format variants
+	t.Run("int8 format", func(t *testing.T) {
+		// Encode as int8 (-128)
+		enc := NewEncoder(16)
+		enc.writeByte(formatInt8)
+		enc.writeByte(0x80) // -128
+		var result int
+		err := Unmarshal(enc.Bytes(), &result)
+		if err != nil || result != -128 {
+			t.Errorf("int8 format failed: %v, got %d", err, result)
+		}
+	})
+
+	t.Run("int16 format", func(t *testing.T) {
+		enc := NewEncoder(16)
+		enc.writeByte(formatInt16)
+		enc.writeUint16(0x8000) // -32768
+		var result int
+		err := Unmarshal(enc.Bytes(), &result)
+		if err != nil || result != -32768 {
+			t.Errorf("int16 format failed: %v, got %d", err, result)
+		}
+	})
+
+	t.Run("int32 format", func(t *testing.T) {
+		enc := NewEncoder(16)
+		enc.writeByte(formatInt32)
+		enc.writeUint32(0xFFFFFF00) // -256
+		var result int
+		err := Unmarshal(enc.Bytes(), &result)
+		if err != nil || result != -256 {
+			t.Errorf("int32 format failed: %v, got %d", err, result)
+		}
+	})
+
+	t.Run("int64 format", func(t *testing.T) {
+		enc := NewEncoder(16)
+		enc.writeByte(formatInt64)
+		enc.writeUint64(0xFFFFFFFFFFFFFF00) // -256
+		var result int64
+		err := Unmarshal(enc.Bytes(), &result)
+		if err != nil || result != -256 {
+			t.Errorf("int64 format failed: %v, got %d", err, result)
+		}
+	})
+
+	t.Run("uint8 format", func(t *testing.T) {
+		enc := NewEncoder(16)
+		enc.writeByte(formatUint8)
+		enc.writeByte(200)
+		var result uint
+		err := Unmarshal(enc.Bytes(), &result)
+		if err != nil || result != 200 {
+			t.Errorf("uint8 format failed: %v, got %d", err, result)
+		}
+	})
+
+	t.Run("uint16 format", func(t *testing.T) {
+		enc := NewEncoder(16)
+		enc.writeByte(formatUint16)
+		enc.writeUint16(40000)
+		var result uint
+		err := Unmarshal(enc.Bytes(), &result)
+		if err != nil || result != 40000 {
+			t.Errorf("uint16 format failed: %v, got %d", err, result)
+		}
+	})
+
+	t.Run("uint32 format", func(t *testing.T) {
+		enc := NewEncoder(16)
+		enc.writeByte(formatUint32)
+		enc.writeUint32(3000000000)
+		var result uint64
+		err := Unmarshal(enc.Bytes(), &result)
+		if err != nil || result != 3000000000 {
+			t.Errorf("uint32 format failed: %v, got %d", err, result)
+		}
+	})
+
+	t.Run("uint64 format", func(t *testing.T) {
+		enc := NewEncoder(16)
+		enc.writeByte(formatUint64)
+		enc.writeUint64(0xFFFFFFFFFFFFFFFF)
+		var result uint64
+		err := Unmarshal(enc.Bytes(), &result)
+		if err != nil || result != 0xFFFFFFFFFFFFFFFF {
+			t.Errorf("uint64 format failed: %v, got %d", err, result)
+		}
+	})
+}
+
+// TestUnmarshalFloatFormats tests decoding float formats.
+func TestUnmarshalFloatFormats(t *testing.T) {
+	t.Run("float32 format", func(t *testing.T) {
+		enc := NewEncoder(16)
+		enc.EncodeFloat32(3.14)
+		var result float32
+		err := Unmarshal(enc.Bytes(), &result)
+		if err != nil {
+			t.Errorf("float32 format failed: %v", err)
+		}
+	})
+
+	t.Run("float64 format", func(t *testing.T) {
+		enc := NewEncoder(16)
+		enc.EncodeFloat64(3.14159265359)
+		var result float64
+		err := Unmarshal(enc.Bytes(), &result)
+		if err != nil || result != 3.14159265359 {
+			t.Errorf("float64 format failed: %v, got %f", err, result)
+		}
+	})
+
+	t.Run("float32 into float64", func(t *testing.T) {
+		enc := NewEncoder(16)
+		enc.EncodeFloat32(2.5)
+		var result float64
+		err := Unmarshal(enc.Bytes(), &result)
+		if err != nil || result != float64(float32(2.5)) {
+			t.Errorf("float32 into float64 failed: %v, got %f", err, result)
+		}
+	})
+}
+
+// TestDecodeArrayFormats tests decoding large arrays.
+func TestDecodeArrayFormats(t *testing.T) {
+	t.Run("array16", func(t *testing.T) {
+		enc := NewEncoder(1024)
+		enc.writeByte(formatArray16)
+		enc.writeUint16(100)
+		for i := 0; i < 100; i++ {
+			enc.EncodeInt(int64(i))
+		}
+		var result []int64
+		err := Unmarshal(enc.Bytes(), &result)
+		if err != nil || len(result) != 100 {
+			t.Errorf("array16 failed: %v, len=%d", err, len(result))
+		}
+	})
+
+	t.Run("array32", func(t *testing.T) {
+		enc := NewEncoder(1024)
+		enc.writeByte(formatArray32)
+		enc.writeUint32(50)
+		for i := 0; i < 50; i++ {
+			enc.EncodeInt(int64(i))
+		}
+		var result []int64
+		err := Unmarshal(enc.Bytes(), &result)
+		if err != nil || len(result) != 50 {
+			t.Errorf("array32 failed: %v, len=%d", err, len(result))
+		}
+	})
+}
+
+// TestDecodeMapFormats tests decoding large maps.
+func TestDecodeMapFormats(t *testing.T) {
+	t.Run("map16", func(t *testing.T) {
+		enc := NewEncoder(2048)
+		enc.writeByte(formatMap16)
+		enc.writeUint16(50)
+		for i := 0; i < 50; i++ {
+			enc.EncodeString("k" + string(rune('0'+i%10)))
+			enc.EncodeInt(int64(i))
+		}
+		var result map[string]int
+		err := Unmarshal(enc.Bytes(), &result)
+		if err != nil {
+			t.Errorf("map16 failed: %v", err)
+		}
+	})
+
+	t.Run("map32", func(t *testing.T) {
+		enc := NewEncoder(2048)
+		enc.writeByte(formatMap32)
+		enc.writeUint32(30)
+		for i := 0; i < 30; i++ {
+			enc.EncodeString("key" + string(rune('a'+i%26)))
+			enc.EncodeInt(int64(i))
+		}
+		var result map[string]int
+		err := Unmarshal(enc.Bytes(), &result)
+		if err != nil {
+			t.Errorf("map32 failed: %v", err)
+		}
+	})
+}

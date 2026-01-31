@@ -1507,3 +1507,220 @@ func TestStructDecoderAllPointerTypes(t *testing.T) {
 		t.Errorf("PtrBool: got %v, want %v", result.PtrBool, b)
 	}
 }
+
+// TestStructDecoderAllSliceTypes tests all supported slice types for coverage.
+func TestStructDecoderAllSliceTypes(t *testing.T) {
+	type AllSlices struct {
+		StringSlice  []string  `msgpack:"string_slice"`
+		Int64Slice   []int64   `msgpack:"int64_slice"`
+		IntSlice     []int     `msgpack:"int_slice"`
+		Int32Slice   []int32   `msgpack:"int32_slice"`
+		Int16Slice   []int16   `msgpack:"int16_slice"`
+		Int8Slice    []int8    `msgpack:"int8_slice"`
+		Uint64Slice  []uint64  `msgpack:"uint64_slice"`
+		UintSlice    []uint    `msgpack:"uint_slice"`
+		Uint32Slice  []uint32  `msgpack:"uint32_slice"`
+		Uint16Slice  []uint16  `msgpack:"uint16_slice"`
+		Float64Slice []float64 `msgpack:"float64_slice"`
+		Float32Slice []float32 `msgpack:"float32_slice"`
+		ByteSlice    []byte    `msgpack:"byte_slice"`
+	}
+
+	original := AllSlices{
+		StringSlice:  []string{"a", "b", "c"},
+		Int64Slice:   []int64{-1, -2, -3},
+		IntSlice:     []int{1, 2, 3},
+		Int32Slice:   []int32{-100, -200, -300},
+		Int16Slice:   []int16{-10, -20, -30},
+		Int8Slice:    []int8{-1, -2, -3},
+		Uint64Slice:  []uint64{100, 200, 300},
+		UintSlice:    []uint{10, 20, 30},
+		Uint32Slice:  []uint32{1000, 2000, 3000},
+		Uint16Slice:  []uint16{100, 200, 300},
+		Float64Slice: []float64{1.1, 2.2, 3.3},
+		Float32Slice: []float32{1.5, 2.5, 3.5},
+		ByteSlice:    []byte{0x01, 0x02, 0x03},
+	}
+
+	enc := GetStructEncoder[AllSlices]()
+	data, err := enc.Encode(&original)
+	if err != nil {
+		t.Fatalf(errMsgEncodeFailed, err)
+	}
+
+	dec := GetStructDecoder[AllSlices](false)
+	var result AllSlices
+	err = dec.Decode(data, &result)
+	if err != nil {
+		t.Fatalf(errMsgDecodeFailedCap, err)
+	}
+
+	// Verify all slice fields
+	if len(result.StringSlice) != 3 || result.StringSlice[0] != "a" {
+		t.Errorf("StringSlice mismatch: got %v", result.StringSlice)
+	}
+	if len(result.Int64Slice) != 3 || result.Int64Slice[0] != -1 {
+		t.Errorf("Int64Slice mismatch: got %v", result.Int64Slice)
+	}
+	if len(result.IntSlice) != 3 || result.IntSlice[0] != 1 {
+		t.Errorf("IntSlice mismatch: got %v", result.IntSlice)
+	}
+	if len(result.Int32Slice) != 3 || result.Int32Slice[0] != -100 {
+		t.Errorf("Int32Slice mismatch: got %v", result.Int32Slice)
+	}
+	if len(result.Int16Slice) != 3 || result.Int16Slice[0] != -10 {
+		t.Errorf("Int16Slice mismatch: got %v", result.Int16Slice)
+	}
+	if len(result.Int8Slice) != 3 || result.Int8Slice[0] != -1 {
+		t.Errorf("Int8Slice mismatch: got %v", result.Int8Slice)
+	}
+	if len(result.Uint64Slice) != 3 || result.Uint64Slice[0] != 100 {
+		t.Errorf("Uint64Slice mismatch: got %v", result.Uint64Slice)
+	}
+	if len(result.UintSlice) != 3 || result.UintSlice[0] != 10 {
+		t.Errorf("UintSlice mismatch: got %v", result.UintSlice)
+	}
+	if len(result.Uint32Slice) != 3 || result.Uint32Slice[0] != 1000 {
+		t.Errorf("Uint32Slice mismatch: got %v", result.Uint32Slice)
+	}
+	if len(result.Uint16Slice) != 3 || result.Uint16Slice[0] != 100 {
+		t.Errorf("Uint16Slice mismatch: got %v", result.Uint16Slice)
+	}
+	if len(result.Float64Slice) != 3 || result.Float64Slice[0] != 1.1 {
+		t.Errorf("Float64Slice mismatch: got %v", result.Float64Slice)
+	}
+	if len(result.Float32Slice) != 3 || result.Float32Slice[0] != 1.5 {
+		t.Errorf("Float32Slice mismatch: got %v", result.Float32Slice)
+	}
+	if len(result.ByteSlice) != 3 || result.ByteSlice[0] != 0x01 {
+		t.Errorf("ByteSlice mismatch: got %v", result.ByteSlice)
+	}
+}
+
+// TestStructDecoderAllMapTypes tests all supported map types for coverage.
+func TestStructDecoderAllMapTypes(t *testing.T) {
+	type AllMaps struct {
+		StringMap  map[string]string  `msgpack:"string_map"`
+		IntMap     map[string]int     `msgpack:"int_map"`
+		Int64Map   map[string]int64   `msgpack:"int64_map"`
+		Int32Map   map[string]int32   `msgpack:"int32_map"`
+		Uint64Map  map[string]uint64  `msgpack:"uint64_map"`
+		Uint32Map  map[string]uint32  `msgpack:"uint32_map"`
+		Float64Map map[string]float64 `msgpack:"float64_map"`
+		BoolMap    map[string]bool    `msgpack:"bool_map"`
+		AnyMap     map[string]any     `msgpack:"any_map"`
+	}
+
+	original := AllMaps{
+		StringMap:  map[string]string{"a": "x", "b": "y"},
+		IntMap:     map[string]int{"i1": 1, "i2": 2},
+		Int64Map:   map[string]int64{"i64a": -100, "i64b": 200},
+		Int32Map:   map[string]int32{"i32a": -50, "i32b": 50},
+		Uint64Map:  map[string]uint64{"u64a": 1000, "u64b": 2000},
+		Uint32Map:  map[string]uint32{"u32a": 100, "u32b": 200},
+		Float64Map: map[string]float64{"f1": 1.5, "f2": 2.5},
+		BoolMap:    map[string]bool{"t": true, "f": false},
+		AnyMap:     map[string]any{"str": "hello", "num": int64(42), "bool": true},
+	}
+
+	enc := GetStructEncoder[AllMaps]()
+	data, err := enc.Encode(&original)
+	if err != nil {
+		t.Fatalf(errMsgEncodeFailed, err)
+	}
+
+	dec := GetStructDecoder[AllMaps](false)
+	var result AllMaps
+	err = dec.Decode(data, &result)
+	if err != nil {
+		t.Fatalf(errMsgDecodeFailedCap, err)
+	}
+
+	// Verify all map fields
+	if result.StringMap["a"] != "x" {
+		t.Errorf("StringMap mismatch: got %v", result.StringMap)
+	}
+	if result.IntMap["i1"] != 1 {
+		t.Errorf("IntMap mismatch: got %v", result.IntMap)
+	}
+	if result.Int64Map["i64a"] != -100 {
+		t.Errorf("Int64Map mismatch: got %v", result.Int64Map)
+	}
+	if result.Int32Map["i32a"] != -50 {
+		t.Errorf("Int32Map mismatch: got %v", result.Int32Map)
+	}
+	if result.Uint64Map["u64a"] != 1000 {
+		t.Errorf("Uint64Map mismatch: got %v", result.Uint64Map)
+	}
+	if result.Uint32Map["u32a"] != 100 {
+		t.Errorf("Uint32Map mismatch: got %v", result.Uint32Map)
+	}
+	if result.Float64Map["f1"] != 1.5 {
+		t.Errorf("Float64Map mismatch: got %v", result.Float64Map)
+	}
+	if result.BoolMap["t"] != true {
+		t.Errorf("BoolMap mismatch: got %v", result.BoolMap)
+	}
+	if result.AnyMap["str"] != "hello" {
+		t.Errorf("AnyMap mismatch: got %v", result.AnyMap)
+	}
+}
+
+// TestStructDecoderNestedStruct tests nested struct decoding for coverage.
+func TestStructDecoderNestedStruct(t *testing.T) {
+	type Inner struct {
+		Value  int     `msgpack:"value"`
+		Name   string  `msgpack:"name"`
+		Active bool    `msgpack:"active"`
+		Score  float64 `msgpack:"score"`
+	}
+
+	type Outer struct {
+		ID    int64  `msgpack:"id"`
+		Inner Inner  `msgpack:"inner"`
+		Label string `msgpack:"label"`
+	}
+
+	original := Outer{
+		ID: 123,
+		Inner: Inner{
+			Value:  42,
+			Name:   "test",
+			Active: true,
+			Score:  3.14,
+		},
+		Label: "outer",
+	}
+
+	enc := GetStructEncoder[Outer]()
+	data, err := enc.Encode(&original)
+	if err != nil {
+		t.Fatalf(errMsgEncodeFailed, err)
+	}
+
+	dec := GetStructDecoder[Outer](false)
+	var result Outer
+	err = dec.Decode(data, &result)
+	if err != nil {
+		t.Fatalf(errMsgDecodeFailedCap, err)
+	}
+
+	if result.ID != 123 {
+		t.Errorf("ID mismatch: got %d", result.ID)
+	}
+	if result.Inner.Value != 42 {
+		t.Errorf("Inner.Value mismatch: got %d", result.Inner.Value)
+	}
+	if result.Inner.Name != "test" {
+		t.Errorf("Inner.Name mismatch: got %s", result.Inner.Name)
+	}
+	if result.Inner.Active != true {
+		t.Errorf("Inner.Active mismatch: got %v", result.Inner.Active)
+	}
+	if result.Inner.Score != 3.14 {
+		t.Errorf("Inner.Score mismatch: got %f", result.Inner.Score)
+	}
+	if result.Label != "outer" {
+		t.Errorf("Label mismatch: got %s", result.Label)
+	}
+}
