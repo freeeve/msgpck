@@ -10,42 +10,6 @@ func bytesToString(b []byte, zeroCopy bool) string {
 	return string(b)
 }
 
-func decodeMapStringAny(d *Decoder, zeroCopy bool) (map[string]any, error) {
-	format, err := d.readByte()
-	if err != nil {
-		return nil, err
-	}
-
-	if format == formatNil {
-		return nil, nil
-	}
-
-	mapLen, err := d.parseMapLen(format)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := d.validateMapLen(mapLen); err != nil {
-		return nil, err
-	}
-
-	m := make(map[string]any, mapLen)
-	for i := 0; i < mapLen; i++ {
-		keyBytes, err := d.readStringBytes()
-		if err != nil {
-			return nil, err
-		}
-		key := bytesToString(keyBytes, zeroCopy)
-
-		val, err := decodeAnyValue(d, zeroCopy)
-		if err != nil {
-			return nil, err
-		}
-		m[key] = val
-	}
-	return m, nil
-}
-
 // decodeAnyUint decodes uint format bytes to int64 (or uint64 for overflow).
 func decodeAnyUint(d *Decoder, format byte) (any, error) {
 	switch format {
@@ -251,60 +215,5 @@ func decodeMapStringAnyWithLen(d *Decoder, length int, zeroCopy bool) (map[strin
 		}
 		m[key] = val
 	}
-	return m, nil
-}
-
-// decodeMapStringStringCore is the core implementation for decoding map[string]string.
-func decodeMapStringStringCore(d *Decoder, zeroCopy bool) (map[string]string, error) {
-	format, err := d.readByte()
-	if err != nil {
-		return nil, err
-	}
-
-	if format == formatNil {
-		return nil, nil
-	}
-
-	mapLen, err := d.parseMapLen(format)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := d.validateMapLen(mapLen); err != nil {
-		return nil, err
-	}
-
-	m := make(map[string]string, mapLen)
-	for i := 0; i < mapLen; i++ {
-		keyBytes, err := d.readStringBytes()
-		if err != nil {
-			return nil, err
-		}
-
-		valFormat, err := d.readByte()
-		if err != nil {
-			return nil, err
-		}
-
-		if valFormat == formatNil {
-			continue
-		}
-
-		valLen, err := d.parseStringLen(valFormat)
-		if err != nil {
-			return nil, err
-		}
-
-		if err := d.validateStringLen(valLen); err != nil {
-			return nil, err
-		}
-		valBytes, err := d.readBytes(valLen)
-		if err != nil {
-			return nil, err
-		}
-
-		m[bytesToString(keyBytes, zeroCopy)] = bytesToString(valBytes, zeroCopy)
-	}
-
 	return m, nil
 }
