@@ -5,6 +5,11 @@ import (
 	"testing"
 )
 
+const (
+	errMsgDecodeInt64ArrayFailed = "DecodeInt64Array failed: %v"
+	errMsgIndexGotWant           = "index %d: got %d, want %d"
+)
+
 func TestEncoderBufferGrowth(t *testing.T) {
 	e := NewEncoder(1) // Start with tiny buffer
 
@@ -318,14 +323,14 @@ func TestEncoderBatchArrays(t *testing.T) {
 		d := NewDecoder(e.Bytes())
 		result, err := d.DecodeInt64Array()
 		if err != nil {
-			t.Fatalf("DecodeInt64Array failed: %v", err)
+			t.Fatalf(errMsgDecodeInt64ArrayFailed, err)
 		}
 		if len(result) != len(arr) {
 			t.Errorf(errMsgLengthMismatch, len(result), len(arr))
 		}
 		for i := range arr {
 			if result[i] != arr[i] {
-				t.Errorf("index %d: got %d, want %d", i, result[i], arr[i])
+				t.Errorf(errMsgIndexGotWant, i, result[i], arr[i])
 			}
 		}
 	})
@@ -345,7 +350,7 @@ func TestEncoderBatchArrays(t *testing.T) {
 		}
 		for i := range arr {
 			if result[i] != arr[i] {
-				t.Errorf("index %d: got %d, want %d", i, result[i], arr[i])
+				t.Errorf(errMsgIndexGotWant, i, result[i], arr[i])
 			}
 		}
 	})
@@ -405,7 +410,7 @@ func TestEncoderLargeArrays(t *testing.T) {
 		d := NewDecoder(e.Bytes())
 		result, err := d.DecodeInt64Array()
 		if err != nil {
-			t.Fatalf("DecodeInt64Array failed: %v", err)
+			t.Fatalf(errMsgDecodeInt64ArrayFailed, err)
 		}
 		if len(result) != 20 {
 			t.Errorf("length mismatch: got %d, want 20", len(result))
@@ -434,11 +439,11 @@ func TestEncoderLargeArrays(t *testing.T) {
 		d := NewDecoder(e.Bytes())
 		result, err := d.DecodeInt64Array()
 		if err != nil {
-			t.Fatalf("DecodeInt64Array failed: %v", err)
+			t.Fatalf(errMsgDecodeInt64ArrayFailed, err)
 		}
 		for i := range arr {
 			if result[i] != arr[i] {
-				t.Errorf("index %d: got %d, want %d", i, result[i], arr[i])
+				t.Errorf(errMsgIndexGotWant, i, result[i], arr[i])
 			}
 		}
 	})
@@ -455,7 +460,7 @@ func TestEncoderLargeArrays(t *testing.T) {
 		d := NewDecoder(e.Bytes())
 		result, err := d.DecodeInt64Array()
 		if err != nil {
-			t.Fatalf("DecodeInt64Array failed: %v", err)
+			t.Fatalf(errMsgDecodeInt64ArrayFailed, err)
 		}
 		if len(result) != 100 {
 			t.Errorf("length mismatch: got %d, want 100", len(result))

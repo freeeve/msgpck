@@ -4,6 +4,8 @@ import (
 	"testing"
 )
 
+const errMsgDecodeFailedFmt = "decode failed: %v"
+
 func TestStructEncoderMethods(t *testing.T) {
 	type Person struct {
 		Name string `msgpack:"name"`
@@ -216,7 +218,7 @@ func TestStructEncoderEncodeWith(t *testing.T) {
 	var result Person
 	err = dec.Decode(e.Bytes(), &result)
 	if err != nil {
-		t.Fatalf("decode failed: %v", err)
+		t.Fatalf(errMsgDecodeFailedFmt, err)
 	}
 
 	if result.Name != original.Name || result.Age != original.Age {
@@ -317,7 +319,7 @@ func TestStructEncoderLongStrings(t *testing.T) {
 			var result Data
 			err = dec.Decode(data, &result)
 			if err != nil {
-				t.Fatalf("decode failed: %v", err)
+				t.Fatalf(errMsgDecodeFailedFmt, err)
 			}
 
 			if result.S != original.S {
@@ -418,7 +420,7 @@ func TestStructEncoderAllFieldTypes(t *testing.T) {
 	var result AllTypes
 	err = dec.Decode(data, &result)
 	if err != nil {
-		t.Fatalf("decode failed: %v", err)
+		t.Fatalf(errMsgDecodeFailedFmt, err)
 	}
 
 	// Verify a sampling of fields

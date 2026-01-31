@@ -4,6 +4,8 @@ import (
 	"testing"
 )
 
+const errMsgGotLenErr = "got len=%d, err=%v"
+
 func TestDecodeAnyAllFormats(t *testing.T) {
 	tests := []struct {
 		name string
@@ -1087,7 +1089,7 @@ func TestLargeArrayMapHeaders(t *testing.T) {
 		var result []int64
 		err := Unmarshal(e.Bytes(), &result)
 		if err != nil || len(result) != 300 {
-			t.Errorf("got len=%d, err=%v", len(result), err)
+			t.Errorf(errMsgGotLenErr, len(result), err)
 		}
 	})
 
@@ -1103,7 +1105,7 @@ func TestLargeArrayMapHeaders(t *testing.T) {
 		var result []int64
 		err := Unmarshal(e.Bytes(), &result)
 		if err != nil || len(result) != 3 {
-			t.Errorf("got len=%d, err=%v", len(result), err)
+			t.Errorf(errMsgGotLenErr, len(result), err)
 		}
 	})
 
@@ -1118,7 +1120,7 @@ func TestLargeArrayMapHeaders(t *testing.T) {
 		var result map[string]int64
 		err := Unmarshal(e.Bytes(), &result)
 		if err != nil || len(result) != 20 {
-			t.Errorf("got len=%d, err=%v", len(result), err)
+			t.Errorf(errMsgGotLenErr, len(result), err)
 		}
 	})
 
@@ -1136,7 +1138,7 @@ func TestLargeArrayMapHeaders(t *testing.T) {
 		var result map[string]int64
 		err := Unmarshal(e.Bytes(), &result)
 		if err != nil || len(result) != 2 {
-			t.Errorf("got len=%d, err=%v", len(result), err)
+			t.Errorf(errMsgGotLenErr, len(result), err)
 		}
 	})
 }
