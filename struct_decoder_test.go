@@ -1724,3 +1724,580 @@ func TestStructDecoderNestedStruct(t *testing.T) {
 		t.Errorf("Label mismatch: got %s", result.Label)
 	}
 }
+
+// TestStructDecoderDeepNested tests deeply nested struct decoding.
+func TestStructDecoderDeepNested(t *testing.T) {
+	type Level3 struct {
+		Value int    `msgpack:"value"`
+		Name  string `msgpack:"name"`
+	}
+
+	type Level2 struct {
+		L3    Level3 `msgpack:"l3"`
+		Count uint32 `msgpack:"count"`
+	}
+
+	type Level1 struct {
+		L2   Level2  `msgpack:"l2"`
+		Rate float32 `msgpack:"rate"`
+	}
+
+	original := Level1{
+		L2: Level2{
+			L3: Level3{
+				Value: 999,
+				Name:  "deep",
+			},
+			Count: 42,
+		},
+		Rate: 3.5,
+	}
+
+	enc := GetStructEncoder[Level1]()
+	data, err := enc.Encode(&original)
+	if err != nil {
+		t.Fatalf(errMsgEncodeFailed, err)
+	}
+
+	dec := GetStructDecoder[Level1](false)
+	var result Level1
+	err = dec.Decode(data, &result)
+	if err != nil {
+		t.Fatalf(errMsgDecodeFailedCap, err)
+	}
+
+	if result.L2.L3.Value != 999 {
+		t.Errorf("L2.L3.Value mismatch: got %d", result.L2.L3.Value)
+	}
+	if result.L2.L3.Name != "deep" {
+		t.Errorf("L2.L3.Name mismatch: got %s", result.L2.L3.Name)
+	}
+}
+
+// TestStructDecoderNestedMapAny tests map[string]any within struct.
+func TestStructDecoderNestedMapAny(t *testing.T) {
+	type Data struct {
+		Meta map[string]any `msgpack:"meta"`
+	}
+
+	original := Data{
+		Meta: map[string]any{
+			"string": "hello",
+			"number": int64(42),
+			"bool":   true,
+			"float":  3.14,
+			"nested": map[string]any{
+				"inner": "value",
+			},
+			"array": []any{int64(1), int64(2), int64(3)},
+		},
+	}
+
+	enc := GetStructEncoder[Data]()
+	data, err := enc.Encode(&original)
+	if err != nil {
+		t.Fatalf(errMsgEncodeFailed, err)
+	}
+
+	dec := GetStructDecoder[Data](false)
+	var result Data
+	err = dec.Decode(data, &result)
+	if err != nil {
+		t.Fatalf(errMsgDecodeFailedCap, err)
+	}
+
+	if result.Meta["string"] != "hello" {
+		t.Errorf("Meta[string] mismatch: got %v", result.Meta["string"])
+	}
+	if result.Meta["number"] != int64(42) {
+		t.Errorf("Meta[number] mismatch: got %v", result.Meta["number"])
+	}
+}
+
+// TestStructDecoderZeroCopyMode tests zero-copy decoding mode.
+func TestStructDecoderZeroCopyMode(t *testing.T) {
+	type Data struct {
+		Name   string            `msgpack:"name"`
+		Values []string          `msgpack:"values"`
+		Meta   map[string]string `msgpack:"meta"`
+	}
+
+	original := Data{
+		Name:   "test",
+		Values: []string{"a", "b", "c"},
+		Meta:   map[string]string{"key": "value"},
+	}
+
+	enc := GetStructEncoder[Data]()
+	data, err := enc.Encode(&original)
+	if err != nil {
+		t.Fatalf(errMsgEncodeFailed, err)
+	}
+
+	// Keep a copy of the data since zero-copy references it
+	dataCopy := make([]byte, len(data))
+	copy(dataCopy, data)
+
+	dec := GetStructDecoder[Data](true) // zero-copy mode
+	var result Data
+	err = dec.Decode(dataCopy, &result)
+	if err != nil {
+		t.Fatalf(errMsgDecodeFailedCap, err)
+	}
+
+	if result.Name != "test" {
+		t.Errorf("Name mismatch: got %s", result.Name)
+	}
+	if len(result.Values) != 3 {
+		t.Errorf("Values length mismatch: got %d", len(result.Values))
+	}
+	if result.Meta["key"] != "value" {
+		t.Errorf("Meta mismatch: got %v", result.Meta)
+	}
+}
+
+// TestStructDecoderMapAnyWithVariousFormats tests decoding map[string]any with various msgpack formats.
+// This exercises the typed_decode.go functions through struct decoder path.
+func TestStructDecoderMapAnyWithVariousFormats(t *testing.T) {
+	type Data struct {
+		Meta map[string]any `msgpack:"meta"`
+	}
+
+	t.Run("str8 in map value", func(t *testing.T) {
+		// Create a string > 31 bytes to trigger str8 format
+		longStr := "this is a string longer than 31 bytes to trigger str8 format"
+		original := Data{Meta: map[string]any{"key": longStr}}
+		enc := GetStructEncoder[Data]()
+		data, _ := enc.Encode(&original)
+
+		dec := GetStructDecoder[Data](false)
+		var result Data
+		err := dec.Decode(data, &result)
+		if err != nil || result.Meta["key"] != longStr {
+			t.Errorf("str8: got %v, err=%v", result.Meta["key"], err)
+		}
+	})
+
+	t.Run("str16 in map value", func(t *testing.T) {
+		// Create a string > 255 bytes to trigger str16 format
+		longStr := make([]byte, 300)
+		for i := range longStr {
+			longStr[i] = 'a'
+		}
+		original := Data{Meta: map[string]any{"key": string(longStr)}}
+		enc := GetStructEncoder[Data]()
+		data, _ := enc.Encode(&original)
+
+		dec := GetStructDecoder[Data](false)
+		var result Data
+		err := dec.Decode(data, &result)
+		if err != nil || result.Meta["key"] != string(longStr) {
+			t.Errorf("str16: got len=%d, err=%v", len(result.Meta["key"].(string)), err)
+		}
+	})
+
+	t.Run("bin8 in map value", func(t *testing.T) {
+		original := Data{Meta: map[string]any{"key": []byte{1, 2, 3, 4, 5}}}
+		enc := GetStructEncoder[Data]()
+		data, _ := enc.Encode(&original)
+
+		dec := GetStructDecoder[Data](false)
+		var result Data
+		err := dec.Decode(data, &result)
+		b, ok := result.Meta["key"].([]byte)
+		if err != nil || !ok || len(b) != 5 {
+			t.Errorf("bin8: got %v, err=%v", result.Meta["key"], err)
+		}
+	})
+
+	t.Run("bin16 in map value", func(t *testing.T) {
+		// Create binary > 255 bytes to trigger bin16 format
+		bin := make([]byte, 300)
+		for i := range bin {
+			bin[i] = byte(i % 256)
+		}
+		original := Data{Meta: map[string]any{"key": bin}}
+		enc := GetStructEncoder[Data]()
+		data, _ := enc.Encode(&original)
+
+		dec := GetStructDecoder[Data](false)
+		var result Data
+		err := dec.Decode(data, &result)
+		b, ok := result.Meta["key"].([]byte)
+		if err != nil || !ok || len(b) != 300 {
+			t.Errorf("bin16: got len=%d, err=%v", len(b), err)
+		}
+	})
+
+	t.Run("array16 in map value", func(t *testing.T) {
+		// Create array > 15 elements to trigger array16 format
+		arr := make([]any, 20)
+		for i := range arr {
+			arr[i] = int64(i)
+		}
+		original := Data{Meta: map[string]any{"key": arr}}
+		enc := GetStructEncoder[Data]()
+		data, _ := enc.Encode(&original)
+
+		dec := GetStructDecoder[Data](false)
+		var result Data
+		err := dec.Decode(data, &result)
+		a, ok := result.Meta["key"].([]any)
+		if err != nil || !ok || len(a) != 20 {
+			t.Errorf("array16: got len=%d, err=%v", len(a), err)
+		}
+	})
+
+	t.Run("map16 in map value", func(t *testing.T) {
+		// Create map > 15 entries to trigger map16 format
+		m := make(map[string]any)
+		for i := 0; i < 20; i++ {
+			m[string('a'+byte(i))] = int64(i)
+		}
+		original := Data{Meta: map[string]any{"key": m}}
+		enc := GetStructEncoder[Data]()
+		data, _ := enc.Encode(&original)
+
+		dec := GetStructDecoder[Data](false)
+		var result Data
+		err := dec.Decode(data, &result)
+		inner, ok := result.Meta["key"].(map[string]any)
+		if err != nil || !ok || len(inner) != 20 {
+			t.Errorf("map16: got len=%d, err=%v", len(inner), err)
+		}
+	})
+
+	t.Run("nested arrays", func(t *testing.T) {
+		original := Data{Meta: map[string]any{"key": []any{[]any{int64(1), int64(2)}, []any{int64(3), int64(4)}}}}
+		enc := GetStructEncoder[Data]()
+		data, _ := enc.Encode(&original)
+
+		dec := GetStructDecoder[Data](false)
+		var result Data
+		err := dec.Decode(data, &result)
+		a, ok := result.Meta["key"].([]any)
+		if err != nil || !ok || len(a) != 2 {
+			t.Errorf("nested arrays: got %v, err=%v", result.Meta["key"], err)
+		}
+	})
+
+	t.Run("nested maps", func(t *testing.T) {
+		original := Data{Meta: map[string]any{"outer": map[string]any{"inner": int64(42)}}}
+		enc := GetStructEncoder[Data]()
+		data, _ := enc.Encode(&original)
+
+		dec := GetStructDecoder[Data](false)
+		var result Data
+		err := dec.Decode(data, &result)
+		outer, ok := result.Meta["outer"].(map[string]any)
+		if err != nil || !ok || outer["inner"] != int64(42) {
+			t.Errorf("nested maps: got %v, err=%v", result.Meta, err)
+		}
+	})
+
+	t.Run("all int formats", func(t *testing.T) {
+		original := Data{Meta: map[string]any{
+			"uint8":  uint64(200),
+			"uint16": uint64(40000),
+			"uint32": uint64(100000),
+			"int8":   int64(-100),
+			"int16":  int64(-1000),
+			"int32":  int64(-100000),
+		}}
+		enc := GetStructEncoder[Data]()
+		data, _ := enc.Encode(&original)
+
+		dec := GetStructDecoder[Data](false)
+		var result Data
+		err := dec.Decode(data, &result)
+		if err != nil {
+			t.Errorf("all int formats: err=%v", err)
+		}
+	})
+
+	t.Run("float formats", func(t *testing.T) {
+		original := Data{Meta: map[string]any{
+			"f32": float64(3.14),
+			"f64": float64(2.71828),
+		}}
+		enc := GetStructEncoder[Data]()
+		data, _ := enc.Encode(&original)
+
+		dec := GetStructDecoder[Data](false)
+		var result Data
+		err := dec.Decode(data, &result)
+		if err != nil {
+			t.Errorf("float formats: err=%v", err)
+		}
+	})
+
+	t.Run("nil value", func(t *testing.T) {
+		original := Data{Meta: map[string]any{"key": nil}}
+		enc := GetStructEncoder[Data]()
+		data, _ := enc.Encode(&original)
+
+		dec := GetStructDecoder[Data](false)
+		var result Data
+		err := dec.Decode(data, &result)
+		if err != nil || result.Meta["key"] != nil {
+			t.Errorf("nil value: got %v, err=%v", result.Meta["key"], err)
+		}
+	})
+
+	t.Run("bool values", func(t *testing.T) {
+		original := Data{Meta: map[string]any{"t": true, "f": false}}
+		enc := GetStructEncoder[Data]()
+		data, _ := enc.Encode(&original)
+
+		dec := GetStructDecoder[Data](false)
+		var result Data
+		err := dec.Decode(data, &result)
+		if err != nil || result.Meta["t"] != true || result.Meta["f"] != false {
+			t.Errorf("bool values: got %v, err=%v", result.Meta, err)
+		}
+	})
+}
+
+// TestStructDecoderMapAnyZeroCopy tests decoding map[string]any in zero-copy mode.
+func TestStructDecoderMapAnyZeroCopy(t *testing.T) {
+	type Data struct {
+		Meta map[string]any `msgpack:"meta"`
+	}
+
+	longStr := "this is a string that triggers str8 format for testing"
+	original := Data{Meta: map[string]any{
+		"str":   longStr,
+		"bin":   []byte{1, 2, 3, 4, 5},
+		"arr":   []any{int64(1), int64(2), int64(3)},
+		"map":   map[string]any{"nested": "value"},
+		"int":   int64(42),
+		"float": float64(3.14),
+	}}
+
+	enc := GetStructEncoder[Data]()
+	data, _ := enc.Encode(&original)
+
+	// Keep a copy for zero-copy mode
+	dataCopy := make([]byte, len(data))
+	copy(dataCopy, data)
+
+	dec := GetStructDecoder[Data](true) // zero-copy mode
+	var result Data
+	err := dec.Decode(dataCopy, &result)
+	if err != nil {
+		t.Fatalf("zero-copy decode failed: %v", err)
+	}
+
+	if result.Meta["str"] != longStr {
+		t.Errorf("str mismatch")
+	}
+	if len(result.Meta["bin"].([]byte)) != 5 {
+		t.Errorf("bin mismatch")
+	}
+	if len(result.Meta["arr"].([]any)) != 3 {
+		t.Errorf("arr mismatch")
+	}
+}
+
+// TestStructDecoderFloatFromIntFormats tests decoding various int formats into float64 field.
+func TestStructDecoderFloatFromIntFormats(t *testing.T) {
+	type Data struct {
+		F float64 `msgpack:"f"`
+	}
+
+	tests := []struct {
+		name     string
+		buildMsg func(*Encoder)
+		want     float64
+	}{
+		{"positive fixint", func(e *Encoder) {
+			e.writeByte(fixmapPrefix | 1)
+			e.writeByte(fixstrPrefix | 1)
+			e.writeByte('f')
+			e.writeByte(42) // positive fixint
+		}, 42.0},
+		{"negative fixint", func(e *Encoder) {
+			e.writeByte(fixmapPrefix | 1)
+			e.writeByte(fixstrPrefix | 1)
+			e.writeByte('f')
+			e.writeByte(0xe0) // -32
+		}, -32.0},
+		{"uint8", func(e *Encoder) {
+			e.writeByte(fixmapPrefix | 1)
+			e.writeByte(fixstrPrefix | 1)
+			e.writeByte('f')
+			e.writeByte(formatUint8)
+			e.writeByte(200)
+		}, 200.0},
+		{"uint16", func(e *Encoder) {
+			e.writeByte(fixmapPrefix | 1)
+			e.writeByte(fixstrPrefix | 1)
+			e.writeByte('f')
+			e.writeByte(formatUint16)
+			e.writeUint16(40000)
+		}, 40000.0},
+		{"uint32", func(e *Encoder) {
+			e.writeByte(fixmapPrefix | 1)
+			e.writeByte(fixstrPrefix | 1)
+			e.writeByte('f')
+			e.writeByte(formatUint32)
+			e.writeUint32(100000)
+		}, 100000.0},
+		{"int8", func(e *Encoder) {
+			e.writeByte(fixmapPrefix | 1)
+			e.writeByte(fixstrPrefix | 1)
+			e.writeByte('f')
+			e.writeByte(formatInt8)
+			e.writeByte(0x80) // -128
+		}, -128.0},
+		{"int16", func(e *Encoder) {
+			e.writeByte(fixmapPrefix | 1)
+			e.writeByte(fixstrPrefix | 1)
+			e.writeByte('f')
+			e.writeByte(formatInt16)
+			e.writeUint16(0x8000) // -32768
+		}, -32768.0},
+		{"int32", func(e *Encoder) {
+			e.writeByte(fixmapPrefix | 1)
+			e.writeByte(fixstrPrefix | 1)
+			e.writeByte('f')
+			e.writeByte(formatInt32)
+			e.writeUint32(0xFFFFFF00) // -256
+		}, -256.0},
+		{"int64", func(e *Encoder) {
+			e.writeByte(fixmapPrefix | 1)
+			e.writeByte(fixstrPrefix | 1)
+			e.writeByte('f')
+			e.writeByte(formatInt64)
+			e.writeUint64(0xFFFFFFFFFFFFFFFE) // -2
+		}, -2.0},
+		{"float32", func(e *Encoder) {
+			e.writeByte(fixmapPrefix | 1)
+			e.writeByte(fixstrPrefix | 1)
+			e.writeByte('f')
+			e.EncodeFloat32(3.14)
+		}, 3.14},
+		{"float64", func(e *Encoder) {
+			e.writeByte(fixmapPrefix | 1)
+			e.writeByte(fixstrPrefix | 1)
+			e.writeByte('f')
+			e.EncodeFloat64(2.71828)
+		}, 2.71828},
+	}
+
+	dec := GetStructDecoder[Data](false)
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			e := NewEncoder(64)
+			tc.buildMsg(e)
+			var result Data
+			err := dec.Decode(e.Bytes(), &result)
+			if err != nil {
+				t.Fatalf("err=%v", err)
+			}
+			diff := result.F - tc.want
+			if diff < 0 {
+				diff = -diff
+			}
+			if diff > 0.01 {
+				t.Errorf("got %v, want %v", result.F, tc.want)
+			}
+		})
+	}
+}
+
+// TestStructDecoderFloat32FieldFromIntFormats tests decoding various formats into float32 field.
+func TestStructDecoderFloat32FieldFromIntFormats(t *testing.T) {
+	type Data struct {
+		F float32 `msgpack:"f"`
+	}
+
+	tests := []struct {
+		name     string
+		buildMsg func(*Encoder)
+		want     float32
+	}{
+		{"positive fixint", func(e *Encoder) {
+			e.writeByte(fixmapPrefix | 1)
+			e.writeByte(fixstrPrefix | 1)
+			e.writeByte('f')
+			e.writeByte(42)
+		}, 42.0},
+		{"uint8", func(e *Encoder) {
+			e.writeByte(fixmapPrefix | 1)
+			e.writeByte(fixstrPrefix | 1)
+			e.writeByte('f')
+			e.writeByte(formatUint8)
+			e.writeByte(200)
+		}, 200.0},
+		{"int8", func(e *Encoder) {
+			e.writeByte(fixmapPrefix | 1)
+			e.writeByte(fixstrPrefix | 1)
+			e.writeByte('f')
+			e.writeByte(formatInt8)
+			e.writeByte(0x80)
+		}, -128.0},
+		{"float32", func(e *Encoder) {
+			e.writeByte(fixmapPrefix | 1)
+			e.writeByte(fixstrPrefix | 1)
+			e.writeByte('f')
+			e.EncodeFloat32(3.14)
+		}, 3.14},
+	}
+
+	dec := GetStructDecoder[Data](false)
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			e := NewEncoder(64)
+			tc.buildMsg(e)
+			var result Data
+			err := dec.Decode(e.Bytes(), &result)
+			if err != nil {
+				t.Fatalf("err=%v", err)
+			}
+			diff := result.F - tc.want
+			if diff < 0 {
+				diff = -diff
+			}
+			if diff > 0.01 {
+				t.Errorf("got %v, want %v", result.F, tc.want)
+			}
+		})
+	}
+}
+
+// TestLargeArrayAndMapEncodings tests array32 and map32 format encoding.
+func TestLargeArrayAndMapEncodings(t *testing.T) {
+	t.Run("array32 encoding", func(t *testing.T) {
+		e := NewEncoder(1024)
+		// Create array with > 65535 elements would be too slow
+		// Instead, directly test the format by manually constructing
+		e.writeByte(formatArray32)
+		e.writeUint32(3)
+		e.EncodeInt(1)
+		e.EncodeInt(2)
+		e.EncodeInt(3)
+
+		var result []int64
+		err := Unmarshal(e.Bytes(), &result)
+		if err != nil || len(result) != 3 {
+			t.Errorf("got len=%d, err=%v", len(result), err)
+		}
+	})
+
+	t.Run("map32 encoding", func(t *testing.T) {
+		e := NewEncoder(1024)
+		e.writeByte(formatMap32)
+		e.writeUint32(2)
+		e.EncodeString("a")
+		e.EncodeInt(1)
+		e.EncodeString("b")
+		e.EncodeInt(2)
+
+		var result map[string]int64
+		err := Unmarshal(e.Bytes(), &result)
+		if err != nil || len(result) != 2 {
+			t.Errorf("got len=%d, err=%v", len(result), err)
+		}
+	})
+}

@@ -390,3 +390,180 @@ func TestEncoderBatchArrays(t *testing.T) {
 		}
 	})
 }
+
+// TestEncoderLargeArrays tests array16/array32 format encoding.
+func TestEncoderLargeArrays(t *testing.T) {
+	t.Run("array16 format", func(t *testing.T) {
+		e := NewEncoder(1024)
+		// Create array with 20 elements (triggers array16 format, not fixarray)
+		arr := make([]int64, 20)
+		for i := range arr {
+			arr[i] = int64(i * 10)
+		}
+		e.EncodeInt64Array(arr)
+
+		d := NewDecoder(e.Bytes())
+		result, err := d.DecodeInt64Array()
+		if err != nil {
+			t.Fatalf("DecodeInt64Array failed: %v", err)
+		}
+		if len(result) != 20 {
+			t.Errorf("length mismatch: got %d, want 20", len(result))
+		}
+	})
+
+	t.Run("array with various int formats", func(t *testing.T) {
+		e := NewEncoder(256)
+		// Mix of different integer formats
+		arr := []int64{
+			0,           // positive fixint
+			127,         // positive fixint max
+			-1,          // negative fixint
+			-32,         // negative fixint min
+			200,         // uint8
+			-100,        // int8
+			30000,       // uint16/int16
+			-30000,      // int16
+			70000,       // uint32
+			-70000,      // int32
+			5000000000,  // int64
+			-5000000000, // int64
+		}
+		e.EncodeInt64Array(arr)
+
+		d := NewDecoder(e.Bytes())
+		result, err := d.DecodeInt64Array()
+		if err != nil {
+			t.Fatalf("DecodeInt64Array failed: %v", err)
+		}
+		for i := range arr {
+			if result[i] != arr[i] {
+				t.Errorf("index %d: got %d, want %d", i, result[i], arr[i])
+			}
+		}
+	})
+
+	t.Run("large array header", func(t *testing.T) {
+		e := NewEncoder(8192)
+		// Create 100 element array
+		arr := make([]int64, 100)
+		for i := range arr {
+			arr[i] = int64(i)
+		}
+		e.EncodeInt64Array(arr)
+
+		d := NewDecoder(e.Bytes())
+		result, err := d.DecodeInt64Array()
+		if err != nil {
+			t.Fatalf("DecodeInt64Array failed: %v", err)
+		}
+		if len(result) != 100 {
+			t.Errorf("length mismatch: got %d, want 100", len(result))
+		}
+	})
+}
+
+// TestEncoderLargeMaps tests map16/map32 format encoding.
+func TestEncoderLargeMaps(t *testing.T) {
+	t.Run("map16 format", func(t *testing.T) {
+		e := NewEncoder(2048)
+		// Create map with 20 entries (triggers map16 format)
+		e.EncodeMapHeader(20)
+		for i := 0; i < 20; i++ {
+			e.EncodeString("key" + string(rune('a'+i)))
+			e.EncodeInt(int64(i * 100))
+		}
+
+		d := NewDecoder(e.Bytes())
+		v, err := d.Decode()
+		if err != nil {
+			t.Fatalf("Decode failed: %v", err)
+		}
+		if len(v.Map) != 20 {
+			t.Errorf("map length mismatch: got %d, want 20", len(v.Map))
+		}
+	})
+}
+
+// TestDecodeFloatFromIntegers tests decoding various integer formats into float64.
+func TestDecodeFloatFromIntegers(t *testing.T) {
+	type FloatData struct {
+		F float64 `msgpack:"f"`
+	}
+
+	tests := []struct {
+		name   string
+		encode func(*Encoder)
+		want   float64
+	}{
+		{"positive fixint", func(e *Encoder) {
+			e.EncodeMapHeader(1)
+			e.EncodeString("f")
+			e.writeByte(42) // positive fixint
+		}, 42.0},
+		{"negative fixint", func(e *Encoder) {
+			e.EncodeMapHeader(1)
+			e.EncodeString("f")
+			e.writeByte(0xff) // -1 as negative fixint
+		}, -1.0},
+		{"uint8", func(e *Encoder) {
+			e.EncodeMapHeader(1)
+			e.EncodeString("f")
+			e.writeByte(formatUint8)
+			e.writeByte(200)
+		}, 200.0},
+		{"uint16", func(e *Encoder) {
+			e.EncodeMapHeader(1)
+			e.EncodeString("f")
+			e.writeByte(formatUint16)
+			e.writeUint16(40000)
+		}, 40000.0},
+		{"uint32", func(e *Encoder) {
+			e.EncodeMapHeader(1)
+			e.EncodeString("f")
+			e.writeByte(formatUint32)
+			e.writeUint32(100000)
+		}, 100000.0},
+		{"int8", func(e *Encoder) {
+			e.EncodeMapHeader(1)
+			e.EncodeString("f")
+			e.writeByte(formatInt8)
+			e.writeByte(0x80) // -128
+		}, -128.0},
+		{"int16", func(e *Encoder) {
+			e.EncodeMapHeader(1)
+			e.EncodeString("f")
+			e.writeByte(formatInt16)
+			e.writeUint16(0x8000) // -32768
+		}, -32768.0},
+		{"int32", func(e *Encoder) {
+			e.EncodeMapHeader(1)
+			e.EncodeString("f")
+			e.writeByte(formatInt32)
+			e.writeUint32(0xFFFFFF00) // -256
+		}, -256.0},
+		{"int64", func(e *Encoder) {
+			e.EncodeMapHeader(1)
+			e.EncodeString("f")
+			e.writeByte(formatInt64)
+			e.writeUint64(0xFFFFFFFFFFFFFC18) // -1000
+		}, -1000.0},
+	}
+
+	dec := GetStructDecoder[FloatData](false)
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			e := NewEncoder(64)
+			tc.encode(e)
+
+			var result FloatData
+			err := dec.Decode(e.Bytes(), &result)
+			if err != nil {
+				t.Fatalf("decode failed: %v", err)
+			}
+			if result.F != tc.want {
+				t.Errorf("got %f, want %f", result.F, tc.want)
+			}
+		})
+	}
+}
